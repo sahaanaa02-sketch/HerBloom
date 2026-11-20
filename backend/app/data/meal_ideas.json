@@ -1,0 +1,37 @@
+[
+  {
+    "title": "Red Rice with Dhal and Vegetables",
+    "description": "A familiar Sri Lankan meal idea with grains, legumes and vegetables.",
+    "category": "lunch",
+    "ingredients": ["red rice", "dhal", "vegetables"],
+    "tags": ["Sri Lankan", "Plant-based option"]
+  },
+  {
+    "title": "String Hoppers with Dhal",
+    "description": "A traditional breakfast idea. Portions and accompaniments can be adjusted.",
+    "category": "breakfast",
+    "ingredients": ["string hoppers", "dhal"],
+    "tags": ["Sri Lankan", "Breakfast"]
+  },
+  {
+    "title": "Chickpeas with Vegetables",
+    "description": "A legume-based meal idea that can be adapted to personal preferences.",
+    "category": "snack",
+    "ingredients": ["chickpeas", "vegetables"],
+    "tags": ["Legumes", "Meal idea"]
+  },
+  {
+    "title": "Pittu with Dhal",
+    "description": "A traditional meal combination with a legume accompaniment.",
+    "category": "dinner",
+    "ingredients": ["pittu", "dhal"],
+    "tags": ["Sri Lankan", "Dinner"]
+  },
+  {
+    "title": "Guava and Plain Yoghurt",
+    "description": "A simple snack idea. Check ingredients for allergies.",
+    "category": "snack",
+    "ingredients": ["guava", "plain yoghurt"],
+    "tags": ["Snack", "Fruit"]
+  }
+]

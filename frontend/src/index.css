@@ -1,0 +1,49 @@
+
+@import "tailwindcss";
+
+:root {
+  --hb-primary: #7B2346;
+  --hb-primary-dark: #651C39;
+  --hb-soft: #F6D3DB;
+  --hb-accent: #D9A25B;
+  --hb-background: #FFF6F1;
+  --hb-text: #3A1224;
+  --hb-border: #E8C3CC;
+  --hb-white: #FFFFFF;
+
+  font-family: 'Poppins', sans-serif;
+  color: var(--hb-text);
+  background: var(--hb-background);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--hb-background);
+  font-family: 'Poppins', sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: var(--hb-soft);
+  color: var(--hb-primary);
+}

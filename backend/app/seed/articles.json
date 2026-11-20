@@ -1,0 +1,302 @@
+[
+  {
+    "slug": "breastfeeding-basics",
+    "category": "breastfeeding",
+    "title_en": "Breastfeeding Essentials",
+    "title_ta": "தாய்ப்பால் கொடுப்பதற்கான அடிப்படைகள்",
+    "body_en": "Breastfeeding is a learning process for both mother and baby.\n\nFind a comfortable supported position. Keep your baby close, with their head and body aligned.\n\nIf feeding is painful or difficult, ask a qualified healthcare professional or lactation specialist for help.",
+    "body_ta": "தாய்ப்பால் கொடுப்பது தாயும் குழந்தையும் படிப்படியாகக் கற்றுக்கொள்ளும் ஒரு செயலாகும்.\n\nஉங்களுக்கு வசதியான நிலையில் அமர்ந்து, குழந்தையின் தலை மற்றும் உடலை நேராக ஆதரித்துப் பிடியுங்கள்.\n\nபால் கொடுப்பதில் வலி அல்லது சிரமம் இருந்தால் தகுதியான சுகாதார நிபுணரிடம் ஆலோசனை பெறுங்கள்.",
+    "key_points_en": [
+      "Choose a comfortable position",
+      "Support your baby's head and body",
+      "Ask for help if feeding is difficult"
+    ],
+    "key_points_ta": [
+      "வசதியான நிலையைத் தேர்ந்தெடுக்கவும்",
+      "குழந்தையின் தலை மற்றும் உடலை ஆதரிக்கவும்",
+      "சிரமம் இருந்தால் உதவி கேட்கவும்"
+    ],
+    "doctor_note_en": "Seek medical advice if your baby is feeding poorly, has fewer wet nappies than expected, or seems unusually sleepy.",
+    "doctor_note_ta": "குழந்தை சரியாகப் பால் குடிக்காவிட்டால், வழக்கத்தைவிட சிறுநீர் குறைவாக இருந்தால் அல்லது வழக்கத்திற்கு மாறாக மந்தமாக இருந்தால் மருத்துவ ஆலோசனை பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1491013516836-7db643ee125a?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 5,
+    "min_week": 1,
+    "max_week": 12,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "newborn-holding",
+    "category": "baby_care",
+    "title_en": "Holding Your Newborn Safely",
+    "title_ta": "புதிதாகப் பிறந்த குழந்தையைப் பாதுகாப்பாகத் தூக்குதல்",
+    "body_en": "Newborns need gentle support for their head and neck. Before picking up your baby, wash your hands and make sure you have a steady position. Slide one hand beneath the head and neck and the other beneath the body, then lift gently and keep your baby close.\n\nWhen passing your baby to another person, make sure they are ready and supporting the head and body before you let go. Keep the baby's nose and mouth clear, especially during skin-to-skin contact. Never shake a baby. If you feel sleepy while holding your baby, put them on their back in a safe separate sleep space.",
+    "body_ta": "புதிதாகப் பிறந்த குழந்தையின் தலை மற்றும் கழுத்துக்கு மென்மையான ஆதரவு தேவை. குழந்தையைத் தூக்கும் முன் கைகளைக் கழுவி, நீங்கள் நிலையாக இருப்பதை உறுதிசெய்யுங்கள். ஒரு கையால் தலை மற்றும் கழுத்தையும் மற்றொரு கையால் உடலையும் ஆதரித்து மெதுவாகத் தூக்கி அருகில் வைத்துக்கொள்ளுங்கள்.\n\nமற்றொருவரிடம் குழந்தையைக் கொடுக்கும்போது, அவர் தலை மற்றும் உடலை நன்றாகப் பிடித்த பிறகே உங்கள் பிடியை விடுங்கள். குறிப்பாக தோலோடு தோல் தொடர்பின்போது குழந்தையின் மூக்கும் வாயும் மறைக்கப்படாமல் பார்த்துக்கொள்ளுங்கள். குழந்தையை ஒருபோதும் குலுக்க வேண்டாம். குழந்தையைத் தூக்கியபடி தூக்கம் வந்தால், தனியான பாதுகாப்பான உறங்கும் இடத்தில் முதுகில் படுக்க வையுங்கள்.",
+    "key_points_en": [
+      "Support the head and neck",
+      "Keep the nose and mouth clear",
+      "Never shake a baby",
+      "Put baby in a safe sleep space if you feel sleepy"
+    ],
+    "key_points_ta": [
+      "தலை மற்றும் கழுத்தை ஆதரிக்கவும்",
+      "மூக்கும் வாயும் மறைக்கப்படாமல் பார்த்துக்கொள்ளவும்",
+      "குழந்தையை ஒருபோதும் குலுக்க வேண்டாம்",
+      "தூக்கம் வந்தால் பாதுகாப்பான தனிப் படுக்கையில் வைக்கவும்"
+    ],
+    "doctor_note_en": "Seek urgent medical help if your baby has difficulty breathing or is unresponsive.",
+    "doctor_note_ta": "குழந்தைக்கு சுவாசிப்பதில் சிரமம் இருந்தால் அல்லது பதிலளிக்காவிட்டால் உடனடி மருத்துவ உதவி பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 5,
+    "min_week": 1,
+    "max_week": 8,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "newborn-burping",
+    "category": "baby_care",
+    "title_en": "Burping Your Baby After Feeding",
+    "title_ta": "பால் குடித்த பிறகு குழந்தைக்கு ஏப்பம் வர உதவுதல்",
+    "body_en": "Some babies swallow air during feeding and may feel uncomfortable. Burping can help, but not every baby burps after every feed.\n\nHold your baby upright against your chest with the head and neck supported, or sit them supported on your lap. Gently rub or pat the back for a short time. Keep the chin off the chest and make sure the nose and mouth are clear. Never shake or vigorously pat your baby.\n\nIf no burp comes after a few minutes and your baby seems comfortable, it is usually fine to stop. If your baby spits up, continue to follow safe-sleep advice: put them on their back on a firm, flat sleep surface for sleep. Do not prop them up with pillows.",
+    "body_ta": "சில குழந்தைகள் பால் குடிக்கும்போது காற்றையும் விழுங்கலாம். ஏப்பம் வர உதவுவது சில நேரங்களில் அசௌகரியத்தைக் குறைக்கலாம். ஆனால் ஒவ்வொரு முறையும் எல்லாக் குழந்தைகளுக்கும் ஏப்பம் வரவேண்டும் என்பதில்லை.\n\nகுழந்தையின் தலை மற்றும் கழுத்தை ஆதரித்து உங்கள் மார்புக்கு அருகில் நிமிர்த்திப் பிடிக்கலாம் அல்லது உங்கள் மடியில் ஆதரவுடன் அமர்த்தலாம். முதுகை மெதுவாகத் தடவவோ தட்டவோ செய்யுங்கள். தாடை மார்பில் அழுந்தாமலும் மூக்கும் வாயும் மறையாமலும் பார்த்துக்கொள்ளுங்கள். குழந்தையை ஒருபோதும் குலுக்கவோ பலமாகத் தட்டவோ வேண்டாம்.\n\nசில நிமிடங்களில் ஏப்பம் வராவிட்டாலும் குழந்தை வசதியாக இருந்தால் நிறுத்தலாம். பால் சிறிது வெளியே வந்தாலும் உறங்கும்போது குழந்தையை உறுதியான சமமான தனிப் படுக்கையில் முதுகில் படுக்க வையுங்கள். தலையணையால் உயர்த்தி வைக்க வேண்டாம்.",
+    "key_points_en": [
+      "Support head and neck",
+      "Gently rub or pat the back",
+      "Not every baby needs to burp every time",
+      "Always follow safe-sleep advice"
+    ],
+    "key_points_ta": [
+      "தலை மற்றும் கழுத்தை ஆதரிக்கவும்",
+      "முதுகை மெதுவாகத் தடவவும் அல்லது தட்டவும்",
+      "ஒவ்வொரு முறையும் ஏப்பம் வரவேண்டியதில்லை",
+      "பாதுகாப்பான உறக்க வழிகாட்டலைப் பின்பற்றவும்"
+    ],
+    "doctor_note_en": "Seek medical advice if your baby repeatedly refuses feeds, vomits forcefully or seems unwell. Seek urgent help for breathing difficulties or green vomit.",
+    "doctor_note_ta": "குழந்தை தொடர்ந்து பால் குடிக்க மறுத்தாலோ பலமாக வாந்தி எடுத்தாலோ உடல்நிலை சரியில்லாமல் தோன்றினாலோ மருத்துவ ஆலோசனை பெறுங்கள். சுவாசச் சிரமம் அல்லது பச்சை நிற வாந்தி இருந்தால் அவசர உதவி பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 5,
+    "min_week": 1,
+    "max_week": 12,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "newborn-bathing",
+    "category": "baby_care",
+    "title_en": "Bathing Your Newborn Safely",
+    "title_ta": "புதிதாகப் பிறந்த குழந்தையைப் பாதுகாப்பாகக் குளிப்பாட்டுதல்",
+    "body_en": "Newborns do not need a full bath every day. Choose a warm room, gather clean towels and clothes first, and check that the water is comfortably warm rather than hot. A small amount of plain water is usually sufficient for a newborn.\n\nSupport your baby's head and shoulders throughout the bath. Keep the face above water, wash gently and dry carefully, including skin folds. Never leave a baby alone in or near bathwater, even for a moment.\n\nFollow your maternity team's guidance about caring for the umbilical cord stump. Avoid herbal water, essential oils, strong fragrances and unverified mixtures on newborn skin. If you have questions about skin conditions or bathing products, ask your healthcare professional.",
+    "body_ta": "புதிதாகப் பிறந்த குழந்தையை தினமும் முழுமையாகக் குளிப்பாட்ட வேண்டிய அவசியமில்லை. அறை வெதுவெதுப்பாக இருப்பதை உறுதிசெய்து, துண்டு மற்றும் உடைகளை முன்கூட்டியே தயாராக வைத்துக்கொள்ளுங்கள். நீர் சூடாக இல்லாமல் மிதமான வெதுவெதுப்பாக இருக்க வேண்டும். பொதுவாக சாதாரண நீரே போதுமானது.\n\nகுளிப்பாட்டும் நேரம் முழுவதும் குழந்தையின் தலை மற்றும் தோள்களை ஆதரிக்கவும். முகம் நீருக்கு மேலே இருக்கட்டும். மெதுவாகக் கழுவி, தோல் மடிப்புகள் உட்பட நன்றாக உலர்த்துங்கள். ஒரு கணம்கூட குழந்தையை குளியல் நீரின் அருகில் தனியாக விட வேண்டாம்.\n\nதொப்புள் கொடி எஞ்சிய பகுதியைப் பராமரிப்பது குறித்து மகப்பேறு மருத்துவக் குழுவின் ஆலோசனையைப் பின்பற்றுங்கள். குழந்தையின் தோலில் மூலிகை நீர், எசென்ஷியல் ஆயில்கள், அதிக மணமுள்ள பொருட்கள், சரிபார்க்கப்படாத கலவைகள் ஆகியவற்றைத் தவிர்க்கவும். தோல் பிரச்சினைகள் அல்லது குளியல் பொருட்கள் குறித்து சந்தேகம் இருந்தால் சுகாதார நிபுணரிடம் கேளுங்கள்.",
+    "key_points_en": [
+      "A daily full bath is not necessary",
+      "Use comfortably warm plain water",
+      "Support the head and never leave baby unattended",
+      "Avoid herbal mixtures and essential oils"
+    ],
+    "key_points_ta": [
+      "தினமும் முழுக் குளியல் அவசியமில்லை",
+      "மிதமான வெதுவெதுப்பான சாதாரண நீரைப் பயன்படுத்தவும்",
+      "தலையை ஆதரித்து குழந்தையை தனியாக விட வேண்டாம்",
+      "மூலிகைக் கலவைகள் மற்றும் எசென்ஷியல் ஆயில்களைத் தவிர்க்கவும்"
+    ],
+    "doctor_note_en": "Seek medical advice if your baby has a spreading rash, fever, unusual lethargy or signs of infection around the umbilical stump.",
+    "doctor_note_ta": "குழந்தைக்கு பரவும் தோல் தடிப்பு, காய்ச்சல், வழக்கத்திற்கு மாறான மந்தநிலை அல்லது தொப்புள் பகுதியில் தொற்றுக்கான அறிகுறிகள் இருந்தால் மருத்துவ ஆலோசனை பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 6,
+    "min_week": 1,
+    "max_week": 12,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "safe-sleep",
+    "category": "baby_care",
+    "title_en": "Safe Sleep for Newborns",
+    "title_ta": "புதிதாகப் பிறந்த குழந்தையின் பாதுகாப்பான உறக்கம்",
+    "body_en": "Place your baby on their back for every sleep.\n\nUse a firm, flat sleep surface with a fitted sheet. Keep pillows, loose blankets, and soft toys out of the sleep space.\n\nRoom-sharing without bed-sharing is recommended for safer infant sleep.",
+    "body_ta": "ஒவ்வொரு உறக்கத்தின்போதும் குழந்தையை முதுகில் படுக்க வையுங்கள்.\n\nஉறுதியான, சமமான படுக்கை மேற்பரப்பைப் பயன்படுத்துங்கள். தலையணைகள், தளர்வான போர்வைகள் மற்றும் மென்மையான பொம்மைகளை உறங்கும் இடத்தில் வைக்க வேண்டாம்.\n\nகுழந்தையுடன் ஒரே அறையில், ஆனால் தனியான பாதுகாப்பான படுக்கையில் உறங்குவது பரிந்துரைக்கப்படுகிறது.",
+    "key_points_en": [
+      "Back for every sleep",
+      "Firm, flat sleep surface",
+      "No loose bedding or toys"
+    ],
+    "key_points_ta": [
+      "எப்போதும் முதுகில் படுக்க வைக்கவும்",
+      "உறுதியான சமமான படுக்கை",
+      "தளர்வான போர்வைகள் அல்லது பொம்மைகள் வேண்டாம்"
+    ],
+    "doctor_note_en": "Seek urgent medical help if your baby has breathing difficulties.",
+    "doctor_note_ta": "குழந்தைக்கு சுவாசிப்பதில் சிரமம் இருந்தால் உடனடி மருத்துவ உதவி பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1522771930-78848d9293e8?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 5,
+    "min_week": 1,
+    "max_week": 20,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "postpartum-recovery",
+    "category": "recovery",
+    "title_en": "Understanding Postpartum Recovery",
+    "title_ta": "பிரசவத்திற்குப் பிந்தைய உடல் மீட்பு",
+    "body_en": "Recovery after childbirth is different for every mother.\n\nRest when possible, accept practical support, and follow your healthcare professional's advice about activity.\n\nContact your healthcare team if symptoms are concerning or worsening.",
+    "body_ta": "பிரசவத்திற்குப் பிந்தைய மீட்பு ஒவ்வொரு தாய்க்கும் வேறுபடும்.\n\nமுடிந்தவரை ஓய்வெடுங்கள். தேவையான உதவியைப் பெறுங்கள். உடல் செயல்பாடுகள் குறித்து சுகாதார நிபுணரின் ஆலோசனையைப் பின்பற்றுங்கள்.\n\nஅறிகுறிகள் கவலைக்கிடமாக இருந்தாலோ மோசமடைந்தாலோ மருத்துவக் குழுவைத் தொடர்புகொள்ளுங்கள்.",
+    "key_points_en": [
+      "Recovery varies",
+      "Rest and accept support",
+      "Follow personalized medical advice"
+    ],
+    "key_points_ta": [
+      "மீட்பு ஒவ்வொருவருக்கும் வேறுபடும்",
+      "ஓய்வும் உதவியும் பெறுங்கள்",
+      "தனிப்பட்ட மருத்துவ ஆலோசனையைப் பின்பற்றுங்கள்"
+    ],
+    "doctor_note_en": "Seek urgent medical care for heavy bleeding, chest pain, breathing difficulties, severe headache, or other serious symptoms.",
+    "doctor_note_ta": "அதிக இரத்தப்போக்கு, மார்பு வலி, சுவாசச் சிரமம், கடுமையான தலைவலி அல்லது தீவிரமான அறிகுறிகள் இருந்தால் உடனடி மருத்துவ உதவி பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 5,
+    "min_week": 1,
+    "max_week": 12,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "traditional-herbal-bathing",
+    "category": "traditional",
+    "title_en": "Sri Lankan Tamil Postpartum Herbal Bathing: Tradition and Safety",
+    "title_ta": "இலங்கைத் தமிழர்களின் பிரசவத்திற்குப் பிந்தைய மூலிகைக் குளியல்: பாரம்பரியமும் பாதுகாப்பும்",
+    "body_en": "In some Sri Lankan Tamil families, postpartum bathing traditions include plant leaves or herbal water. Practices vary by family, region and individual preference. Some mothers do not use herbs at all, and that is completely fine. Traditional use is not proof of medical benefit or safety.\n\nNOCHI (Vitex negundo): Known in Tamil as nochi, this plant is mentioned in traditional bathing contexts. There is insufficient reliable evidence to recommend a postpartum bathing preparation or claim it speeds healing. Safety note: USE WITH CARE; avoid if you have reacted to it before, and do not apply to wounds or stitches.\n\nVEMBU / NEEM (Azadirachta indica): Neem leaves are used in some traditional practices. Neem-containing products can irritate skin or trigger allergic contact reactions in some people. Safety note: USE WITH CARE; do not assume that a stronger mixture is better. Never give neem oil or herbal preparations to a newborn.\n\nPAVATTA (Pavetta indica): Reported in accounts of traditional postpartum plant use. Local names may refer to different plants, so accurate identification matters. There is not enough evidence to establish safe postpartum bathing use. Safety note: USE WITH CARE; do not use unidentified plants.\n\nPARUTHI / COTTON PLANT (Gossypium herbaceum): Mentioned in some accounts of postpartum bathing traditions. Different plant parts have different properties, and a traditional mention does not establish safety. Safety note: USE WITH CARE; avoid preparations of unknown composition.\n\nThese are examples, not a recipe or a list of recommended ingredients. Do not mix or boil herbs based only on an online article. Avoid applying any herbal preparation to a healing C-section incision, perineal stitches, broken skin, eyes or mouth. If you have eczema, sensitive skin, a history of allergies or other medical concerns, seek individual advice first. Stop using a product if redness, itching or irritation develops. For a newborn, use plain comfortably warm water for bathing unless your healthcare professional advises otherwise.\n\nDISCLAIMER: This article documents cultural practices for educational purposes only. It does not establish that any listed herb is safe or effective for postpartum recovery, and it is not medical advice. Some mothers may have allergies or skin reactions. Discuss any planned herbal bathing with a qualified healthcare professional, especially after a C-section or when wounds are healing. Never use herbal mixtures on newborns without medical advice.",
+    "body_ta": "இலங்கைத் தமிழ்க் குடும்பங்களில் சிலர் பிரசவத்திற்குப் பிந்தைய குளியலில் இலைகள் அல்லது மூலிகை நீரைப் பயன்படுத்தும் பாரம்பரியத்தைக் கடைப்பிடிக்கிறார்கள். குடும்பம், பிரதேசம், தனிப்பட்ட விருப்பம் ஆகியவற்றைப் பொறுத்து முறைகள் மாறுபடும். எல்லாத் தாய்மார்களும் மூலிகைகளைப் பயன்படுத்துவதில்லை; பயன்படுத்தாமல் இருப்பதும் முற்றிலும் சரியானதே. பாரம்பரியப் பயன்பாடு மட்டுமே மருத்துவப் பலனையோ பாதுகாப்பையோ நிரூபிக்காது.\n\nநொச்சி (Vitex negundo): பாரம்பரியக் குளியல் முறைகளில் குறிப்பிடப்படும் தாவரம். பிரசவத்திற்குப் பிந்தைய குளியலில் இதைப் பரிந்துரைக்கவோ காயம் விரைவாக ஆறும் என்று கூறவோ போதிய நம்பகமான ஆதாரம் இல்லை. பாதுகாப்பு: கவனத்துடன் அணுகவும்; முன்பு ஒவ்வாமை ஏற்பட்டிருந்தால் தவிர்க்கவும். காயங்கள் அல்லது தையல்களில் பயன்படுத்த வேண்டாம்.\n\nவேம்பு (Azadirachta indica): சில பாரம்பரிய முறைகளில் வேப்பிலைகள் பயன்படுத்தப்படுகின்றன. வேம்பு சார்ந்த பொருட்கள் சிலருக்கு தோல் எரிச்சல் அல்லது ஒவ்வாமையை ஏற்படுத்தலாம். பாதுகாப்பு: கவனத்துடன் அணுகவும்; அதிக செறிவுள்ள கலவை சிறந்தது என்று நினைக்க வேண்டாம். வேப்பெண்ணெயையோ மூலிகைக் கலவைகளையோ புதிதாகப் பிறந்த குழந்தைக்குப் பயன்படுத்த வேண்டாம்.\n\nபாவட்டா (Pavetta indica): பிரசவத்திற்குப் பிந்தைய பாரம்பரியத் தாவரப் பயன்பாட்டைப் பற்றிய குறிப்புகளில் இடம்பெறுகிறது. உள்ளூர் பெயர்கள் வேறு தாவரங்களையும் குறிக்கக்கூடும்; சரியான அடையாளம் முக்கியம். குளியலில் பயன்படுத்துவதற்கான பாதுகாப்பு ஆதாரம் போதவில்லை. பாதுகாப்பு: கவனத்துடன் அணுகவும்; அடையாளம் தெரியாத தாவரங்களைப் பயன்படுத்த வேண்டாம்.\n\nபருத்திச் செடி (Gossypium herbaceum): சில பாரம்பரியக் குறிப்புகளில் இடம்பெறுகிறது. தாவரத்தின் வெவ்வேறு பகுதிகளுக்கு வெவ்வேறு தன்மைகள் இருக்கலாம். பாரம்பரியத்தில் இடம்பெறுவது பாதுகாப்புக்கான சான்றல்ல. பாதுகாப்பு: கவனத்துடன் அணுகவும்; சேர்க்கைகள் தெரியாத கலவைகளைத் தவிர்க்கவும்.\n\nஇவை பாரம்பரியப் பயன்பாட்டுக்கான எடுத்துக்காட்டுகள் மட்டுமே; மூலிகைக் கலவை தயாரிக்கும் செய்முறையோ பரிந்துரைக்கப்பட்ட பொருட்களின் பட்டியலோ அல்ல. இணையக் கட்டுரையை மட்டும் வைத்து மூலிகைகளைக் கலந்து காய்ச்சிப் பயன்படுத்த வேண்டாம். ஆறிக்கொண்டிருக்கும் சிசேரியன் அறுவைச் சிகிச்சைக் காயம், தையல்கள், தோல் காயங்கள், கண்கள், வாய் ஆகியவற்றில் மூலிகைக் கலவைகளைப் பயன்படுத்த வேண்டாம். தோல் ஒவ்வாமை, எக்சிமா அல்லது உணர்திறன் அதிகமான தோல் இருந்தால் தனிப்பட்ட மருத்துவ ஆலோசனை பெறுங்கள். சிவத்தல், அரிப்பு அல்லது எரிச்சல் ஏற்பட்டால் பயன்படுத்துவதை நிறுத்துங்கள். புதிதாகப் பிறந்த குழந்தையைக் குளிப்பாட்ட பொதுவாக மிதமான வெதுவெதுப்பான சாதாரண நீரைப் பயன்படுத்துங்கள்.\n\nமுக்கிய அறிவிப்பு: இந்தக் கட்டுரை பாரம்பரிய வழக்கங்களை அறிமுகப்படுத்தும் கல்வித் தகவல் மட்டுமே. இங்கு குறிப்பிடப்பட்ட எந்த மூலிகையும் பிரசவத்திற்குப் பிந்தைய மீட்புக்கு பாதுகாப்பானது அல்லது பயனுள்ளது என்று உறுதிப்படுத்தவில்லை; இது மருத்துவ ஆலோசனை அல்ல. சிலருக்கு ஒவ்வாமை அல்லது தோல் பாதிப்பு ஏற்படலாம். குறிப்பாக சிசேரியன் பிரசவத்திற்குப் பிறகும் காயங்கள் ஆறிக்கொண்டிருக்கும்போதும் தகுதியான சுகாதார நிபுணரிடம் ஆலோசனை பெறுங்கள். மருத்துவ ஆலோசனையின்றி புதிதாகப் பிறந்த குழந்தைகளுக்கு மூலிகைக் கலவைகளைப் பயன்படுத்த வேண்டாம்.",
+    "key_points_en": [
+      "Practices vary; no mother needs to use herbs",
+      "No listed herb is established as safe or effective for postpartum recovery",
+      "Allergy and skin irritation are possible",
+      "Avoid herbs on wounds and stitches",
+      "Plain warm water is the default for newborn bathing"
+    ],
+    "key_points_ta": [
+      "பாரம்பரிய முறைகள் மாறுபடும்; மூலிகை பயன்படுத்துவது கட்டாயமல்ல",
+      "குறிப்பிடப்பட்ட மூலிகைகள் பாதுகாப்பானவை அல்லது பயனுள்ளவை என்று நிரூபிக்கப்படவில்லை",
+      "ஒவ்வாமை மற்றும் தோல் எரிச்சல் ஏற்படலாம்",
+      "காயங்கள் மற்றும் தையல்களில் மூலிகைகளைத் தவிர்க்கவும்",
+      "குழந்தைகளின் குளியலுக்கு சாதாரண வெதுவெதுப்பான நீர் பொதுவான தேர்வு"
+    ],
+    "doctor_note_en": "Stop use and seek medical advice for rash, swelling or worsening irritation. Seek urgent help for breathing difficulty or swelling of the face or throat. Contact your maternity team for fever, wound redness, discharge or worsening pain.",
+    "doctor_note_ta": "தடிப்பு, வீக்கம் அல்லது அதிகரிக்கும் எரிச்சல் ஏற்பட்டால் பயன்படுத்துவதை நிறுத்தி மருத்துவ ஆலோசனை பெறுங்கள். சுவாசச் சிரமம் அல்லது முகம், தொண்டை வீக்கம் ஏற்பட்டால் அவசர உதவி பெறுங்கள். காய்ச்சல், காயத்தில் சிவத்தல், சீழ் போன்ற வெளியேற்றம் அல்லது அதிகரிக்கும் வலி இருந்தால் மகப்பேறு மருத்துவக் குழுவைத் தொடர்புகொள்ளுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 9,
+    "min_week": null,
+    "max_week": null,
+    "delivery_type": "any",
+    "safety_label": "use_with_care",
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "pelvic-bladder-awareness",
+    "category": "pelvic",
+    "title_en": "Pelvic & Bladder Health",
+    "title_ta": "இடுப்புத் தசை மற்றும் சிறுநீர்ப்பை ஆரோக்கியம்",
+    "body_en": "Changes in bladder control can happen after childbirth.\n\nSpeak with a healthcare professional if you notice leaking, discomfort, or difficulty emptying your bladder.\n\nIndividual guidance is important before beginning pelvic floor exercises.",
+    "body_ta": "பிரசவத்திற்குப் பிறகு சிறுநீரைக் கட்டுப்படுத்துவதில் மாற்றங்கள் ஏற்படலாம்.\n\nசிறுநீர் கசிவு, அசௌகரியம் அல்லது சிறுநீர்ப்பையை காலி செய்வதில் சிரமம் இருந்தால் சுகாதார நிபுணரிடம் பேசுங்கள்.\n\nஇடுப்புத் தசைப் பயிற்சிகளைத் தொடங்கும் முன் தனிப்பட்ட ஆலோசனை பெறுவது முக்கியம்.",
+    "key_points_en": [
+      "Notice changes in bladder control",
+      "Ask for professional guidance",
+      "Exercises should suit your recovery"
+    ],
+    "key_points_ta": [
+      "சிறுநீர்க் கட்டுப்பாட்டில் மாற்றங்களைக் கவனிக்கவும்",
+      "மருத்துவ ஆலோசனை பெறவும்",
+      "பயிற்சிகள் உங்கள் மீட்புக்கு ஏற்றதாக இருக்க வேண்டும்"
+    ],
+    "doctor_note_en": "Seek prompt medical advice if you cannot pass urine, have fever, or have significant pain.",
+    "doctor_note_ta": "சிறுநீர் கழிக்க முடியாவிட்டால், காய்ச்சல் இருந்தால் அல்லது அதிக வலி இருந்தால் விரைவாக மருத்துவ ஆலோசனை பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 4,
+    "min_week": 1,
+    "max_week": 24,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "postpartum-faq",
+    "category": "faq",
+    "title_en": "Common Postpartum Questions",
+    "title_ta": "பிரசவத்திற்குப் பிந்தைய பொதுவான கேள்விகள்",
+    "body_en": "How long does recovery take?\nRecovery varies from person to person.\n\nCan I ask for help?\nYes. Practical and emotional support can be valuable.\n\nShould I attend follow-up appointments?\nYes. Follow the schedule recommended by your healthcare professional.",
+    "body_ta": "மீட்புக்கு எவ்வளவு காலம் ஆகும்?\nஒவ்வொருவருக்கும் மீட்புக் காலம் வேறுபடும்.\n\nஉதவி கேட்கலாமா?\nஆம். நடைமுறை மற்றும் உணர்வுபூர்வமான ஆதரவு உதவியாக இருக்கும்.\n\nமருத்துவப் பரிசோதனைகளுக்குச் செல்ல வேண்டுமா?\nஆம். உங்கள் சுகாதார நிபுணர் பரிந்துரைத்த அட்டவணையைப் பின்பற்றுங்கள்.",
+    "key_points_en": [
+      "Every recovery is different",
+      "Support matters",
+      "Keep follow-up appointments"
+    ],
+    "key_points_ta": [
+      "ஒவ்வொருவரின் மீட்பும் வேறுபடும்",
+      "ஆதரவு முக்கியம்",
+      "தொடர் மருத்துவப் பரிசோதனைகளை மேற்கொள்ளவும்"
+    ],
+    "doctor_note_en": "Contact a healthcare professional whenever symptoms concern you.",
+    "doctor_note_ta": "உங்களுக்கு கவலையளிக்கும் அறிகுறிகள் இருந்தால் சுகாதார நிபுணரைத் தொடர்புகொள்ளுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 3,
+    "min_week": null,
+    "max_week": null,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  },
+  {
+    "slug": "cycle-awareness",
+    "category": "cycle",
+    "title_en": "Cycle Awareness After Birth",
+    "title_ta": "பிரசவத்திற்குப் பிந்தைய மாதவிடாய் விழிப்புணர்வு",
+    "body_en": "The return of menstrual periods after childbirth varies.\n\nBreastfeeding and individual hormonal changes can influence timing.\n\nA cycle log can help you notice patterns, but it cannot predict fertility reliably or diagnose a condition.",
+    "body_ta": "பிரசவத்திற்குப் பிறகு மாதவிடாய் மீண்டும் தொடங்கும் காலம் ஒவ்வொருவருக்கும் வேறுபடும்.\n\nதாய்ப்பால் கொடுப்பதும் தனிப்பட்ட ஹார்மோன் மாற்றங்களும் காலத்தைப் பாதிக்கலாம்.\n\nமாதவிடாய் பதிவேடு மாற்றங்களைக் கவனிக்க உதவும். ஆனால் கருவுறும் காலத்தை நம்பத்தகுந்த வகையில் கணிக்கவோ நோயைக் கண்டறியவோ முடியாது.",
+    "key_points_en": [
+      "Timing varies",
+      "Breastfeeding can affect cycles",
+      "Cycle tracking is not a diagnosis"
+    ],
+    "key_points_ta": [
+      "காலம் மாறுபடும்",
+      "தாய்ப்பால் கொடுப்பது மாதவிடாயைப் பாதிக்கலாம்",
+      "பதிவு செய்வது நோயறிதல் அல்ல"
+    ],
+    "doctor_note_en": "Seek medical advice for unusually heavy bleeding, severe pain, or other concerning symptoms.",
+    "doctor_note_ta": "வழக்கத்திற்கு மாறாக அதிக இரத்தப்போக்கு, கடுமையான வலி அல்லது கவலைக்கிடமான அறிகுறிகள் இருந்தால் மருத்துவ ஆலோசனை பெறுங்கள்.",
+    "image_url": "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?w=1000&auto=format&fit=crop&q=80",
+    "read_time": 4,
+    "min_week": null,
+    "max_week": null,
+    "delivery_type": "any",
+    "safety_label": null,
+    "reviewed_by": null,
+    "review_date": null,
+    "published": true
+  }
+]
