@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import {
   Footprints,
@@ -56,14 +57,17 @@ export default function TodayOverview({
   onQuickLog,
   onNavigate,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   return (
     <section className="rounded-[26px] border border-[#F3E2E6] bg-white p-6 shadow-sm">
       <div className="mb-6">
         <h2 className="font-['Playfair_Display'] text-xl font-semibold text-[#3A1224]">
-          Today at a Glance
+          {uiText('today_at_a_glance')}
         </h2>
         <p className="mt-1 text-xs text-[#987B86]">
-          Your daily activity, all in one place
+          {localizeCopy('common:your_daily_activity_all_in_one_place')}
         </p>
       </div>
 
@@ -116,7 +120,7 @@ export default function TodayOverview({
                   className="mt-4 flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[#7B2346]"
                 >
                   <Plus size={13} />
-                  {item.action === 'walk' ? 'Add 10 min' : 'Add 1 glass'}
+                  {item.action === 'walk' ? auditText('common:add_10_min') : auditText('common:add_1_glass')}
                 </button>
               )}
             </div>

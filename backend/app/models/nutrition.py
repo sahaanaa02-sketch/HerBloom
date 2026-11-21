@@ -162,6 +162,19 @@ class FoodLog(Base):
     )
 
 
+class FoodLogSave(Base):
+    __tablename__ = "food_log_saves"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", name="fk_food_log_saves_user", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    request_key: Mapped[str] = mapped_column(String(36), primary_key=True)
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    # Keep the original response ID even when a diary entry is later deleted.
+    response_id: Mapped[int] = mapped_column(Integer)
+
+
 class FavoriteFood(Base):
     __tablename__ = "favorite_foods"
     __table_args__ = (

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useEffect, useState } from 'react'
 import {
@@ -24,6 +25,9 @@ export default function WeeklyMealPlan({
   plan,
   onRefresh,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [history, setHistory] = useState([])
@@ -152,10 +156,10 @@ export default function WeeklyMealPlan({
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-6">
         <div>
           <h3 className="font-['Playfair_Display'] text-2xl text-[#7B2346]">
-            My 7-Day Meal Plan
+            {uiText('my_7_day_meal_plan')}
           </h3>
           <p className="mt-2 text-sm text-[#977A86]">
-            Seven days · Five meal slots per day
+            {auditText('common:seven_days_five_meal_slots_per_day')}
           </p>
         </div>
 
@@ -167,7 +171,7 @@ export default function WeeklyMealPlan({
             className="flex items-center gap-2 rounded-full border border-[#E5C8D3] px-4 py-3 text-sm text-[#7B2346]"
           >
             <History size={16} />
-            Past Plans
+            {uiText('past_plans')}
           </button>
 
           <button
@@ -177,7 +181,7 @@ export default function WeeklyMealPlan({
             className="flex items-center gap-2 rounded-full bg-[#7B2346] px-5 py-3 text-sm text-white disabled:opacity-50"
           >
             <RefreshCw size={16} />
-            {busy ? 'Please wait...' : 'Generate This Week'}
+            {busy ? localizeCopy('auth:please_wait') : auditText('common:generate_this_week')}
           </button>
         </div>
       </div>
@@ -191,7 +195,7 @@ export default function WeeklyMealPlan({
       {showHistory ? (
         <div className="rounded-3xl border border-[#F2DFE5] bg-white p-6">
           <h4 className="mb-5 font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Previous Meal Plans
+            {uiText('previous_meal_plans')}
           </h4>
 
           {history.length ? (
@@ -203,14 +207,14 @@ export default function WeeklyMealPlan({
                   onClick={() => openPlan(entry.id)}
                   className="flex w-full items-center justify-between rounded-2xl bg-[#FFF6F1] p-4 text-left text-sm text-[#7B2346]"
                 >
-                  Week starting {entry.start_date}
+                  {uiText('week_starting')} {entry.start_date}
                   <CalendarDays size={18} />
                 </button>
               ))}
             </div>
           ) : (
             <p className="text-sm text-[#977A86]">
-              No previous plans available.
+              {auditText('common:no_previous_plans_available')}
             </p>
           )}
 
@@ -220,7 +224,7 @@ export default function WeeklyMealPlan({
             className="mt-5 flex items-center gap-2 text-sm text-[#7B2346]"
           >
             <ArrowLeft size={16} />
-            Back
+            {uiText('back')}
           </button>
         </div>
       ) : (
@@ -235,7 +239,7 @@ export default function WeeklyMealPlan({
               className="flex items-center gap-2 text-sm text-[#7B2346]"
             >
               <ArrowLeft size={16} />
-              Back to Latest Plan
+              {auditText('common:back_to_latest_plan')}
             </button>
           )}
 
@@ -246,11 +250,10 @@ export default function WeeklyMealPlan({
                 className="mx-auto mb-4 text-[#7B2346]"
               />
               <p className="text-[#7B2346]">
-                Your weekly meal plan is not generated yet.
+                {auditText('common:your_weekly_meal_plan_is_not_generated_yet')}
               </p>
               <p className="mt-3 text-sm text-[#977A86]">
-                Reviewed food data and dietary safety checks
-                are required before generating a plan.
+                {auditText('common:reviewed_food_data_and_dietary_safety_checks_are_required_before_generating_a_plan')}
               </p>
             </div>
           )}
@@ -278,7 +281,7 @@ export default function WeeklyMealPlan({
                 <h4 className="mb-5 font-['Playfair_Display'] text-xl text-[#7B2346]">
                   {displayDate
                     ? `${dayName(displayDate)} · ${displayDate}`
-                    : 'Meal Plan'}
+                    : auditText('common:meal_plan')}
                 </h4>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -296,7 +299,7 @@ export default function WeeklyMealPlan({
                       </p>
 
                       <p className="mt-2 text-xs text-[#977A86]">
-                        Suggested portion: {item.grams} g
+                        {auditText('common:suggested_portion')} {item.grams} g
                       </p>
 
                       <div className="mt-5 flex flex-wrap gap-2">
@@ -311,7 +314,7 @@ export default function WeeklyMealPlan({
                           }`}
                         >
                           <CheckCircle2 size={14} />
-                          {item.eaten ? 'Eaten' : 'I Ate This'}
+                          {item.eaten ? auditText('common:eaten') : auditText('common:i_ate_this')}
                         </button>
 
                         <button
@@ -320,7 +323,7 @@ export default function WeeklyMealPlan({
                           onClick={() => swap(item)}
                           className="rounded-full border border-[#E5C8D3] px-3 py-2 text-xs text-[#7B2346] disabled:opacity-50"
                         >
-                          Swap
+                          {auditText('common:swap')}
                         </button>
                       </div>
                     </div>

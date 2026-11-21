@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useEffect, useState } from 'react'
 import {
@@ -39,6 +40,9 @@ export default function DailyFoodLog({
   data,
   onRefresh,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [foods, setFoods] = useState([])
   const [favourites, setFavourites] = useState([])
 
@@ -196,7 +200,7 @@ export default function DailyFoodLog({
     setSuccess('')
 
     if (!foodId) {
-      setError('Please select a food.')
+      setError(auditText('common:please_select_a_food'))
       return
     }
 
@@ -205,7 +209,7 @@ export default function DailyFoodLog({
     if (!Number.isFinite(amount) ||
         amount <= 0 ||
         amount > 3000) {
-      setError('Enter a valid portion between 1 and 3000 grams.')
+      setError(auditText('common:enter_a_valid_portion_between_1_and_3000_grams'))
       return
     }
 
@@ -225,14 +229,14 @@ export default function DailyFoodLog({
           payload
         )
 
-        setSuccess('Meal updated successfully.')
+        setSuccess(auditText('common:meal_updated_successfully'))
       } else {
         await nutritionApi.addMeal(token, {
           ...payload,
           date: selectedDate || null,
         })
 
-        setSuccess('Meal saved successfully.')
+        setSuccess(auditText('common:meal_saved_successfully'))
       }
 
       resetForm()
@@ -247,7 +251,7 @@ export default function DailyFoodLog({
   // Delete meal
   async function deleteMeal(id) {
     const confirmed = window.confirm(
-      'Are you sure you want to delete this meal?'
+      auditText('common:are_you_sure_you_want_to_delete_this_meal')
     )
 
     if (!confirmed) return
@@ -264,7 +268,7 @@ export default function DailyFoodLog({
         resetForm()
       }
 
-      setSuccess('Meal deleted successfully.')
+      setSuccess(auditText('common:meal_deleted_successfully'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -338,7 +342,7 @@ export default function DailyFoodLog({
       >
         <div className="flex items-center justify-between">
           <h3 className="font-['Playfair_Display'] text-2xl text-[#7B2346]">
-            {editingId ? 'Edit Meal' : 'Add a Meal'}
+            {editingId ? auditText('common:edit_meal') : auditText('common:add_a_meal')}
           </h3>
 
           {editingId && (
@@ -346,7 +350,7 @@ export default function DailyFoodLog({
               type="button"
               onClick={resetForm}
               className="rounded-lg p-2 text-[#7B2346]"
-              aria-label="Cancel editing"
+              aria-label={localizeCopy('common:cancel_editing')}
             >
               <X size={20} />
             </button>
@@ -355,7 +359,7 @@ export default function DailyFoodLog({
 
         {/* SEARCH FOOD */}
         <label className="block text-sm text-[#7B2346]">
-          Search food
+          {uiText('search_food')}
 
           <div className="mt-2 flex items-center gap-2 rounded-xl border border-[#EAD6DE] px-3">
             <Search
@@ -370,7 +374,7 @@ export default function DailyFoodLog({
                 setQuery(e.target.value)
                 setFoodId('')
               }}
-              placeholder="Rice, dhal, pittu..."
+              placeholder={auditText('common:rice_dhal_pittu')}
               className="w-full py-3 outline-none"
             />
           </div>
@@ -378,7 +382,7 @@ export default function DailyFoodLog({
 
         {/* SELECT FOOD */}
         <label className="block text-sm text-[#7B2346]">
-          Select food
+          {uiText('select_food')}
 
           <select
             required
@@ -389,7 +393,7 @@ export default function DailyFoodLog({
             className="mt-2 w-full rounded-xl border border-[#EAD6DE] p-3"
           >
             <option value="">
-              Choose a food
+              {uiText('choose_a_food')}
             </option>
 
             {visibleFoods.map((food) => (
@@ -400,7 +404,7 @@ export default function DailyFoodLog({
                 {food.name_en}
                 {food.verified
                   ? ''
-                  : ' (unverified)'}
+                  : auditText('common:unverified')}
               </option>
             ))}
           </select>
@@ -408,7 +412,7 @@ export default function DailyFoodLog({
 
         {/* MEAL TYPE */}
         <label className="block text-sm text-[#7B2346]">
-          Meal type
+          {localizeCopy('mother:scanner_meal_type')}
 
           <select
             value={mealType}
@@ -430,7 +434,7 @@ export default function DailyFoodLog({
 
         {/* PORTION */}
         <label className="block text-sm text-[#7B2346]">
-          Portion in grams
+          {localizeCopy('mother:scanner_portion_in_grams')}
 
           <input
             type="number"
@@ -467,16 +471,14 @@ export default function DailyFoodLog({
           className="w-full rounded-full bg-[#7B2346] py-3 font-semibold text-white transition hover:bg-[#5C1935] disabled:opacity-50"
         >
           {busy
-            ? 'Saving...'
+            ? localizeCopy('common:saving_dots')
             : editingId
-              ? 'Update Meal'
-              : 'Save Meal'}
+              ? auditText('common:update_meal')
+              : auditText('common:save_meal')}
         </button>
 
         <p className="text-xs leading-5 text-[#977A86]">
-          Food portions are estimates. Nutrient totals
-          use only verified food data. Missing nutrient
-          values do not mean zero intake.
+          {auditText('common:food_portions_are_estimates_nutrient_totals_use_only_verified_food_data_missing_nutrient_values_do_not_mean_zero_intake')}
         </p>
       </form>
 
@@ -486,12 +488,12 @@ export default function DailyFoodLog({
         {/* FOOD JOURNAL */}
         <div className="rounded-3xl border border-[#F2DFE5] bg-white p-6">
           <h3 className="mb-5 font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Food Journal
+            {auditText('common:food_journal')}
           </h3>
 
           {/* DATE PICKER */}
           <label className="block text-sm text-[#795C69]">
-            View date
+            {auditText('common:view_date')}
 
             <input
               type="date"
@@ -523,7 +525,7 @@ export default function DailyFoodLog({
             }}
             className="mt-3 text-xs font-semibold text-[#7B2346] hover:underline"
           >
-            View Today
+            {auditText('common:view_today')}
           </button>
 
           <p className="mt-3 text-xs text-[#977A86]">
@@ -535,7 +537,7 @@ export default function DailyFoodLog({
           {/* FOOD LOG ITEMS */}
           {!displayed?.meals?.length ? (
             <p className="mt-5 rounded-xl bg-[#FFF6F1] p-5 text-sm text-[#977A86]">
-              No meals recorded for this date.
+              {auditText('common:no_meals_recorded_for_this_date')}
             </p>
           ) : (
             <div className="mt-5 space-y-3">
@@ -562,7 +564,7 @@ export default function DailyFoodLog({
                       {meal.verified &&
                       meal.nutrients
                         ? `${meal.nutrients.calories} kcal`
-                        : 'Nutrient data unavailable'}
+                        : auditText('common:nutrient_data_unavailable')}
                     </p>
                   </div>
 
@@ -575,7 +577,7 @@ export default function DailyFoodLog({
                         startEdit(meal)
                       }
                       className="rounded-lg p-2 text-[#7B2346] hover:bg-[#F6D3DB] disabled:opacity-50"
-                      aria-label="Edit meal"
+                      aria-label={auditText('common:edit_meal_2')}
                     >
                       <Pencil size={17} />
                     </button>
@@ -588,7 +590,7 @@ export default function DailyFoodLog({
                         deleteMeal(meal.id)
                       }
                       className="rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:opacity-50"
-                      aria-label="Delete meal"
+                      aria-label={auditText('common:delete_meal')}
                     >
                       <Trash2 size={17} />
                     </button>
@@ -602,13 +604,13 @@ export default function DailyFoodLog({
         {/* FOOD FAVOURITES */}
         <div className="rounded-3xl border border-[#F2DFE5] bg-white p-6">
           <h3 className="mb-4 font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Food Favourites
+            {auditText('common:food_favourites')}
           </h3>
 
           <div className="max-h-64 space-y-2 overflow-y-auto">
             {foods.length === 0 ? (
               <p className="text-sm text-[#977A86]">
-                No foods available.
+                {auditText('common:no_foods_available')}
               </p>
             ) : (
               foods.map((food) => {

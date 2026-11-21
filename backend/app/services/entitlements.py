@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import inspect
+from sqlalchemy import case, column, func, inspect, select, table
 from sqlalchemy.exc import IntegrityError
 
 from app.services import free_quota
@@ -46,6 +46,26 @@ def periods(db, user_id):
         "SELECT id,plan_code,starts_at_utc,ends_at_utc FROM entitlement_periods "
         "WHERE user_id=%s ORDER BY starts_at_utc,id", (user_id,)
     ).all()
+
+
+def current_plan_expression(db, users, now):
+    """Resolve the A12 plan for an audience without loading individual accounts."""
+    if not ready(db) or not free_quota.ready(db):
+        return None
+    active = table("entitlement_periods", column("id"), column("user_id"),
+                   column("plan_code"), column("starts_at_utc"), column("ends_at_utc"))
+    stamp = utc_naive(now)
+    paid_or_trial = (
+        select(active.c.plan_code)
+        .where(active.c.user_id == users.c.id, active.c.starts_at_utc <= stamp, stamp < active.c.ends_at_utc)
+        .order_by(active.c.starts_at_utc, active.c.id)
+        .limit(1)
+        .correlate(users)
+        .scalar_subquery()
+    )
+    # Unavailable or future activation anchors are also rejected by current().
+    return case((column("activated_at_utc", _selectable=users) <= stamp,
+                 func.coalesce(paid_or_trial, "free")))
 
 
 def current(db, user_id, now, anchor=None):

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useState } from 'react'
 import {
   Camera,
@@ -22,11 +23,11 @@ import { nutritionApi } from '../../services/nutritionApi'
 
 
 const TABS = [
-  { id: 'today', label: 'Today' },
-  { id: 'food', label: 'Food Log' },
-  { id: 'plan', label: 'Meal Plan' },
-  { id: 'anaemia', label: 'Anaemia Care' },
-  { id: 'gdm', label: 'GDM Follow-up' },
+  { id: 'today', label: 'common:today' },
+  { id: 'food', label: 'common:food_log' },
+  { id: 'plan', label: 'common:meal_plan' },
+  { id: 'anaemia', label: 'common:anaemia_care' },
+  { id: 'gdm', label: 'common:gdm_follow_up' },
 ]
 
 
@@ -35,6 +36,9 @@ export default function Nutrition({
   onLogout,
   onNavigate,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const token = user?.access_token
 
   const [tab, setTab] = useState('today')
@@ -96,7 +100,7 @@ export default function Nutrition({
     if (failures.length) {
       setError(
         failures[0].reason?.message ||
-        'Some nutrition information could not be loaded.'
+        "common:some_nutrition_information_could_not_be_loaded"
       )
     } else {
       setError('')
@@ -150,19 +154,19 @@ export default function Nutrition({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#D9A25B]">
-              HERBLOOM NOURISHMENT
+              {auditText('common:herbloom_nourishment')}
             </p>
 
             <h1 className="font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346] md:text-4xl">
-              Nutrition and Anaemia
+              {uiText('nutrition_and_anaemia')}
             </h1>
 
             <p className="mt-2 text-sm text-[#947684]">
-              Fuel well, boost your nutrients and recover better.
+              {auditText('common:fuel_well_boost_your_nutrients_and_recover_better')}
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <button
               type="button"
               onClick={refresh}
@@ -173,7 +177,7 @@ export default function Nutrition({
                 size={16}
                 className={refreshing ? 'animate-spin' : ''}
               />
-              Refresh
+              {uiText('refresh')}
             </button>
 
             <button
@@ -182,26 +186,26 @@ export default function Nutrition({
               className="flex items-center gap-2 rounded-full bg-[#7B2346] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#5F1937]"
             >
               <Camera size={17} />
-              Scan Food
+              {uiText('scan_food')}
             </button>
           </div>
         </div>
 
         {/* TABS */}
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2.5">
           {TABS.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
-              className={`rounded-full px-5 py-3 text-xs font-semibold transition ${
+              className={`min-h-11 rounded-full px-4 py-2.5 text-xs font-semibold sm:px-5 transition ${
                 tab === item.id
                   ? 'bg-[#7B2346] text-white shadow-md'
                   : 'bg-[#F6D3DB]/65 text-[#7B2346] hover:bg-[#F6D3DB]'
               }`}
             >
-              {item.label}
+              {localizeCopy(item.label)}
             </button>
           ))}
         </div>
@@ -211,7 +215,7 @@ export default function Nutrition({
         {error && (
           <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             <AlertCircle size={19} className="shrink-0" />
-            <span>{error}</span>
+            <span>{error.startsWith('common:') ? auditText(error) : error}</span>
           </div>
         )}
 
@@ -223,7 +227,7 @@ export default function Nutrition({
               <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#F6D3DB] border-t-[#7B2346]" />
 
               <p className="text-sm text-[#7B2346]">
-                Loading your nutrition information...
+                {localizeCopy('common:loading_your_nutrition_information')}
               </p>
             </div>
           </div>
@@ -243,16 +247,15 @@ export default function Nutrition({
                     onRefresh={refresh}
                   />
 
-                  <div className="rounded-3xl bg-gradient-to-br from-[#7B2346] to-[#A94C6B] p-7 text-white">
+                  <div className="rounded-3xl bg-gradient-to-br from-[#7B2346] to-[#A94C6B] p-5 text-white sm:p-7">
                     <Utensils size={28} className="mb-5 text-[#F5C4D2]" />
 
                     <h3 className="font-['Playfair_Display'] text-2xl">
-                      Your Food Journal
+                      {uiText('your_food_journal')}
                     </h3>
 
                     <p className="mt-3 text-sm leading-7 text-white/80">
-                      Record meals, explore Sri Lankan food ideas
-                      and keep your nutrition journey organized.
+                      {auditText('common:record_meals_explore_sri_lankan_food_ideas_and_keep_your_nutrition_journey_organized')}
                     </p>
 
                     <button
@@ -260,7 +263,7 @@ export default function Nutrition({
                       onClick={openFoodLog}
                       className="mt-6 rounded-full bg-white px-5 py-3 text-xs font-semibold text-[#7B2346]"
                     >
-                      Open Food Log
+                      {auditText('common:open_food_log')}
                     </button>
                   </div>
                 </div>
@@ -323,6 +326,7 @@ export default function Nutrition({
       {scannerOpen && (
         <MealScanner
           token={token}
+          onViewPlan={() => { setScannerOpen(false); onNavigate?.('settings-plan') }}
           onClose={() => setScannerOpen(false)}
           onSaved={refresh}
         />

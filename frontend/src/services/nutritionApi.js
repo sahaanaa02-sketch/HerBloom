@@ -25,7 +25,7 @@ async function request(path, token, options = {}) {
           ? detail.map((e) => e.msg).join(', ')
           : `Request failed (${response.status})`
 
-    throw new Error(message)
+    throw Object.assign(new Error(message), { status: response.status })
   }
 
   return data
@@ -47,9 +47,10 @@ export const nutritionApi = {
       token
     ),
 
-  addMeal: (token, payload) =>
+  addMeal: (token, payload, requestKey) =>
     request('/nutrition/meals', token, {
       method: 'POST',
+      headers: requestKey ? { 'Idempotency-Key': requestKey } : undefined,
       body: JSON.stringify(payload),
     }),
 

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, TextField } from '@mui/material'
 import { Bar, ComposedChart, CartesianGrid, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -16,13 +17,16 @@ const formatCount = (num) => num == null ? 'Unavailable' : Number(num).toLocaleS
 const formatCost = (num) => num == null ? 'Unavailable' : '$' + Number(num).toFixed(6)
 
 function Usage({ data, filter, update }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   return <section className="space-y-4">
     <div className="flex flex-wrap gap-3">
-      {['start','end'].map((key)=><TextField key={key} type="date" size="small" label={key==='start'?'From (UTC)':'Through (UTC)'}
+      {['start','end'].map((key)=><TextField key={key} type="date" size="small" label={key==='start'?localizeCopy('common:from_utc'):localizeCopy('common:through_utc')}
         value={filter[key]||data?.[key]||''} slotProps={{inputLabel:{shrink:true},htmlInput:{max:data?.as_of}}}
         onChange={(event)=>update(key,event.target.value)}/>)}
-      <TextField select size="small" label="Feature" value={filter.feature||''} onChange={(event)=>update('feature',event.target.value)}>
-        <MenuItem value="">All features</MenuItem>
+      <TextField select size="small" label={uiText('feature')} value={filter.feature||''} onChange={(event)=>update('feature',event.target.value)}>
+        <MenuItem value="">{uiText('all_features')}</MenuItem>
         {Object.entries(features).map(([id,label])=><MenuItem key={id} value={id}>{label}</MenuItem>)}
       </TextField>
     </div>
@@ -36,8 +40,8 @@ function Usage({ data, filter, update }) {
         ].map(([label,value])=><div className="ha-stat-card" key={label}><p>{label}</p><strong>{value}</strong></div>)}
       </div>
       <section className="ha-panel">
-        <h3>Daily calls and estimated cost</h3>
-        {data.totals.calls===0&&<p>No AI requests in the selected range.</p>}
+        <h3>{uiText('daily_calls_and_estimated_cost')}</h3>
+        {data.totals.calls===0&&<p>{uiText('no_ai_requests_in_the_selected_range')}</p>}
         <div className="ha-safety-chart">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data.daily} accessibilityLayer>
@@ -53,7 +57,7 @@ function Usage({ data, filter, update }) {
         </div>
       </section>
       <section className="ha-panel overflow-x-auto">
-        <h3>Usage by feature</h3>
+        <h3>{uiText('usage_by_feature')}</h3>
         <table className="w-full text-left text-sm"><thead><tr>
           {['Feature','Calls','Input tokens','Output tokens','Priced calls','Estimated cost'].map((label)=><th className="p-2" key={label}>{label}</th>)}
         </tr></thead><tbody>
@@ -63,15 +67,17 @@ function Usage({ data, filter, update }) {
           </tr>)}
         </tbody></table>
       </section>
-      <section className="ha-panel"><h3>Scanner correction rate</h3>
-        <p>{data.scanner.correction_rate==null?'No reviews recorded.':data.scanner.correction_rate+'% of reviewed scans were corrected.'}</p>
-        <p>{data.scanner.corrected} corrected · {data.scanner.reviewed} reviewed · {data.scanner.successful} successful scans</p>
+      <section className="ha-panel"><h3>{uiText('scanner_correction_rate')}</h3>
+        <p>{data.scanner.correction_rate==null?localizeCopy('common:no_reviews_recorded'):data.scanner.correction_rate+'% of reviewed scans were corrected.'}</p>
+        <p>{data.scanner.corrected} {auditText('common:corrected')} {data.scanner.reviewed} {auditText('common:reviewed')} {data.scanner.successful} {auditText('common:successful_scans')}</p>
       </section>
     </>}
   </section>
 }
 
 function ConfigForm({ row, models, disabled, onSave }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [form,setForm] = useState(row)
   const update = (key,value)=>setForm((current)=>({...current,[key]:value}))
   function save(event) {
@@ -81,10 +87,10 @@ function ConfigForm({ row, models, disabled, onSave }) {
     onSave(payload)
   }
   return <form onSubmit={save} className="grid gap-3">
-    {!row.connected&&<Alert severity="info">The meal planner uses rules and has no AI provider connection.</Alert>}
-    <FormControlLabel label="Enabled" control={<Checkbox checked={Boolean(form.enabled)} disabled={disabled||!row.connected}
+    {!row.connected&&<Alert severity="info">{auditText('common:the_meal_planner_uses_rules_and_has_no_ai_provider_connection')}</Alert>}
+    <FormControlLabel label={auditText('common:enabled')} control={<Checkbox checked={Boolean(form.enabled)} disabled={disabled||!row.connected}
       onChange={(event)=>update('enabled',event.target.checked)}/>}/>
-    <TextField select label="Approved model" required value={models.includes(form.model_name)?form.model_name:''}
+    <TextField select label={auditText('common:approved_model')} required value={models.includes(form.model_name)?form.model_name:''}
       disabled={disabled} onChange={(event)=>update('model_name',event.target.value)}>
       {models.map((model)=><MenuItem key={model} value={model}>{model}</MenuItem>)}
     </TextField>
@@ -93,12 +99,15 @@ function ConfigForm({ row, models, disabled, onSave }) {
         disabled={disabled} required={key==='temperature'||(key==='max_output_tokens'&&row.feature!=='scan')}
         onChange={(event)=>update(key,event.target.value)} slotProps={{htmlInput:{min:0,step:key.startsWith('price')?0.000001:key==='temperature'?0.001:1}}}/>)}
     </div>
-    <p className="text-sm">Leave both prices blank when pricing is unknown. Premium limits are stored for future entitlement support.</p>
-    {!disabled&&<Button type="submit" variant="contained">Save settings</Button>}
+    <p className="text-sm">{auditText('common:leave_both_prices_blank_when_pricing_is_unknown_premium_limits_are_stored_for_future_entitlement_support')}</p>
+    {!disabled&&<Button type="submit" variant="contained">{uiText('save_settings')}</Button>}
   </form>
 }
 
 export default function AIMonitor({token,permissions}) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const canManage=permissions.includes('ai.manage')
   const [tab,setTab]=useState('usage')
   const [feature,setFeature]=useState('chat')
@@ -154,61 +163,61 @@ export default function AIMonitor({token,permissions}) {
       {field:'shared',headerName:'Content shared',minWidth:130,renderCell:({value})=>value?'Yes':'No'},
       {field:'created_at',headerName:'Date',minWidth:150,flex:1}]
   return <div className="space-y-4">
-    <nav aria-label="AI monitoring sections" className="flex flex-wrap gap-2">
+    <nav aria-label={localizeCopy('common:ai_monitoring_sections')} className="flex flex-wrap gap-2">
       {Object.entries(tabs).map(([id,label])=><Button key={id} variant={tab===id?'contained':'outlined'} aria-pressed={tab===id}
         onClick={()=>{setTab(id);setPage(0);setEditor(null);setError('')}}>{label}</Button>)}
     </nav>
     {current?.error&&<Alert severity="error">{current.error}</Alert>}
     {!editor&&error&&<Alert severity="error">{error}</Alert>}
-    {!current&&<p role="status">Loading AI monitoring…</p>}
+    {!current&&<p role="status">{localizeCopy('common:loading_ai_monitoring')}</p>}
     {tab==='usage'&&<Usage data={current?.data??(result?.url?.startsWith('/usage')?result.data:null)} filter={filter}
       update={(key,value)=>setFilter((old)=>({...old,[key]:value}))}/>}
-    {(tab==='settings'||tab==='prompts')&&<TextField select label="Feature" size="small" value={feature}
+    {(tab==='settings'||tab==='prompts')&&<TextField select label={uiText('feature')} size="small" value={feature}
       onChange={(event)=>{setFeature(event.target.value);setPage(0)}}>
       {Object.entries(features).map(([id,label])=><MenuItem key={id} value={id}>{label}</MenuItem>)}
     </TextField>}
     {tab==='settings'&&current?.data&&<ConfigForm key={feature+revision} row={data.items.find((r)=>r.feature===feature)}
       models={data.approved_models} disabled={!canManage||busy} onSave={(payload)=>mutate(()=>send('/settings/'+feature,'PUT',payload))}/>}
-    {tab==='feedback'&&<TextField select label="Review status" value={feedbackState} size="small"
+    {tab==='feedback'&&<TextField select label={localizeCopy('common:review_status')} value={feedbackState} size="small"
       onChange={(event)=>{setFeedbackState(event.target.value);setPage(0)}}>
-      <MenuItem value="">All statuses</MenuItem>
+      <MenuItem value="">{localizeCopy('common:all_statuses')}</MenuItem>
       {Object.entries(states).map(([id,label])=><MenuItem key={id} value={id}>{label}</MenuItem>)}
     </TextField>}
     {(tab==='prompts'||tab==='feedback')&&<AdminTable key={tab} title={tabs[tab]} columns={cols} rows={data.items} total={data.total}
       page={page} pageSize={size} loading={!current} onPageChange={setPage} onPageSizeChange={(value)=>{setSize(value);setPage(0)}}
-      onView={show} onCreate={tab==='prompts'&&canManage&&current?.data?()=>setEditor({system_prompt:''}):undefined} createLabel="New prompt version"/>}
+      onView={show} onCreate={tab==='prompts'&&canManage&&current?.data?()=>setEditor({system_prompt:''}):undefined} createLabel={localizeCopy('common:new_prompt_version')}/>}
     {editor&&<Dialog open fullWidth maxWidth="md" onClose={()=>{if(!busy)setEditor(null)}}>
-      <DialogTitle>{tab==='feedback'?'Feedback review':editor.id?'Prompt version '+editor.version:'New prompt version'}</DialogTitle>
+      <DialogTitle>{tab==='feedback'?localizeCopy('common:feedback_review'):editor.id?'Prompt version '+editor.version:localizeCopy('common:new_prompt_version')}</DialogTitle>
       <DialogContent dividers className="space-y-3">
         {error&&<Alert severity="error">{error}</Alert>}
         {tab==='prompts'?<>
-          <Alert severity="info">Active guidance is applied alongside HerBloom’s fixed safety rules.</Alert>
-          <TextField fullWidth multiline minRows={5} label="System prompt guidance" disabled={Boolean(editor.id)||busy}
+          <Alert severity="info">{auditText('common:active_guidance_is_applied_alongside_herbloom_s_fixed_safety_rules')}</Alert>
+          <TextField fullWidth multiline minRows={5} label={localizeCopy('common:system_prompt_guidance')} disabled={Boolean(editor.id)||busy}
             value={editor.system_prompt} onChange={(event)=>setEditor({...editor,system_prompt:event.target.value})}/>
         </>:<>
           {editor.shared?<div className="space-y-2">
-            <p className="whitespace-pre-wrap"><strong>Question:</strong> {editor.question??'A linked question is unavailable for this reply.'}</p>
-            <p className="whitespace-pre-wrap"><strong>Answer:</strong> {editor.answer}</p>
-          </div>:<Alert severity="info">The mother has not shared the conversation.</Alert>}
+            <p className="whitespace-pre-wrap"><strong>{localizeCopy('common:question')}</strong> {editor.question??localizeCopy('common:a_linked_question_is_unavailable_for_this_reply')}</p>
+            <p className="whitespace-pre-wrap"><strong>{localizeCopy('common:answer')}</strong> {editor.answer}</p>
+          </div>:<Alert severity="info">{localizeCopy('common:the_mother_has_not_shared_the_conversation')}</Alert>}
           {editor.sources?.length>0&&<ul>{editor.sources.map((s)=><li key={s.article_id}>{s.title}</li>)}</ul>}
-          <TextField select label="Status" value={editor.status} disabled={!canManage||busy}
+          <TextField select label={uiText('status')} value={editor.status} disabled={!canManage||busy}
             onChange={(event)=>setEditor({...editor,status:event.target.value})}>
             {Object.entries(states).map(([id,label])=><MenuItem key={id} value={id}>{label}</MenuItem>)}
           </TextField>
-          <TextField fullWidth multiline minRows={3} label="Reviewer note" value={editor.reviewer_note} disabled={!canManage||busy}
+          <TextField fullWidth multiline minRows={3} label={localizeCopy('common:reviewer_note')} value={editor.reviewer_note} disabled={!canManage||busy}
             onChange={(event)=>setEditor({...editor,reviewer_note:event.target.value})}/>
         </>}
       </DialogContent>
       <DialogActions>
-        <Button disabled={busy} onClick={()=>setEditor(null)}>Close</Button>
+        <Button disabled={busy} onClick={()=>setEditor(null)}>{uiText('close')}</Button>
         {canManage&&tab==='feedback'&&<Button disabled={busy} onClick={()=>mutate(()=>send('/feedback/'+editor.id,'PUT',{
-          status:editor.status,reviewer_note:editor.reviewer_note}))}>Save review</Button>}
+          status:editor.status,reviewer_note:editor.reviewer_note}))}>{localizeCopy('common:save_review')}</Button>}
         {canManage&&tab==='prompts'&&!editor.id&&<Button disabled={busy||!editor.system_prompt.trim()}
-          onClick={()=>mutate(()=>send('/prompts/'+feature,'POST',{system_prompt:editor.system_prompt}))}>Create version</Button>}
+          onClick={()=>mutate(()=>send('/prompts/'+feature,'POST',{system_prompt:editor.system_prompt}))}>{localizeCopy('common:create_version')}</Button>}
         {canManage&&tab==='prompts'&&editor.id&&!editor.active&&<Button disabled={busy} onClick={()=>{
-          if(window.confirm('Activate this version of the prompt guidance?'))
+          if(window.confirm(uiText('activate_this_version_of_the_prompt_guidance')))
             mutate(()=>send('/prompts/'+feature+'/'+editor.id+'/activate','POST'))
-        }}>Activate this version</Button>}
+        }}>{localizeCopy('common:activate_this_version')}</Button>}
       </DialogActions>
     </Dialog>}
   </div>

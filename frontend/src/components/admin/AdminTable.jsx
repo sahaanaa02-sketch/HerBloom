@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import common from '../../locales/common.json'
 
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -32,6 +34,13 @@ const CREAM = '#FFF6F1'
 
 const DEFAULT_PAGE_SIZE = 10
 
+const labelKeys = new Map(Object.entries(common.en).map(([key, label]) => [label, key]))
+
+function translateLabel(t, label) {
+  const key = labelKeys.get(label)
+  return key ? t(key) : label
+}
+
 export default function AdminTable({
   title = 'Records',
   description = '',
@@ -65,6 +74,8 @@ export default function AdminTable({
   canEditRow,
   canArchive = true,
 }) {
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [search, setSearch] = useState('')
   const [filterValues, setFilterValues] = useState({})
 
@@ -99,14 +110,17 @@ export default function AdminTable({
     )
 
   const tableColumns = useMemo(() => {
-    const result = [...columns]
+    const result = columns.map(column => ({
+      ...column,
+      headerName: translateLabel(uiText, column.headerName),
+    }))
 
     const actions = []
 
     if (onView) {
       actions.push({
         icon: <Eye size={17} />,
-        label: 'View',
+        label: localizeCopy('common:view'),
         handler: onView,
       })
     }
@@ -114,7 +128,7 @@ export default function AdminTable({
     if (onEdit && canEdit) {
       actions.push({
         icon: <Pencil size={17} />,
-        label: 'Edit',
+        label: localizeCopy('common:edit'),
         handler: onEdit,
         visible: canEditRow,
       })
@@ -123,7 +137,7 @@ export default function AdminTable({
     if (onArchive && canArchive) {
       actions.push({
         icon: <Archive size={17} />,
-        label: 'Archive',
+        label: localizeCopy('common:archive'),
         handler: onArchive,
       })
     }
@@ -132,7 +146,7 @@ export default function AdminTable({
       result.push({
         field: '__actions',
         type: 'actions',
-        headerName: 'Actions',
+        headerName: uiText('actions'),
         width: Math.max(110, actions.length * 48),
         sortable: false,
         filterable: false,
@@ -141,7 +155,7 @@ export default function AdminTable({
             <GridActionsCellItem
               key={action.label}
               icon={action.icon}
-              label={action.label}
+              label={translateLabel(uiText, action.label)}
               onClick={() => action.handler(params.row)}
               showInMenu={false}
               sx={{
@@ -157,6 +171,8 @@ export default function AdminTable({
 
     return result
   }, [
+    uiText,
+    localizeCopy,
     columns,
     onView,
     onEdit,
@@ -205,7 +221,7 @@ export default function AdminTable({
                 color: BURGUNDY,
               }}
             >
-              {title}
+              {translateLabel(uiText, title)}
             </Typography>
 
             {description && (
@@ -235,7 +251,7 @@ export default function AdminTable({
                   borderRadius: '10px',
                 }}
               >
-                Refresh
+                {uiText('refresh')}
               </Button>
             )}
 
@@ -252,7 +268,7 @@ export default function AdminTable({
                   },
                 }}
               >
-                {createLabel}
+                {translateLabel(uiText, createLabel)}
               </Button>
             )}
           </Stack>
@@ -279,7 +295,7 @@ export default function AdminTable({
             onChange={(event) =>
               setSearch(event.target.value)
             }
-            placeholder={searchPlaceholder}
+            placeholder={translateLabel(uiText, searchPlaceholder)}
             sx={{
               minWidth: 250,
               flex: 1,
@@ -316,7 +332,7 @@ export default function AdminTable({
                 sx={{ borderRadius: '10px' }}
               >
                 <MenuItem value="">
-                  All {filter.label}
+                  {uiText('all')} {translateLabel(uiText, filter.label)}
                 </MenuItem>
 
                 {filter.options.map((option) => (
@@ -324,7 +340,7 @@ export default function AdminTable({
                     key={option.value}
                     value={option.value}
                   >
-                    {option.label}
+                    {translateLabel(uiText, option.label)}
                   </MenuItem>
                 ))}
               </Select>
@@ -340,7 +356,7 @@ export default function AdminTable({
                 textTransform: 'none',
               }}
             >
-              Clear
+              {uiText('clear')}
             </Button>
           )}
         </Stack>
@@ -353,6 +369,13 @@ export default function AdminTable({
           rows={rows}
           columns={tableColumns}
           loading={loading}
+          localeText={{
+            noRowsLabel: uiText('no_records_found'),
+            noResultsOverlayLabel: uiText('no_records_found'),
+            paginationRowsPerPage: uiText('rows_per_page'),
+            paginationDisplayedRows: ({ from, to, count }) =>
+              uiText(count === -1 ? 'row_range_unknown' : 'row_range', { from, to, count }),
+          }}
           rowCount={total}
           paginationMode="server"
           paginationModel={{
@@ -378,7 +401,7 @@ export default function AdminTable({
                   color: '#806A73',
                 }}
               >
-                {emptyMessage}
+                {translateLabel(uiText, emptyMessage)}
               </Box>
             ),
           }}
@@ -425,7 +448,11 @@ export default function AdminTable({
 export function AdminStatusChip({
   status = 'draft',
 }) {
+  const { t, i18n } = useTranslation('common')
   const normalized = String(status).toLowerCase()
+  const plainLabel = normalized.replaceAll('_', ' ')
+  const label = i18n.resolvedLanguage === 'ta' && Object.hasOwn(common.ta, normalized)
+    ? t(normalized) : plainLabel
 
   const styles = {
     draft: {
@@ -467,7 +494,7 @@ export function AdminStatusChip({
   return (
     <Chip
       size="small"
-      label={normalized.replaceAll('_', ' ')}
+      label={label}
       sx={{
         backgroundColor: selected.bg,
         color: selected.color,

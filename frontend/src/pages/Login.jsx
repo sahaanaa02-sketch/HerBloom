@@ -1,5 +1,12 @@
+import { authErrorKey } from '../locales/authErrors'
+import { useTranslation } from 'react-i18next'
+import LanguageSwitcher from '../components/LanguageSwitcher'
+import { startAdminSignIn } from '../services/adminAuthApi'
+import { resolveSharedLogin } from '../services/sharedLogin'
 import { apiBase as API_URL } from '../services/apiBase'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import AdminVerification from '../components/AdminVerification'
+import GoogleSignIn from '../components/GoogleSignIn'
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
 import logo from '../assets/logo.png'
 import login from '../assets/login image.jpg'
@@ -95,12 +102,28 @@ function GoogleIcon() {
   )
 }
 
-export default function Login({ onSuccess, onGoogle, onBack }) {
-  const [mode, setMode] = useState('login')
+export default function Login({ onSuccess, onAdminVerified, onBack, initialMode = "login", adminOnly = false, initialError = "" }) {
+  const { t } = useTranslation('auth')
+  const [mode, setMode] = useState(initialMode)
   const [showPw, setShowPw] = useState(false)
   const [showConfirmPw, setShowConfirmPw] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError)
+  const [adminChallenge, setAdminChallenge] = useState(null)
+  const emailField = useRef(null)
+  const restoreFocus = useRef(false)
+
+  useEffect(() => {
+    if (!adminChallenge && restoreFocus.current) {
+      restoreFocus.current = false
+      emailField.current?.focus()
+    }
+  }, [adminChallenge])
+
+  function returnToSharedLogin() {
+    restoreFocus.current = true
+    setAdminChallenge(null)
+  }
 
   const [form, setForm] = useState({
     name: '',
@@ -138,6 +161,12 @@ export default function Login({ onSuccess, onGoogle, onBack }) {
     setError('')
   }
 
+  function finishAdminSignIn({ admin, challenge }) {
+    setForm((previous) => ({ ...previous, password: '' }))
+    if (admin) onAdminVerified(admin)
+    else setAdminChallenge(challenge)
+  }
+
   // Connect to FastAPI backend
   const submit = async (e) => {
     e.preventDefault()
@@ -148,7 +177,7 @@ export default function Login({ onSuccess, onGoogle, onBack }) {
 
     // Confirm password validation
     if (isRegister && form.password !== form.confirmPassword) {
-      setError('Password and Confirm Password do not match.')
+      setError('password_and_confirm_password_do_not_match')
       return
     }
 
@@ -156,6 +185,12 @@ export default function Login({ onSuccess, onGoogle, onBack }) {
 
     try {
       const email = form.email.trim().toLowerCase()
+
+      const startAdmin = () => startAdminSignIn(email, form.password)
+      if (adminOnly) {
+        finishAdminSignIn(await startAdmin())
+        return
+      }
 
       let response
 
@@ -188,43 +223,28 @@ export default function Login({ onSuccess, onGoogle, onBack }) {
         })
       }
 
-      const data = await response.json()
-
-      // Handle backend errors
-      if (!response.ok) {
-        throw new Error(
-          typeof data.detail === 'string'
-            ? data.detail
-            : 'Something went wrong. Please try again.'
-        )
+      const { mother: data, ...staff } = await resolveSharedLogin(
+        response, !isRegister && Boolean(onAdminVerified), startAdmin,
+      )
+      if (!data) {
+        finishAdminSignIn(staff)
+        return
       }
 
-      // Send actual backend user and token to App.jsx
-
-onSuccess?.({
-  id: data.user.id,
-  name: data.user.full_name,
-  email: data.user.email,
-  role: data.user.role,
-  username: data.user.username,
-  access_token: data.access_token,
-  token_type: data.token_type,
-
-  // Distinguish new registration from login
-  isNewRegistration: isRegister,
-})
+      onSuccess?.({
+        id: data.user.id,
+        name: data.user.full_name,
+        email: data.user.email,
+        role: data.user.role,
+        username: data.user.username,
+        access_token: data.access_token,
+        token_type: data.token_type,
+        isNewRegistration: isRegister,
+      })
 
 
     } catch (err) {
-      console.error('Authentication error:', err)
-
-      if (err instanceof TypeError) {
-        setError(
-          'Cannot connect to the server. Please make sure the HerBloom backend is running.'
-        )
-      } else {
-        setError(err.message || 'Something went wrong. Please try again.')
-      }
+      setError(err instanceof TypeError ? 'connection_failed' : authErrorKey(err.message, err.status))
     } finally {
       setLoading(false)
     }
@@ -240,7 +260,7 @@ onSuccess?.({
         fontSize: u(0.0235),
       }}
       className={
-        'transition ' +
+        'min-h-11 rounded-t-lg transition-colors hover:bg-[#FFF6F1] ' +
         (mode === key
           ? 'border-b-2 border-[#7B2346] font-semibold text-[#3A1224]'
           : 'border-b border-[#E8C3CC] text-[#6B4455]')
@@ -251,13 +271,14 @@ onSuccess?.({
   )
 
   const bigBtn = {
+    minHeight: 44,
     height: u(0.075),
     fontSize: u(0.0235),
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FFF6F1] p-4 md:h-screen md:overflow-hidden">
-      <style>{css}</style>
+    <div className="hb-auth-screen flex min-h-screen items-center justify-center bg-[#FFF6F1] p-4 md:h-screen">
+      <style>{css + '.hb-auth-screen :is(button,a,input):focus-visible { outline: 2px solid #7B2346; outline-offset: 3px } .hb-auth-screen { overflow-wrap: anywhere }'}</style>
 
       <div className="hb-card flex overflow-hidden rounded-3xl border border-[#E8C3CC] bg-[#FFFBF8] shadow-xl">
 
@@ -287,11 +308,11 @@ onSuccess?.({
                 lineHeight: 1.15,
               }}
             >
-              A stronger
+              {t('a_stronger')}
               <br />
-              you starts
+              {t('you_starts')}
               <br />
-              here.
+              {t('here')}
             </h1>
 
             <p
@@ -302,9 +323,9 @@ onSuccess?.({
                 marginTop: u(0.028),
               }}
             >
-              Support for today.
+              {t('support_for_today')}
               <br />
-              A healthier tomorrow.
+              {t('a_healthier_tomorrow')}
             </p>
 
             <div
@@ -324,24 +345,24 @@ onSuccess?.({
                 letterSpacing: '0.2em',
               }}
             >
-              REAL WOMEN
+              {t('real_women')}
               <br />
-              BRIGHTER TOMORROWS
+              {t('brighter_tomorrows')}
             </p>
           </div>
         </div>
 
         {/* RIGHT FORM PANEL */}
-        <div className="relative flex min-w-0 flex-1 flex-col justify-center px-[clamp(20px,3.5vw,48px)] py-6">
-          {onBack && (
+        <div className="relative flex min-w-0 flex-1 flex-col justify-center px-[clamp(20px,3.5vw,48px)] py-8 md:block md:overflow-y-auto">
+          {onBack && !adminChallenge && (
             <button
               type="button"
               onClick={onBack}
               className="absolute left-[clamp(20px,3.5vw,48px)] top-4 z-20 inline-flex items-center gap-2 rounded-full px-2 py-1.5 text-xs font-semibold text-[#7B2346] transition hover:bg-[#F6D3DB]/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B2346]"
-              aria-label="Back to Home"
+              aria-label={t('back_to_home')}
             >
               <ArrowLeft size={16} />
-              Back to Home
+              {t('back_to_home')}
             </button>
           )}
           <div
@@ -357,14 +378,21 @@ onSuccess?.({
               style={{ height: u(0.175) }}
             />
 
+            <div className="mb-2 flex justify-end"><LanguageSwitcher /></div>
+            {adminChallenge ? (
+              <AdminVerification challenge={adminChallenge} onSuccess={onAdminVerified}
+                onCancel={returnToSharedLogin} shared />
+            ) : <>
             {/* LOGIN / REGISTER TABS */}
-            <div
+            {adminOnly ? (
+              <h2 className="mb-4 text-center font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346]">{t('sign_in_to_herbloom')}</h2>
+            ) : <div
               className="grid grid-cols-2"
               style={{ marginTop: u(0.03) }}
             >
-              {tab('login', 'Log in')}
-              {tab('register', 'Create account')}
-            </div>
+              {tab('login', t('log_in'))}
+              {tab('register', t('create_account'))}
+            </div>}
 
             <form
               onSubmit={submit}
@@ -378,10 +406,10 @@ onSuccess?.({
               {isRegister && (
                 <Field
                   icon={User}
-                  label="Name"
+                  label={t('name')}
                   name="name"
                   type="text"
-                  placeholder="Name"
+                  placeholder={t('name')}
                   autoComplete="off"
                   required
                   value={form.name}
@@ -392,10 +420,11 @@ onSuccess?.({
               {/* EMAIL */}
               <Field
                 icon={Mail}
-                label="Email"
+                label={t('email')}
                 name="email"
+                ref={emailField}
                 type="email"
-                placeholder="Email"
+                placeholder={t('email')}
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -407,10 +436,10 @@ onSuccess?.({
               {/* PASSWORD */}
               <Field
                 icon={Lock}
-                label="Password"
+                label={t('password')}
                 name="password"
                 type={showPw ? 'text' : 'password'}
-                placeholder="Password"
+                placeholder={t('password')}
                 autoComplete="new-password"
                 minLength={isRegister ? 8 : undefined}
                 maxLength={128}
@@ -421,7 +450,7 @@ onSuccess?.({
                   <button
                     type="button"
                     onClick={() => setShowPw((prev) => !prev)}
-                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                    aria-label={showPw ? t('hide_password') : t('show_password')}
                   >
                     {showPw ? (
                       <EyeOff size={18} className="text-[#7B2346]" />
@@ -436,10 +465,10 @@ onSuccess?.({
               {isRegister && (
                 <Field
                   icon={Lock}
-                  label="Confirm Password"
+                  label={t('confirm_password')}
                   name="confirmPassword"
                   type={showConfirmPw ? 'text' : 'password'}
-                  placeholder="Confirm Password"
+                  placeholder={t('confirm_password')}
                   autoComplete="new-password"
                   maxLength={128}
                   required
@@ -451,8 +480,8 @@ onSuccess?.({
                       onClick={() => setShowConfirmPw((prev) => !prev)}
                       aria-label={
                         showConfirmPw
-                          ? 'Hide confirm password'
-                          : 'Show confirm password'
+                          ? t('hide_confirm_password')
+                          : t('show_confirm_password')
                       }
                     >
                       {showConfirmPw ? (
@@ -471,27 +500,12 @@ onSuccess?.({
                   role="alert"
                   className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                 >
-                  {error}
-                </div>
-              )}
-
-              {!isRegister && (
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('Forgot password feature is not available yet.')
-                    }}
-                    className="font-medium text-[#7B2346] hover:underline"
-                    style={{ fontSize: u(0.02) }}
-                  >
-                    Forgot password?
-                  </button>
+                  {t(error, { defaultValue: t(authErrorKey(error)) })}
                 </div>
               )}
 
               {/* SUBMIT */}
-              {!isRegister && <a href="/forgot-password" className="mb-3 block text-right text-sm text-[#7B2346] underline">Forgot password?</a>}
+              {!isRegister && !adminOnly && <a href="/forgot-password" className="mb-3 flex min-h-11 items-center justify-end text-sm font-medium text-[#7B2346] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">{t('forgot_password')}</a>}
               <button
                 type="submit"
                 disabled={loading}
@@ -502,15 +516,16 @@ onSuccess?.({
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7B2346] font-medium text-white transition hover:bg-[#651C39] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading
-                  ? 'Please wait...'
+                  ? t('please_wait')
                   : isRegister
-                    ? 'Create account'
-                    : 'Log in'}
+                    ? t('create_account')
+                    : t('log_in')}
 
                 {!loading && <ArrowRight size={18} />}
               </button>
             </form>
 
+            {!adminOnly && <>
             {/* DIVIDER */}
             <div
               className="flex items-center gap-4 text-[#6B4455]"
@@ -525,15 +540,12 @@ onSuccess?.({
             </div>
 
             {/* GOOGLE LOGIN */}
-            <button
-              type="button"
-              onClick={onGoogle}
-              style={bigBtn}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E8C3CC] bg-white font-medium text-[#3A1224] transition hover:bg-[#FFF6F1]"
-            >
+            <GoogleSignIn disabled={loading} onSuccess={onSuccess} style={bigBtn}>
               <GoogleIcon />
-              Continue with Google
-            </button>
+              {t('continue_with_google')}
+            </GoogleSignIn>
+            </>}
+            </>}
           </div>
         </div>
       </div>

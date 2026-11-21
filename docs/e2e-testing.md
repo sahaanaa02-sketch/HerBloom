@@ -80,3 +80,27 @@ To test the hosted popup separately, privately configure the following values in
 Open **Profile & Settings → My Plan** to access the sandbox checkout and payment history. PayHere popup events refresh the backend order state. A pending order remains pending until a signed status arrives, and a verified failure or cancellation allows another attempt. The Admin **Subscriptions** page shows provider events and linked entitlement periods. Staff with billing.manage can retrieve sandbox refund and chargeback status. This records a review flag and leaves entitlement periods intact.
 
 See the [PayHere JavaScript SDK](https://support.payhere.lk/api-&-mobile-sdk/javascript-sdk) and [PayHere Retrieval API](https://support.payhere.lk/api-&-mobile-sdk/retrieval-api).
+
+## Optional live Gemini meal scan
+
+The guarded E2E backend normally blocks all external AI. For a one-off meal-scanner
+test, create a key in a separate Gemini test project and add these two entries to
+the private `%LOCALAPPDATA%/HerBloom/E2E/backend.env` file:
+
+    E2E_LIVE_MEAL_SCANNER_ENABLED=true
+    E2E_MEAL_SCANNER_GEMINI_API_KEY=<dedicated test-project API key>
+
+Use the guarded preflight and restart only the E2E API with `python -m app.e2e serve`.
+Use the existing scanner model configuration; the model must be enabled, approved
+by the gateway, and available to the test project. The key is only read by the
+server-side scanner and never by the shared chat, summary, or meal-plan provider.
+Do not put it in the root environment file or any frontend variable.
+
+Use a synthetic Mother account with a scan remaining. At
+`http://127.0.0.1:5183/login`, open Nutrition and the scanner. Upload one food-only
+Sri Lankan meal photo, check the existing consent box, and analyze it. Confirm
+the recognized items and estimated portions render, then correct a portion or
+catalog match, save, and reload the Food Diary. Check that one successful scan
+consumed one allowance and that the edited portion persists. Set the flag to
+`false`, remove the test key from the private file, and restart the E2E API after
+the live check.

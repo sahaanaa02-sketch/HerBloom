@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { Flame, Heart, Milk } from 'lucide-react'
 
@@ -5,6 +6,7 @@ const format = (value, digits = 1) =>
   Number(value || 0).toFixed(digits)
 
 function NutrientBar({ label, value, target, unit, color, incomplete }) {
+  const { t: auditText } = useTranslation()
   const validTarget = Number(target) > 0
   const percentage = validTarget && !incomplete
     ? Math.min(100, (Number(value) / Number(target)) * 100)
@@ -17,7 +19,7 @@ function NutrientBar({ label, value, target, unit, color, incomplete }) {
           {label}
         </span>
         <span className="text-xs text-[#8C7280]">
-          {incomplete ? 'Partial data · ' : ''}
+          {incomplete ? auditText('common:partial_data') : ''}
           {format(value)}
           {validTarget && !incomplete
             ? ` / ${format(target)}`
@@ -40,6 +42,8 @@ function NutrientBar({ label, value, target, unit, color, incomplete }) {
 }
 
 export default function NutritionToday({ data, onAddMeal }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const totals = data?.totals || {}
   const targets = data?.targets || {}
   const incomplete = Number(data?.unverified_meals || 0) > 0
@@ -58,15 +62,12 @@ export default function NutritionToday({ data, onAddMeal }) {
       <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
         <div className="rounded-3xl border border-[#F3DFE5] bg-white p-6 shadow-sm">
           <h3 className="mb-6 font-['Playfair_Display'] text-xl font-semibold text-[#7B2346]">
-            Today's Nutrition
+            {uiText('today_s_nutrition')}
           </h3>
 
           {incomplete && (
             <p className="mb-5 rounded-xl bg-[#FFF6F1] p-4 text-xs leading-6 text-[#795C69]">
-              {data.unverified_meals} logged food item(s)
-              do not have verified nutrient data. The values
-              below are incomplete and should not be treated
-              as your total daily intake.
+              {data.unverified_meals} {auditText('common:logged_food_item_s_do_not_have_verified_nutrient_data_the_values_below_are_incomplete_and_should_not_be_treated_as_your_total_daily_intake')}
             </p>
           )}
 
@@ -88,15 +89,15 @@ export default function NutritionToday({ data, onAddMeal }) {
                   <p className="text-center text-xs text-[#947684]">
                     {hasTarget
                       ? `/ ${Math.round(targets.calories)} kcal`
-                      : 'verified kcal logged'}
+                      : auditText('common:verified_kcal_logged')}
                   </p>
                 </div>
               </div>
 
               <p className="mt-3 text-center text-xs text-[#947684]">
                 {hasTarget
-                  ? 'Compared with reviewed target'
-                  : 'No complete reviewed target comparison'}
+                  ? auditText('common:compared_with_reviewed_target')
+                  : auditText('common:no_complete_reviewed_target_comparison')}
               </p>
             </div>
 
@@ -118,7 +119,7 @@ export default function NutritionToday({ data, onAddMeal }) {
               ))}
 
               <NutrientBar
-                label="Water"
+                label={auditText('common:water')}
                 value={data?.water_glasses}
                 target={null}
                 unit="glasses"
@@ -134,11 +135,10 @@ export default function NutritionToday({ data, onAddMeal }) {
             <Heart size={32} className="text-[#7B2346]" />
           </div>
           <h3 className="font-['Playfair_Display'] text-2xl font-semibold text-[#7B2346]">
-            Nourish Your Recovery
+            {auditText('common:nourish_your_recovery')}
           </h3>
           <p className="mt-3 text-sm leading-7 text-[#795C69]">
-            Explore familiar Sri Lankan foods, record your
-            meals and support your recovery with varied nutrition.
+            {auditText('common:explore_familiar_sri_lankan_foods_record_your_meals_and_support_your_recovery_with_varied_nutrition')}
           </p>
           <div className="mt-6 flex items-center gap-2 text-xs text-[#7B2346]">
             <Milk size={17} />
@@ -150,14 +150,14 @@ export default function NutritionToday({ data, onAddMeal }) {
       <div className="rounded-3xl border border-[#F3DFE5] bg-white p-6">
         <div className="mb-5 flex items-center justify-between">
           <h3 className="font-['Playfair_Display'] text-xl font-semibold text-[#7B2346]">
-            Today's Meals
+            {auditText('common:today_s_meals')}
           </h3>
           <button
             type="button"
             onClick={onAddMeal}
             className="rounded-full bg-[#7B2346] px-5 py-2.5 text-xs font-semibold text-white"
           >
-            + Add Meal
+            {auditText('common:add_meal')}
           </button>
         </div>
 
@@ -180,14 +180,14 @@ export default function NutritionToday({ data, onAddMeal }) {
                 <p className="mt-1 text-xs text-[#8A6D79]">
                   {meal.verified && meal.nutrients
                     ? `${meal.nutrients.calories} kcal`
-                    : 'Nutrient data unavailable'}
+                    : auditText('common:nutrient_data_unavailable')}
                 </p>
               </div>
             ))}
           </div>
         ) : (
           <p className="rounded-2xl bg-[#FFF6F1] p-6 text-sm text-[#977A86]">
-            No meals logged today.
+            {auditText('common:no_meals_logged_today')}
           </p>
         )}
       </div>

@@ -699,6 +699,9 @@ def exercise_list(
         )
 
         fields = {field: getattr(exercise, field) for field in MOTHER_EXERCISE_FIELDS}
+        if profile is not None and profile.language == "ta":
+            for field in ("name", "steps", "safety_notes", "contraindications"):
+                fields[field] = getattr(exercise, f"{field}_ta") or fields[field]
         if gated:
             if allowed and (exercise.editorial_status != "published" or exercise.id not in approved_ids):
                 allowed, reason = False, "Guided routine is awaiting clinical approval."

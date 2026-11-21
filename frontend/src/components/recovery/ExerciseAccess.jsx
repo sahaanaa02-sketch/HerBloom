@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import {
@@ -11,6 +12,7 @@ export default function ExerciseAccess({
   children,
   onContinue,
 }) {
+  const { t: auditText } = useTranslation()
   const [accepted, setAccepted] = useState(false)
 
   function handleAccept() {
@@ -33,7 +35,7 @@ export default function ExerciseAccess({
 
             <div>
               <p className="text-sm font-semibold text-[#3A1224]">
-                Safety Notice Acknowledged
+                {auditText('common:safety_notice_acknowledged')}
               </p>
 
               <p className="text-xs text-[#765363]">
@@ -48,7 +50,7 @@ export default function ExerciseAccess({
             className="flex items-center gap-2 text-xs font-semibold text-[#7B2346]"
           >
             <RotateCcw size={15} />
-            Review Notice
+            {auditText('common:review_notice')}
           </button>
         </div>
 

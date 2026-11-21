@@ -1,7 +1,10 @@
+import { useTranslation } from 'react-i18next'
 
 import { Baby, CalendarDays, Heart, Sparkles } from 'lucide-react'
 
 export default function StageCard({ stage, user }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   const day = stage?.postpartum_day
   const week = stage?.postpartum_week
   const delivery = stage?.delivery_type
@@ -18,30 +21,29 @@ export default function StageCard({ stage, user }) {
       <div className="relative z-10 max-w-xl">
         <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#A66A77]">
           <Sparkles size={16} />
-          Your Recovery Journey
+          {localizeCopy('mother:your_recovery_journey')}
         </div>
 
         <h2 className="font-['Playfair_Display'] text-3xl font-semibold text-[#3A1224]">
-          One gentle day at a time
+          {localizeCopy('common:one_gentle_day_at_a_time')}
         </h2>
 
         <p className="mt-3 text-sm leading-7 text-[#765363]">
-          Welcome back{user?.name ? `, ${user.name}` : ''}.
-          Your recovery deserves patience, care and support.
+          {auditText('common:welcome_back')}{user?.name ? `, ${user.name}` : ''}{auditText('common:your_recovery_deserves_patience_care_and_support')}
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <div className="flex items-center gap-2 rounded-2xl bg-white/85 px-4 py-3 shadow-sm">
             <CalendarDays size={18} className="text-[#7B2346]" />
             <span className="text-sm font-semibold text-[#3A1224]">
-              {day != null ? `Day ${day}` : 'Day unavailable'}
+              {day != null ? `Day ${day}` : auditText('common:day_unavailable')}
             </span>
           </div>
 
           <div className="flex items-center gap-2 rounded-2xl bg-white/85 px-4 py-3 shadow-sm">
             <Baby size={18} className="text-[#7B2346]" />
             <span className="text-sm font-semibold text-[#3A1224]">
-              {week != null ? `Week ${week}` : 'Week unavailable'}
+              {week != null ? `Week ${week}` : auditText('common:week_unavailable')}
             </span>
           </div>
 

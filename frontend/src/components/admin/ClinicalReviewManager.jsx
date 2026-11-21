@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { Alert, Button, TextField } from '@mui/material'
 import AdminTable from './AdminTable'
@@ -27,47 +28,50 @@ function compare(value) {
 }
 
 function ReviewDetail({ review, busy, onAction, close }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [lang, setLang] = useState('en')
   const [comment, setComment] = useState('')
   const previous = review.previous ?? {}
   const keys = [...new Set([...Object.keys(review.current), ...Object.keys(previous)])].filter((key) =>
     lang === 'en' ? !key.endsWith('_ta') : key.endsWith('_ta'))
   return <section className="space-y-4">
-    <Button onClick={close}>Back to reviews</Button>
+    <Button onClick={close}>{uiText('back_to_reviews')}</Button>
     <div>
       <h2 className="text-xl font-semibold">{review.title}</h2>
-      <p>{labels[review.entity]} ? {statuses[review.decision]}{review.published ? ' ? Published' : ''}</p>
-      {review.next_review_due && <p>Next review due {review.next_review_due}</p>}
+      <p>{labels[review.entity]} ? {statuses[review.decision]}{review.published ? auditText('common:published_2') : ''}</p>
+      {review.next_review_due && <p>{uiText('next_review_due')} {review.next_review_due}</p>}
     </div>
-    <div className="flex gap-2" aria-label="Comparison language">
+    <div className="flex gap-2" aria-label={uiText('comparison_language')}>
       {[['en','English and shared fields'], ['ta','Tamil']].map(([value,label]) =>
         <Button key={value} aria-pressed={lang===value} onClick={() => setLang(value)}>{label}</Button>)}
     </div>
-    {!review.previous && <p>No previous published version for this record.</p>}
-    {!keys.length && <p>No fields in this language.</p>}
+    {!review.previous && <p>{uiText('no_previous_published_version_for_this_record')}</p>}
+    {!keys.length && <p>{uiText('no_fields_in_this_language')}</p>}
     {keys.map((key) => {
       const changed = compare(previous[key]) !== compare(review.current[key])
       return <div key={key} className={'rounded-xl border p-3 ' + (changed ? 'border-[#D9A25B] bg-[#FFF6F1]' : 'border-[#F6D3DB]')}>
-        <h3 className="font-semibold">{key.replaceAll('_',' ')}{changed ? ' ? Changed' : ''}</h3>
+        <h3 className="font-semibold">{key.replaceAll('_',' ')}{changed ? auditText('common:changed_2') : ''}</h3>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
-          <div><span className="font-semibold">Previous published</span><p className="whitespace-pre-wrap break-words">{compare(previous[key])}</p></div>
-          <div><span className="font-semibold">Submitted revision</span><p className="whitespace-pre-wrap break-words">{compare(review.current[key])}</p></div>
+          <div><span className="font-semibold">{localizeCopy('common:previous_published')}</span><p className="whitespace-pre-wrap break-words">{compare(previous[key])}</p></div>
+          <div><span className="font-semibold">{localizeCopy('common:submitted_revision')}</span><p className="whitespace-pre-wrap break-words">{compare(review.current[key])}</p></div>
         </div>
       </div>
     })}
     {review.can_decide && <div className="space-y-2">
-      <TextField label="Comment for requesting changes" multiline fullWidth value={comment} onChange={(event) => setComment(event.target.value)} />
-      <Button disabled={busy || !comment.trim()} onClick={() => onAction('request-changes', { comment })}>Request changes</Button>
-      <Button disabled={busy} onClick={() => onAction('approve')}>Approve</Button>
+      <TextField label={auditText('common:comment_for_requesting_changes')} multiline fullWidth value={comment} onChange={(event) => setComment(event.target.value)} />
+      <Button disabled={busy || !comment.trim()} onClick={() => onAction('request-changes', { comment })}>{uiText('request_changes')}</Button>
+      <Button disabled={busy} onClick={() => onAction('approve')}>{uiText('approve')}</Button>
     </div>}
     {review.can_publish && <Button variant="contained" disabled={busy} onClick={() => {
-      if (window.confirm('Publish this approved revision?')) onAction('publish')
-    }}>Publish</Button>}
+      if (window.confirm(uiText('publish_this_approved_revision'))) onAction('publish')
+    }}>{uiText('publish')}</Button>}
     {review.can_revise && <Button disabled={busy} onClick={() => {
-      if (window.confirm('Reopen for editing and invalidate any current approval?')) onAction('revise')
-    }}>Reopen for editing</Button>}
-    {review.can_resubmit && <Button disabled={busy} onClick={() => onAction('re-review')}>Submit for re-review</Button>}
-    <h3 className="font-semibold">Review history</h3>
+      if (window.confirm(uiText('reopen_for_editing_and_invalidate_any_current_approval'))) onAction('revise')
+    }}>{localizeCopy('common:reopen_for_editing')}</Button>}
+    {review.can_resubmit && <Button disabled={busy} onClick={() => onAction('re-review')}>{localizeCopy('common:submit_for_re_review')}</Button>}
+    <h3 className="font-semibold">{uiText('review_history')}</h3>
     <ul className="space-y-2">{review.history.map((item) => <li key={item.id}>
       {statuses[item.decision]} ? {(item.decided_at ?? item.created_at).slice(0,10)}{item.comment && <p className="whitespace-pre-wrap">{item.comment}</p>}
     </li>)}</ul>
@@ -75,6 +79,9 @@ function ReviewDetail({ review, busy, onAction, close }) {
 }
 
 export default function ClinicalReviewManager({ token, initialTab = 'queue' }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [tab, setTab] = useState(initialTab)
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
@@ -118,21 +125,21 @@ export default function ClinicalReviewManager({ token, initialTab = 'queue' }) {
   return <div className="space-y-4">
     {error && <Alert severity="error">{error}</Alert>}
     {details ? <ReviewDetail key={details.id} review={details} busy={busy} onAction={action} close={() => setDetails(null)} /> : <>
-      <nav aria-label="Clinical Review sections" className="flex gap-2">
+      <nav aria-label={auditText('common:clinical_review_sections')} className="flex gap-2">
         {[['queue','Review queue'],['due','Due for re-review']].map(([id,label]) =>
           <Button key={id} aria-pressed={tab===id} variant={tab===id?'contained':'outlined'} onClick={() => {
             setError(''); setTab(id); setPage(0)
           }}>{label}</Button>)}
       </nav>
       {tab === 'queue' && <div className="flex flex-wrap gap-4">
-        <label>Content type <select value={entity} onChange={(event) => { setError(''); setEntity(event.target.value); setPage(0) }}>
-          <option value="">All types</option>{result.entities.map((key) => <option value={key} key={key}>{labels[key]}</option>)}
+        <label>{uiText('content_type')} <select value={entity} onChange={(event) => { setError(''); setEntity(event.target.value); setPage(0) }}>
+          <option value="">{localizeCopy('common:all_types')}</option>{result.entities.map((key) => <option value={key} key={key}>{labels[key]}</option>)}
         </select></label>
-        <label>Review status <select value={status} onChange={(event) => { setError(''); setStatus(event.target.value); setPage(0) }}>
+        <label>{localizeCopy('common:review_status')} <select value={status} onChange={(event) => { setError(''); setStatus(event.target.value); setPage(0) }}>
           {Object.entries(statuses).map(([value,label]) => <option value={value} key={value}>{label}</option>)}
         </select></label>
       </div>}
-      <AdminTable key={tab} title={tab==='due'?'Due for re-review':'Review queue'} columns={tab==='due'?dueColumns:columns}
+      <AdminTable key={tab} title={tab==='due'?auditText('common:due_for_re_review'):auditText('common:review_queue')} columns={tab==='due'?dueColumns:columns}
         rows={tab==='due'?result.items.slice(page*pageSize,(page+1)*pageSize):result.items} total={result.total}
         onView={open} page={page} pageSize={pageSize} onPageChange={setPage}
         onPageSizeChange={(value) => { setPageSize(value); setPage(0) }} />

@@ -1,6 +1,7 @@
 
 from pathlib import Path
 import os
+import re
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -115,6 +116,17 @@ class E2ESettings(Settings):
     E2E_API_PORT: int
     E2E_FRONTEND_ORIGIN: Literal["http://127.0.0.1:5183"]
     E2E_MEDIA_DIR: Path
+    E2E_ADMIN_PASSWORD_ONLY: bool = True
+    E2E_GOOGLE_ENABLED: bool = False
+    E2E_GOOGLE_CLIENT_ID: str | None = None
+
+    E2E_LIVE_MEAL_SCANNER_ENABLED: bool = False
+    E2E_MEAL_SCANNER_GEMINI_API_KEY: SecretStr | None = None
+
+    @field_validator("E2E_GOOGLE_ENABLED", "E2E_ADMIN_PASSWORD_ONLY", "E2E_LIVE_MEAL_SCANNER_ENABLED", mode="before")
+    @classmethod
+    def parse_explicit_e2e_flag(cls, value):
+        return value is True or (isinstance(value, str) and value.strip().lower() == "true")
 
     @classmethod
     def settings_customise_sources(
@@ -125,6 +137,16 @@ class E2ESettings(Settings):
 
     @model_validator(mode="after")
     def validate_isolation(self):
+        key = self.E2E_MEAL_SCANNER_GEMINI_API_KEY
+        if self.E2E_LIVE_MEAL_SCANNER_ENABLED and (
+            key is None or not key.get_secret_value().strip()
+        ):
+            raise ValueError("The E2E live meal scanner requires a dedicated test API key.")
+        client_id = self.E2E_GOOGLE_CLIENT_ID
+        if self.E2E_GOOGLE_ENABLED and (
+            not client_id or not re.fullmatch(r"[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com", client_id)
+        ):
+            raise ValueError("E2E Google requires a valid dedicated web client ID.")
         if self.E2E_API_PORT != 8100:
             raise ValueError("E2E requires API port 8100.")
         if self.DB_NAME != E2E_DB_NAME or self.DB_USER != E2E_DB_USER:
@@ -189,7 +211,7 @@ def external_setting(name: str, default: str | None = None) -> str | None:
     if E2E_MODE:
         if name == "JOURNAL_ENCRYPTION_KEY":
             return settings.JOURNAL_ENCRYPTION_KEY
-        return default  # E2E has no provider credentials, including inherited process values.
+        return default  # Shared provider access never reads credentials in E2E.
     load_dotenv(ROOT_DIR / ".env")
     return os.getenv(name, default)
 

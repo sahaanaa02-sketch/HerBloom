@@ -1,93 +1,88 @@
+import { useTranslation } from 'react-i18next'
+import './LandingPage.css'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import { publishedFaqs } from '../services/supportApi'
 import PublicLegal from '../components/PublicLegal'
 
 import { useEffect, useState } from 'react'
 import {
   ArrowRight,
-  Baby,
   Check,
   ChevronDown,
-  ClipboardList,
-  Heart,
-  Languages,
   Mail,
   Menu,
-  MessageCircle,
-  Sparkles,
   Target,
-  Utensils,
+  Star,
   X,
 } from 'lucide-react'
 
 import logo from '../assets/logo.png'
-import heroImage from '../assets/mother.jpg'
-import aboutImage from '../assets/about.png'
+import heroImage from '../assets/landing-hero.jpg'
+import aboutImage from '../assets/landing-about.jpg'
+import { Botanical, JourneyIllustration } from './LandingArtwork'
 
 
-const HERO_IMAGE = heroImage
-const ABOUT_IMAGE = aboutImage
+const year = new Date().getFullYear()
+
+
 
 const steps = [
   {
     number: '01',
-    title: 'Create Your Space',
+    title: 'create_your_space',
     description:
-      'Sign up and share a few details about your recovery journey.',
-    icon: Baby,
+      'sign_up_and_share_a_few_details_about_your_recovery_journey',
   },
   {
     number: '02',
-    title: 'Track Your Recovery',
+    title: 'track_your_recovery',
     description:
-      'Monitor your physical recovery, mood, rest, and daily wellbeing.',
-    icon: ClipboardList,
+      'monitor_your_physical_recovery_mood_rest_and_daily_wellbeing',
   },
   {
     number: '03',
-    title: 'Nourish & Learn',
+    title: 'nourish_learn',
     description:
-      'Explore mother-friendly nutrition tips, care guides, and reminders.',
-    icon: Utensils,
+      'explore_mother_friendly_nutrition_tips_care_guides_and_remin',
   },
   {
     number: '04',
-    title: 'Get Guided Support',
+    title: 'get_guided_support',
     description:
-      'Ask questions and find helpful educational information with our AI companion.',
-    icon: MessageCircle,
+      'ask_questions_and_find_helpful_educational_information_with_',
   },
 ]
 
 const faqs = [
   {
-    question: 'What is HerBloom?',
+    question: 'what_is_herbloom',
     answer:
-      'HerBloom is a postpartum recovery companion offering recovery tracking, wellbeing tools, nutrition education, reminders, and AI-assisted educational support.',
+      'herbloom_is_a_postpartum_recovery_companion_offering_recover',
   },
   {
-    question: 'Is it only for C-section mothers?',
+    question: 'is_it_only_for_c_section_mothers',
     answer:
-      'No. HerBloom is designed for mothers recovering from both vaginal and C-section deliveries.',
+      'no_herbloom_is_designed_for_mothers_recovering_from_both_vag',
   },
   {
-    question: 'Do I need an account to explore?',
+    question: 'do_i_need_an_account_to_explore',
     answer:
-      'An account is needed for personal tracking. A guest experience for general educational information is planned.',
+      'an_account_is_needed_for_personal_tracking_a_guest_experienc',
   },
   {
-    question: 'Is my information kept private?',
+    question: 'is_my_information_kept_private',
     answer:
-      'HerBloom is designed with privacy in mind. Appropriate security and access controls are important parts of the application.',
+      'herbloom_is_designed_with_privacy_in_mind_appropriate_securi',
   },
   {
-    question: 'Can I use it in Tamil?',
+    question: 'can_i_use_it_in_tamil',
     answer:
-      'HerBloom is being developed with English and Tamil support.',
+      'herbloom_is_being_developed_with_english_and_tamil_support',
   },
   {
-    question: 'Does it replace medical advice?',
+    question: 'does_it_replace_medical_advice',
     answer:
-      'No. HerBloom is an educational companion, not a medical diagnosis or treatment service.',
+      'no_herbloom_is_an_educational_companion_not_a_medical_diagno',
   },
 ]
 
@@ -98,13 +93,14 @@ export default function LandingPage({
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [openFAQ, setOpenFAQ] = useState(null)
-  const [faqLanguage, setFaqLanguage] = useState('en')
+  const { t, i18n } = useTranslation('landing')
+  const faqLanguage = i18n.resolvedLanguage
   const [managedFaqs, setManagedFaqs] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
     publishedFaqs(faqLanguage, controller.signal).then((result) => {
-      if (!controller.signal.aborted) setManagedFaqs(result.available ? result.items : null)
+      if (!controller.signal.aborted) setManagedFaqs(result.available ? { language: faqLanguage, items: result.items } : null)
     }).catch(() => {})
     return () => controller.abort()
   }, [faqLanguage])
@@ -130,1122 +126,177 @@ export default function LandingPage({
     setMenuOpen(false)
 
     document.getElementById(id)?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       block: 'start',
     })
   }
 
   const navLinks = [
-    { name: 'How It Works', id: 'how-it-works' },
-    { name: 'About', id: 'about' },
-    { name: 'FAQ', id: 'faq' },
+    { name: 'how_it_works', id: 'how-it-works' },
+    { name: 'about', id: 'about' },
+    { name: 'faq', id: 'faq' },
   ]
+
+  const entries = managedFaqs?.language === faqLanguage && managedFaqs.items.length
+    ? managedFaqs.items : faqs
 
   return (
     <div className="hb-landing">
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Poppins:wght@400;500;600;700&display=swap');
-
-        .hb-landing {
-          --berry: #7B2346;
-          --pink: #F6D3DB;
-          --gold: #D9A25B;
-          --cream: #FFF6F1;
-          --burgundy: #7B2346;
-
-          background: var(--cream);
-          color: var(--burgundy);
-          font-family: 'Poppins', sans-serif;
-          overflow-x: hidden;
-        }
-
-        .hb-landing *,
-        .hb-landing *::before,
-        .hb-landing *::after {
-          box-sizing: border-box;
-        }
-
-        .hb-landing h1,
-        .hb-landing h2,
-        .hb-landing h3 {
-          font-family: 'Playfair Display', serif;
-        }
-
-        .hb-landing section,
-        .hb-landing [id] {
-          scroll-margin-top: 100px;
-        }
-
-        .hb-container {
-          width: min(1200px, calc(100% - 48px));
-          margin-inline: auto;
-        }
-
-        .hb-label {
-          color: var(--berry);
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 2.5px;
-          text-transform: uppercase;
-        }
-
-        .hb-heading {
-          font-size: clamp(36px, 4.2vw, 57px);
-          line-height: 1.22;
-          font-weight: 600;
-          letter-spacing: -1.2px;
-        }
-
-        .hb-heading em {
-          color: var(--berry);
-          font-weight: 400;
-        }
-
-        .hb-body {
-          font-size: 14px;
-          line-height: 2;
-          color: #745765;
-        }
-
-        .hb-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          padding: 15px 28px;
-          border-radius: 100px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all .25s ease;
-        }
-
-        .hb-btn:hover {
-          transform: translateY(-2px);
-        }
-
-        .hb-btn-primary {
-          background: var(--berry);
-          color: white;
-        }
-
-        .hb-btn-primary:hover {
-          background: #7B2346;
-          box-shadow: 0 12px 28px #7B23462A;
-        }
-
-        .hb-btn-outline {
-          background: #FFFFFF99;
-          border: 1px solid var(--berry);
-          color: var(--berry);
-        }
-
-        .hb-btn-outline:hover {
-          background: #FBE8ED;
-        }
-
-        /* NAVBAR */
-
-        .hb-navbar {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 100;
-          background: rgba(255, 246, 241, .48);
-          backdrop-filter: blur(20px) saturate(160%);
-          -webkit-backdrop-filter: blur(20px) saturate(160%);
-          border-bottom: 1px solid #FFFFFF88;
-          transition: background .3s, box-shadow .3s;
-        }
-
-        .hb-navbar.scrolled {
-          background: rgba(255, 248, 244, .82);
-          box-shadow: 0 8px 30px rgba(123, 35, 70, .08);
-        }
-
-        .hb-nav-inner {
-          width: min(1300px, calc(100% - 48px));
-          height: 80px;
-          margin: auto;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 25px;
-        }
-
-        .hb-nav-links {
-          display: flex;
-          align-items: center;
-          gap: 40px;
-        }
-
-        .hb-nav-links button {
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--burgundy);
-        }
-
-        .hb-nav-links button:hover {
-          color: var(--berry);
-        }
-
-        .hb-mobile-menu {
-          display: none;
-        }
-
-        /* HERO */
-
-        .hb-hero {
-          position: relative;
-          min-height: 790px;
-          display: flex;
-          align-items: center;
-          padding: 150px 0 100px;
-          background: #FFF6F1;
-          overflow: hidden;
-        }
-
-        .hb-hero-photo {
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: 65%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-        }
-
-        .hb-hero-overlay {
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(
-              90deg,
-              #FFF6F1 0%,
-              #FFF6F1 26%,
-              rgba(255,246,241,.94) 39%,
-              rgba(255,246,241,.54) 54%,
-              rgba(255,246,241,0) 72%
-            );
-        }
-
-        .hb-hero-content {
-          position: relative;
-          z-index: 2;
-          width: min(1250px, calc(100% - 60px));
-          margin: auto;
-        }
-
-        .hb-hero-title {
-          margin-top: 22px;
-          font-size: clamp(72px, 9vw, 140px);
-          font-weight: 500;
-          letter-spacing: -5px;
-          line-height: 1;
-          color: #7B2346;
-        }
-
-        .hb-hero-tagline {
-          margin-top: 16px;
-          font-size: clamp(24px, 2.8vw, 38px);
-          font-family: 'Playfair Display', serif;
-          font-weight: 600;
-          color: #7B2346;
-        }
-
-        .hb-hero-subtitle {
-          margin-top: 14px;
-          font-size: 17px;
-          color: #7B2346;
-        }
-
-        /* PROBLEM SOLUTION */
-
-        .hb-problem-section {
-          padding: 125px 0;
-          background: #FFF9F7;
-        }
-
-        .hb-problem-layout {
-          display: grid;
-          grid-template-columns: 1fr 90px 1fr;
-          gap: 28px;
-          align-items: stretch;
-          margin-top: 45px;
-        }
-
-        .hb-problem-box {
-          border-radius: 32px;
-          padding: 45px;
-          background: #FBE7EB;
-        }
-
-        .hb-solution-box {
-          border-radius: 32px;
-          padding: 45px;
-          background: #7B2346;
-          color: white;
-        }
-
-        .hb-transition {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--berry);
-        }
-
-        /* HOW IT WORKS */
-
-        .hb-how-section {
-          padding: 130px 0;
-          background: white;
-        }
-
-        .hb-steps-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 24px;
-          margin-top: 70px;
-        }
-
-        .hb-step-card {
-          position: relative;
-          padding: 35px 25px;
-          border-radius: 28px;
-          background: #FFF6F1;
-          border: 1px solid #F0DDE3;
-          transition: all .3s;
-        }
-
-        .hb-step-card:hover {
-          transform: translateY(-7px);
-          box-shadow: 0 20px 45px rgba(123, 35, 70, .08);
-        }
-
-        .hb-step-number {
-          font-family: 'Playfair Display', serif;
-          font-size: 55px;
-          color: #E7B8C6;
-        }
-
-        .hb-step-icon {
-          width: 62px;
-          height: 62px;
-          display: grid;
-          place-items: center;
-          border-radius: 20px;
-          background: #F6D3DB;
-          color: #7B2346;
-        }
-
-        /* ABOUT */
-
-        .hb-about-section {
-          padding: 135px 0;
-          background: #FFF6F1;
-        }
-
-        .hb-about-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 85px;
-          align-items: center;
-        }
-
-        .hb-about-photo {
-          width: 100%;
-          height: 580px;
-          object-fit: cover;
-          border-radius: 260px 260px 35px 35px;
-        }
-
-        .hb-differentiator {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          margin-top: 18px;
-          font-size: 13px;
-          color: #674958;
-        }
-
-        .hb-differentiator svg {
-          color: var(--berry);
-          flex-shrink: 0;
-        }
-
-        /* FAQ */
-
-        .hb-faq-section {
-          padding: 125px 0;
-          background: white;
-        }
-
-        .hb-faq-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 18px;
-          margin-top: 55px;
-        }
-
-        .hb-faq-item {
-          border: 1px solid #EED9E0;
-          border-radius: 16px;
-          background: #FFF9F7;
-          overflow: hidden;
-        }
-
-        .hb-faq-question {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 18px;
-          padding: 22px;
-          font-size: 13px;
-          font-weight: 600;
-          text-align: left;
-        }
-
-        .hb-faq-answer {
-          padding: 0 22px 22px;
-          font-size: 12px;
-          line-height: 1.9;
-          color: #765D68;
-        }
-
-        /* CTA */
-
-        .hb-cta-section {
-          padding: 100px 0;
-          background: #FFF6F1;
-        }
-
-        .hb-cta-box {
-          border-radius: 40px;
-          padding: 85px 60px;
-          background: #7B2346;
-          color: white;
-          text-align: center;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .hb-cta-box::before {
-          content: '';
-          position: absolute;
-          width: 350px;
-          height: 350px;
-          border: 60px solid #FFFFFF0A;
-          border-radius: 50%;
-          top: -190px;
-          left: -150px;
-        }
-
-        .hb-cta-box::after {
-          content: '';
-          position: absolute;
-          width: 350px;
-          height: 350px;
-          border: 60px solid #FFFFFF0A;
-          border-radius: 50%;
-          bottom: -190px;
-          right: -150px;
-        }
-
-        /* FOOTER */
-
-        .hb-footer {
-          padding: 80px 0 30px;
-          background: #7B2346;
-          color: white;
-        }
-
-        .hb-footer-grid {
-          display: grid;
-          grid-template-columns: 1.5fr 1fr 1fr 1fr;
-          gap: 45px;
-        }
-
-        .hb-footer-link {
-          display: block;
-          margin-top: 15px;
-          font-size: 12px;
-          color: #E7C8D3;
-        }
-
-        .hb-footer-link:hover {
-          color: white;
-        }
-
-        @media (max-width: 1050px) {
-          .hb-nav-links,
-          .hb-nav-desktop {
-            display: none !important;
-          }
-
-          .hb-mobile-menu {
-            display: block;
-          }
-
-          .hb-steps-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .hb-about-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .hb-about-photo {
-            height: 500px;
-          }
-
-          .hb-footer-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 700px) {
-          .hb-container {
-            width: calc(100% - 36px);
-          }
-
-          .hb-hero {
-            min-height: 760px;
-            padding: 130px 0 70px;
-            align-items: flex-end;
-          }
-
-          .hb-hero-photo {
-            width: 100%;
-            height: 68%;
-            top: 0;
-            object-position: center top;
-          }
-
-          .hb-hero-overlay {
-            background: linear-gradient(
-              0deg,
-              #FFF6F1 12%,
-              rgba(255,246,241,.96) 35%,
-              rgba(255,246,241,.3) 73%
-            );
-          }
-
-          .hb-hero-content {
-            width: calc(100% - 36px);
-          }
-
-          .hb-hero-title {
-            font-size: clamp(58px, 15vw, 85px);
-            letter-spacing: -3px;
-          }
-
-          .hb-hero-tagline {
-            font-size: 25px;
-          }
-
-          .hb-problem-section,
-          .hb-how-section,
-          .hb-about-section,
-          .hb-faq-section {
-            padding: 85px 0;
-          }
-
-          .hb-problem-layout {
-            grid-template-columns: 1fr;
-          }
-
-          .hb-transition {
-            transform: rotate(90deg);
-            padding: 10px;
-          }
-
-          .hb-problem-box,
-          .hb-solution-box {
-            padding: 30px;
-          }
-
-          .hb-steps-grid,
-          .hb-faq-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .hb-about-photo {
-            height: 380px;
-          }
-
-          .hb-cta-box {
-            padding: 65px 25px;
-          }
-
-          .hb-footer-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .hb-landing *,
-          .hb-landing *::before,
-          .hb-landing *::after {
-            transition: none !important;
-            scroll-behavior: auto !important;
-          }
-        }
-      `}</style>
-
-      {/* ================= NAVBAR ================= */}
-      <header
-        className={`hb-navbar ${
-          scrolled ? 'scrolled' : ''
-        }`}
-      >
+      <header className={`hb-navbar ${scrolled ? 'hb-navbar-scrolled' : ''}`}>
         <div className="hb-nav-inner">
-
-          <button
-            type="button"
-            onClick={() => goTo('home')}
-          >
-            <img
-              src={logo}
-              alt="HerBloom Logo"
-              className="w-[155px] object-contain"
-            />
-          </button>
-
-          <div className="hb-nav-links">
-            {navLinks.map((link) => (
-              <button
-                type="button"
-                key={link.id}
-                onClick={() => goTo(link.id)}
-              >
-                {link.name}
-              </button>
-            ))}
+          <a href="#home" onClick={(event) => { event.preventDefault(); goTo('home') }}>
+            <img className="hb-logo" src={logo} width={923} height={623} alt="HerBloom" />
+          </a>
+          <nav className="hb-nav-links">
+            {navLinks.map(link => <a key={link.id} href={`#${link.id}`}>{t(link.name)}</a>)}
+          </nav>
+          <div className="hb-nav-actions">
+            <LanguageSwitcher />
+            <button type="button" className="hb-login" onClick={onLogin}>{t('log_in')}</button>
+            <button type="button" className="hb-btn" onClick={onGetStarted}>{t('start_your_journey')} <ArrowRight size={17} /></button>
           </div>
-
-          <div className="hb-nav-desktop flex items-center gap-5">
-
-            <span className="flex items-center gap-2 text-xs font-semibold text-[#7B2346]">
-              <Languages size={16} />
-              EN / தமிழ்
-            </span>
-
-            <button
-              type="button"
-              onClick={onLogin}
-              className="text-xs font-semibold text-[#7B2346]"
-            >
-              Log In
-            </button>
-
-            <button
-              type="button"
-              onClick={onGetStarted}
-              className="hb-btn hb-btn-primary"
-            >
-              Start Your Journey
-              <ArrowRight size={16} />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="hb-mobile-menu text-[#7B2346]"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle navigation"
-            aria-expanded={menuOpen}
-          >
+          <button type="button" className="hb-mobile-menu" aria-label={t('toggle_navigation')}
+            aria-expanded={menuOpen} aria-controls="hb-mobile-navigation"
+            onClick={() => setMenuOpen(open => !open)}>
             {menuOpen ? <X /> : <Menu />}
           </button>
         </div>
-
-        {menuOpen && (
-          <div className="border-t border-[#EED9E0] bg-[#FFF9F6]/95 px-6 py-6 backdrop-blur-xl">
-            <div className="flex flex-col gap-5">
-              {navLinks.map((link) => (
-                <button
-                  type="button"
-                  key={link.id}
-                  onClick={() => goTo(link.id)}
-                  className="text-left text-sm text-[#7B2346]"
-                >
-                  {link.name}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onLogin?.()
-                }}
-                className="text-left text-sm font-semibold text-[#7B2346]"
-              >
-                Log In
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onGetStarted?.()
-                }}
-                className="hb-btn hb-btn-primary"
-              >
-                Start Your Journey
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        {menuOpen && <nav id="hb-mobile-navigation" className="hb-mobile-nav">
+          <LanguageSwitcher />
+          {navLinks.map(link => <a key={link.id} href={`#${link.id}`} onClick={() => setMenuOpen(false)}>{t(link.name)}</a>)}
+          <button type="button" className="hb-login" onClick={onLogin}>{t('log_in')}</button>
+          <button type="button" className="hb-btn" onClick={onGetStarted}>{t('start_your_journey')} <ArrowRight size={17} /></button>
+        </nav>}
       </header>
 
-      {/* ================= HERO ================= */}
-      <section id="home" className="hb-hero">
-
-        <img
-          src={HERO_IMAGE}
-          alt="Mother holding her newborn baby"
-          className="hb-hero-photo"
-        />
-
-        <div className="hb-hero-overlay" />
-
-        <div className="hb-hero-content">
-
-          <p className="hb-label">
-            FOR SRI LANKAN & TAMIL MOTHERS
-          </p>
-
-          <h1 className="hb-hero-title">
-            HerBloom
-          </h1>
-
-          <h2 className="hb-hero-tagline">
-            Recover. Feel better. Bloom again.
-          </h2>
-
-          <p className="hb-hero-subtitle">
-            A little care, every day.
-          </p>
-
-          <div className="mt-9 flex flex-wrap gap-4">
-            <button
-              type="button"
-              onClick={onGetStarted}
-              className="hb-btn hb-btn-primary"
-            >
-              Start My Journey
-              <ArrowRight size={18} />
-            </button>
+      <main>
+        <section id="home" className="hb-hero">
+          <img src={heroImage} width={1612} height={656} className="hb-hero-photo" alt={t('mother_holding_her_newborn_baby')} fetchPriority="high" />
+          <div className="hb-hero-wash" aria-hidden="true" />
+          <Botanical className="hb-hero-botanical" />
+          <div className="hb-container hb-hero-content">
+            <p className="hb-label">{t('for_sri_lankan_tamil_mothers')}</p>
+            <h1>HerBloom</h1>
+            <p className="hb-hero-tagline">{t('recover_feel_better_bloom_again')}</p>
+            <p className="hb-hero-subtitle">{t('a_little_care_every_day')}</p>
+            <button type="button" className="hb-btn" onClick={onGetStarted}>{t('start_my_journey')} <ArrowRight size={19} /></button>
           </div>
+        </section>
 
-          <div className="mt-12 flex items-center gap-4">
-            <div className="h-[2px] w-14 bg-[#D9A25B]" />
-
-            <span className="text-[10px] font-semibold tracking-[2.5px] text-[#A05E75]">
-              MADE FOR YOUR POSTPARTUM CHAPTER
-            </span>
+        <section id="problem-solution" className="hb-problem hb-container">
+          <div className="hb-problem-pill">
+            <h2>{t('the_challenge')}</h2>
+            <p>{t('after_childbirth_mothers_often_face_physical_discomfort_emot')}</p>
           </div>
-
-        </div>
-      </section>
-
-      {/* ================= PROBLEM + SOLUTION ================= */}
-      <section
-        id="problem-solution"
-        className="hb-problem-section"
-      >
-        <div className="hb-container">
-
-          <div className="text-center">
-            <p className="hb-label">
-              WHY HERBLOOM EXISTS
-            </p>
-
-            <h2 className="hb-heading mt-5">
-              Every Mother Deserves
-              <br />
-              <em>Care After Birth.</em>
-            </h2>
+          <ArrowRight className="hb-problem-arrow" aria-hidden="true" />
+          <div className="hb-problem-pill hb-solution">
+            <h2>{t('our_solution')}</h2>
+            <p>{t('herbloom_brings_recovery_education_emotional_wellbeing_suppo')}</p>
           </div>
+        </section>
 
-          <div className="hb-problem-layout">
-
-            <div className="hb-problem-box">
-              <div className="mb-5 flex items-center gap-3">
-                <Heart
-                  size={25}
-                  color="#7B2346"
-                />
-
-                <h3 className="text-3xl font-semibold">
-                  The Challenge
-                </h3>
+        <section id="how-it-works" className="hb-container hb-how">
+          <div className="hb-how-heading">
+            <p className="hb-label">{t('how_it_works_19')}</p>
+            <h2>{t('support_at')} {t('every_step')}</h2>
+            <p>{t('a_simple_guided_journey_with_helpful_tools_for_a_more_inform')}</p>
+          </div>
+          <ol className="hb-steps">
+            {steps.map(({ number, title, description }) => <li key={number}>
+              <span className="hb-step-icon" aria-hidden="true"><JourneyIllustration step={number} /></span>
+              <div className="hb-step-copy">
+                <span className="hb-step-number">{number}</span>
+                <h3>{t(title)}</h3>
+                <p>{t(description)}</p>
               </div>
+            </li>)}
+          </ol>
+        </section>
 
-              <p className="hb-body">
-                After childbirth, mothers often face
-                physical discomfort, emotional changes,
-                and uncertainty while caring for a newborn.
-                Finding clear, accessible, and culturally
-                relevant recovery information can be
-                difficult.
-              </p>
-            </div>
-
-            <div className="hb-transition">
-              <ArrowRight size={40} strokeWidth={1.4} />
-            </div>
-
-            <div className="hb-solution-box">
-              <div className="mb-5 flex items-center gap-3">
-                <Sparkles
-                  size={25}
-                  color="#D9A25B"
-                />
-
-                <h3 className="text-3xl font-semibold">
-                  Our Solution
-                </h3>
-              </div>
-
-              <p className="text-sm leading-8 text-[#FBE7EE]">
-                HerBloom brings recovery education,
-                emotional wellbeing support, nutrition
-                information, tracking tools, and helpful
-                reminders together in one caring space —
-                so mothers can feel more informed and
-                supported throughout recovery.
-              </p>
-            </div>
-
+        <section id="about" className="hb-container hb-about">
+          <div className="hb-about-art">
+            <img src={aboutImage} width={1264} height={843} loading="lazy" decoding="async"
+              alt={t('mother_and_newborn')} className="hb-about-photo" />
+            <Botanical className="hb-about-botanical" />
           </div>
-        </div>
-      </section>
-
-      {/* ================= HOW IT WORKS ================= */}
-      <section
-        id="how-it-works"
-        className="hb-how-section"
-      >
-        <div className="hb-container">
-
-          <div className="text-center">
-            <p className="hb-label">
-              HOW IT WORKS
-            </p>
-
-            <h2 className="hb-heading mt-5">
-              Support at
-              <em> Every Step.</em>
-            </h2>
-
-            <p className="hb-body mx-auto mt-5 max-w-[650px]">
-              A simple, guided journey with helpful
-              tools for a more informed and supported
-              postpartum recovery.
-            </p>
+          <div className="hb-about-intro">
+            <p className="hb-label">{t('about_herbloom')}</p>
+            <h2>{t('caring_for_mothers')}<br />{t('beyond_birth')}</h2>
+            <p>{t('herbloom_is_a_postpartum_recovery_companion_designed_to_make')}</p>
           </div>
-
-          <div className="hb-steps-grid">
-            {steps.map((step) => {
-              const Icon = step.icon
-
-              return (
-                <div
-                  key={step.number}
-                  className="hb-step-card"
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="hb-step-number">
-                      {step.number}
-                    </span>
-
-                    <div className="hb-step-icon">
-                      <Icon size={27} strokeWidth={1.7} />
-                    </div>
-                  </div>
-
-                  <h3 className="mt-7 text-[23px] font-semibold">
-                    {step.title}
-                  </h3>
-
-                  <p className="mt-4 text-[13px] leading-7 text-[#765D68]">
-                    {step.description}
-                  </p>
-                </div>
-              )
-            })}
+          <div className="hb-about-detail">
+            <Target aria-hidden="true" />
+            <div><h3>{t('our_mission')}</h3><p>{t('to_help_mothers_feel_informed_supported_and_respected_throug')}</p></div>
           </div>
-
-        </div>
-      </section>
-
-      {/* ================= ABOUT ================= */}
-      <section id="about" className="hb-about-section">
-        <div className="hb-container hb-about-grid">
-
-          <div>
-            <img
-              src={ABOUT_IMAGE}
-              alt="Mother and newborn"
-              className="hb-about-photo"
-              loading="lazy"
-            />
-          </div>
-
-          <div>
-            <p className="hb-label">
-              ABOUT HERBLOOM
-            </p>
-
-            <h2 className="hb-heading mt-5">
-              Caring for Mothers,
-              <br />
-              <em>Beyond Birth.</em>
-            </h2>
-
-            <p className="hb-body mt-7">
-              HerBloom is a postpartum recovery companion
-              designed to make recovery information,
-              tracking tools, and wellbeing support more
-              accessible to Sri Lankan and Tamil mothers.
-            </p>
-
-            <div className="mt-10 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F6D3DB] text-[#7B2346]">
-                <Target size={24} />
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold">
-                  Our Mission
-                </h3>
-
-                <p className="hb-body mt-2">
-                  To help mothers feel informed,
-                  supported, and respected throughout
-                  their postpartum recovery journey.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-10">
-              <h3 className="text-xl font-semibold">
-                What Makes Us Different
-              </h3>
-
-              {[
-                'Designed with Sri Lankan mothers in mind',
-                'English and Tamil support planned',
-                'Recovery, nutrition, and wellbeing in one place',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="hb-differentiator"
-                >
-                  <Check size={18} />
-                  <span>{item}</span>
-                </div>
-              ))}
+          <div className="hb-about-detail">
+            <Star aria-hidden="true" />
+            <div>
+              <h3>{t('what_makes_us_different')}</h3>
+              <ul>
+                {['designed_with_sri_lankan_mothers_in_mind', 'english_and_tamil_support_planned', 'recovery_nutrition_and_wellbeing_in_one_place'].map(key => <li key={key}><Check aria-hidden="true" />{t(key)}</li>)}
+              </ul>
             </div>
           </div>
+        </section>
 
-        </div>
-      </section>
-
-      {/* ================= FAQ ================= */}
-      <section id="faq" className="hb-faq-section">
-        <div className="hb-container">
-
-          <div className="text-center">
-            <p className="hb-label">
-              FREQUENTLY ASKED QUESTIONS
-            </p>
-
-            <h2 className="hb-heading mt-5">
-              Common <em>Questions.</em>
-            </h2>
-
-            <p className="hb-body mt-4">
-              Quick answers to help you get started.
-            </p>
+        <section id="faq" className="hb-container hb-faq">
+          <div className="hb-faq-heading">
+            <Botanical className="hb-faq-botanical" />
+            <p className="hb-label">{t('faq')}</p>
+            <h2>{t('common')} {t('questions')}</h2>
+            <p>{t('quick_answers_to_help_you_get_started')}</p>
           </div>
-
-          {managedFaqs !== null && <label className="block text-center">
-            <select aria-label="FAQ language" value={faqLanguage} onChange={(event) => { setOpenFAQ(null); setManagedFaqs([]); setFaqLanguage(event.target.value) }}>
-              <option value="en">English</option><option value="ta">Tamil</option>
-            </select>
-          </label>}
           <div className="hb-faq-grid">
-            {(managedFaqs?.length ? managedFaqs : faqLanguage === 'en' ? faqs : []).map((faq, index) => {
-              const isOpen = openFAQ === index
-
-              return (
-                <div
-                  className="hb-faq-item"
-                  key={faq.id ?? faq.question}
-                >
-                  <button
-                    type="button"
-                    className="hb-faq-question"
-                    aria-expanded={isOpen}
-                    onClick={() =>
-                      setOpenFAQ(
-                        isOpen ? null : index
-                      )
-                    }
-                  >
-                    <span>{faq.question}</span>
-
-                    <ChevronDown
-                      size={18}
-                      className={`shrink-0 text-[#7B2346] transition-transform ${
-                        isOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {isOpen && (
-                    <p className="hb-faq-answer">
-                      {faq.answer}
-                    </p>
-                  )}
+            {entries.map((faq, index) => {
+              const key = faq.id ?? faq.question
+              const isOpen = openFAQ === key
+              const id = `hb-faq-answer-${index}`
+              return <div className="hb-faq-item" key={key}>
+                <button type="button" className="hb-faq-question" aria-expanded={isOpen} aria-controls={id}
+                  onClick={() => setOpenFAQ(isOpen ? null : key)}>
+                  <span>{faq.id == null ? t(faq.question) : faq.question}</span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
+                <div className="hb-faq-answer" id={id} inert={isOpen ? undefined : true} aria-hidden={!isOpen}>
+                  <div><p>{faq.id == null ? t(faq.answer) : faq.answer}</p></div>
                 </div>
-              )
+              </div>
             })}
           </div>
+        </section>
 
-        </div>
-      </section>
-
-      {/* ================= FINAL CTA ================= */}
-      <section className="hb-cta-section">
-        <div className="hb-container">
-          <div className="hb-cta-box">
-
-            <div className="relative z-10">
-              <p className="text-xs font-semibold uppercase tracking-[3px] text-[#F6D3DB]">
-                YOUR JOURNEY MATTERS
-              </p>
-
-              <h2 className="mx-auto mt-7 max-w-[800px] text-[clamp(37px,4.5vw,58px)] font-semibold leading-tight text-white">
-                You Care for Everyone.
-                <br />
-                <em className="text-[#F6D3DB]">
-                  Let's Make Space for You.
-                </em>
-              </h2>
-
-              <p className="mx-auto mt-6 max-w-[600px] text-sm leading-8 text-[#F8DFE7]">
-                A caring, all-in-one companion for your
-                postpartum recovery journey.
-                Discover supportive tools and
-                information designed around you.
-              </p>
-
-              <button
-                type="button"
-                onClick={onGetStarted}
-                className="hb-btn mt-9 bg-white text-[#7B2346]"
-              >
-                Start My Journey
-                <ArrowRight size={18} />
-              </button>
-            </div>
-
+        <section className="hb-cta-section">
+          <div className="hb-container hb-cta">
+            <Botanical className="hb-cta-botanical" />
+            <Botanical className="hb-cta-botanical hb-cta-botanical-start" />
+            <h2>{t('you_care_for_everyone')}<br />{t('let_s_make_space_for_you')}</h2>
+            <p>{t('a_caring_all_in_one_companion_for_your_postpartum_recovery_j')}</p>
+            <button type="button" className="hb-btn hb-btn-light" onClick={onGetStarted}>{t('start_my_journey')} <ArrowRight size={17} /></button>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* ================= FOOTER ================= */}
       <footer className="hb-footer">
-        <div className="hb-container">
-
-          <div className="hb-footer-grid">
-
-            <div>
-              <img
-                src={logo}
-                alt="HerBloom Logo"
-                className="w-[170px] rounded-lg bg-[#FFF6F1] p-2"
-              />
-
-              <p className="mt-5 max-w-[280px] text-xs leading-7 text-[#E7C8D3]">
-                Recover. Feel better. Bloom again.
-                A little care, every day.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold">
-                Quick Links
-              </h3>
-
-              {navLinks.map((link) => (
-                <button
-                  type="button"
-                  key={link.id}
-                  onClick={() => goTo(link.id)}
-                  className="hb-footer-link text-left"
-                >
-                  {link.name}
-                </button>
-              ))}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold">
-                Contact
-              </h3>
-
-              <p className="mt-5 flex items-center gap-2 text-xs text-[#E7C8D3]">
-                <Mail size={16} />
-                Contact email coming soon
-              </p>
-
-              <p className="mt-5 text-xs text-[#E7C8D3]">
-                Social media links will be added
-                when official accounts are available.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold">
-                Legal
-              </h3>
-
-              <PublicLegal landing />
-
-              <p className="mt-7 text-xs text-[#E7C8D3]">
-                Built with care for mothers.
-              </p>
-            </div>
-
+        <div className="hb-container hb-footer-grid">
+          <div>
+            <img src={logo} width={923} height={623} alt="HerBloom" className="hb-logo" />
+            <p>{t('recover_feel_better_bloom_again')}</p>
           </div>
-
-          <div className="mt-16 flex flex-col justify-between gap-5 border-t border-white/15 pt-7 text-[11px] leading-6 text-[#D9B6C3] md:flex-row">
-
-            <p>
-              © {new Date().getFullYear()} HerBloom.
-              All rights reserved.
-            </p>
-
-            <p className="max-w-[560px]">
-              HerBloom provides educational information
-              and does not replace professional medical
-              advice, diagnosis, or treatment.
-            </p>
-
+          <nav className="hb-footer-links">
+            {navLinks.map(link => <a key={link.id} href={`#${link.id}`}>{t(link.name)}</a>)}
+          </nav>
+          <div>
+            <h3><Mail size={15} aria-hidden="true" />{t('contact')}</h3>
+            <p>{t('contact_email_coming_soon')}</p>
+            <p>{t('social_media_links_will_be_added_when_official_accounts_are_')}</p>
           </div>
-
+          <div>
+            <PublicLegal landing />
+            <p>{t('built_with_care_for_mothers')} · © {year} HerBloom. {t('all_rights_reserved')}</p>
+          </div>
         </div>
+        <p className="hb-container hb-footer-note">{t('herbloom_provides_educational_information_and_does_not_repla')}</p>
       </footer>
-
     </div>
   )
 }

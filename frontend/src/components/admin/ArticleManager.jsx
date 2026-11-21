@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import MarkdownPreview from '../SafeMarkdown'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
@@ -60,11 +61,14 @@ function toPayload(form, initial) {
 }
 
 function ArticlePreview({ article, token }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [language, setLanguage] = useState('en')
   const text = (key) => article[key + '_' + language]
   return (
     <article className="space-y-5 rounded-xl bg-[#FFF6F1] p-5 text-[#3A1224]">
-      <div className="flex gap-2" aria-label="Preview language">
+      <div className="flex gap-2" aria-label={uiText('preview_language')}>
         <Button aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</Button>
         <Button aria-pressed={language === 'ta'} onClick={() => setLanguage('ta')}>Tamil</Button>
       </div>
@@ -72,18 +76,21 @@ function ArticlePreview({ article, token }) {
         <AdminMediaImage key={article.image_media_id} token={token} mediaId={article.image_media_id} legacyUrl={article.image_url} />
         <p>{article.category} · {article.read_time} min</p>
         {article.safety_label && <p>{article.safety_label.replaceAll('_', ' ')}</p>}
-        <h2 className="text-2xl font-bold">{text('title') || 'Title missing'}</h2>
+        <h2 className="text-2xl font-bold">{text('title') || localizeCopy('common:title_missing')}</h2>
         {text('key_points') && (
           <ul className="list-disc pl-6">{text('key_points').split('\n').filter(Boolean).map((point, i) => <li key={i}>{point}</li>)}</ul>
         )}
         <MarkdownPreview body={text('body') || ''} />
-        {text('doctor_note') && <aside className="rounded-xl bg-amber-50 p-4"><strong>When to see a doctor</strong><MarkdownPreview body={text('doctor_note')} /></aside>}
+        {text('doctor_note') && <aside className="rounded-xl bg-amber-50 p-4"><strong>{auditText('common:when_to_see_a_doctor')}</strong><MarkdownPreview body={text('doctor_note')} /></aside>}
       </div>
     </article>
   )
 }
 
 function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [initial] = useState(() => detail.article ? toForm(detail.article) : empty)
   const [form, setForm] = useState(initial)
   const [preview, setPreview] = useState(detail.mode === 'view')
@@ -108,7 +115,7 @@ function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
   }, [dirty])
 
   function close() {
-    if (!inFlight.current && (!dirty || window.confirm('Discard your unsaved article changes?'))) onClose()
+    if (!inFlight.current && (!dirty || window.confirm(uiText('discard_your_unsaved_article_changes')))) onClose()
   }
   function change(key, value) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -136,14 +143,14 @@ function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
   }
 
   function archive() {
-    if (inFlight.current || dirty || !window.confirm('Archive this article? It will become read-only.')) return
+    if (inFlight.current || dirty || !window.confirm(uiText('archive_this_article_it_will_become_read_only'))) return
     mutate(() => archiveAdminArticle(token, article.id))
   }
 
   return (
     <Dialog open onClose={close} fullWidth maxWidth="md">
       <form onSubmit={submit}>
-        <DialogTitle>{readOnly ? 'Article preview' : detail.article ? 'Edit draft' : 'New article draft'}</DialogTitle>
+        <DialogTitle>{readOnly ? localizeCopy('common:article_preview') : detail.article ? localizeCopy('common:edit_draft') : localizeCopy('common:new_article_draft')}</DialogTitle>
         <DialogContent dividers>
           {error && <Alert severity="error">{error}</Alert>}
           {article && <AdminStatusChip status={article.status} />}
@@ -152,7 +159,7 @@ function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
           )}
           {!preview && (
             <fieldset disabled={saving} className="space-y-4">
-              {(!form.title_ta.trim() || !form.body_ta.trim()) && <Alert severity="warning">Tamil title or body is missing.</Alert>}
+              {(!form.title_ta.trim() || !form.body_ta.trim()) && <Alert severity="warning">{localizeCopy('common:tamil_title_or_body_is_missing')}</Alert>}
               {fields.map(([key, label, maxLength]) => (
                 <div key={key} className="grid gap-4 sm:grid-cols-2">
                   {[['en', 'English'], ['ta', 'Tamil']].map(([lang, name]) => {
@@ -193,17 +200,17 @@ function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={form.first_baby_only} onChange={(event) => change('first_baby_only', event.target.checked)} />
-                  First Baby Only
+                  {auditText('common:first_baby_only')}
                 </label>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={form.is_premium} onChange={(event) => change('is_premium', event.target.checked)} />
-                  Premium Content
+                  {auditText('common:premium_content')}
                 </label>
               </div>
               {canUseMedia && (
                 <div>
-                  <Button disabled={saving} onClick={() => setPicker((value) => !value)}>Choose library image</Button>
-                  {form.image_media_id && <Button disabled={saving} onClick={() => change('image_media_id', null)}>Remove selected image</Button>}
+                  <Button disabled={saving} onClick={() => setPicker((value) => !value)}>{localizeCopy('common:choose_library_image')}</Button>
+                  {form.image_media_id && <Button disabled={saving} onClick={() => change('image_media_id', null)}>{localizeCopy('common:remove_selected_image')}</Button>}
                   {form.image_media_id && <AdminMediaImage key={form.image_media_id} token={token} mediaId={form.image_media_id} />}
                   {picker && <ImagePicker token={token} onSelect={(id) => { change('image_media_id', id); setPicker(false) }} />}
                 </div>
@@ -212,15 +219,15 @@ function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
           )}
         </DialogContent>
         <DialogActions sx={{ flexWrap: 'wrap' }}>
-          <Button disabled={saving} onClick={close}>Close</Button>
-          {canArchive && <Button disabled={saving || dirty} onClick={archive}>Archive</Button>}
+          <Button disabled={saving} onClick={close}>{uiText('close')}</Button>
+          {canArchive && <Button disabled={saving || dirty} onClick={archive}>{uiText('archive')}</Button>}
           {canSubmit && (
             <Button disabled={saving || dirty} onClick={() => mutate(() => submitAdminArticleForReview(token, article.id))}>
-              Submit for Review
+              {localizeCopy('common:submit_for_review_2')}
             </Button>
           )}
-          {!readOnly && <Button disabled={saving} onClick={() => setPreview((value) => !value)}>{preview ? 'Back to editor' : 'Preview'}</Button>}
-          {!readOnly && !preview && <Button variant="contained" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save draft'}</Button>}
+          {!readOnly && <Button disabled={saving} onClick={() => setPreview((value) => !value)}>{preview ? localizeCopy('common:back_to_editor') : localizeCopy('common:preview')}</Button>}
+          {!readOnly && !preview && <Button variant="contained" type="submit" disabled={saving}>{saving ? localizeCopy('common:saving') : localizeCopy('common:save_draft')}</Button>}
         </DialogActions>
       </form>
     </Dialog>
@@ -228,6 +235,8 @@ function ArticleDialog({ detail, token, permissions, onClose, onSaved }) {
 }
 
 export default function ArticleManager({ token, permissions }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
@@ -271,12 +280,12 @@ export default function ArticleManager({ token, permissions }) {
     }
   }
 
-  if (!canRead) return <Alert severity="warning">Article viewing permission is required.</Alert>
+  if (!canRead) return <Alert severity="warning">{localizeCopy('common:article_viewing_permission_is_required')}</Alert>
   return (
     <>
       {(error || currentList?.error) && <Alert severity="error">{error || currentList.error}</Alert>}
       <AdminTable
-        title="Articles"
+        title={localizeCopy('admin:articles')}
         rows={currentList?.data?.items ?? []}
         total={list?.data?.total ?? 0}
         columns={columns}
@@ -295,7 +304,7 @@ export default function ArticleManager({ token, permissions }) {
         canCreate={canCreate}
         canEdit={canEdit}
         canEditRow={(row) => row.status === 'draft'}
-        createLabel="New draft"
+        createLabel={auditText('common:new_draft')}
       />
       {detail && (
         <ArticleDialog

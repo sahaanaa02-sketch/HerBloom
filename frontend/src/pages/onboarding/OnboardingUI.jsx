@@ -1,3 +1,4 @@
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
 import { Check } from 'lucide-react'
 
@@ -16,6 +17,7 @@ export function QuestionCard({
   required = false,
   children,
 }) {
+  const copy = useOnboardingCopy()
   return (
     <section className="rounded-2xl border border-[#F1D9DF] bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -28,17 +30,17 @@ export function QuestionCard({
 
           <div className="min-w-0">
             <h3 className="text-sm font-semibold leading-6 text-[#3A1224]">
-              {title}
+              {copy(title)}
               {required && <span className="ml-1 text-red-600">*</span>}
             </h3>
 
             <span className="mt-1 inline-block rounded-full bg-[#FBEAF0] px-2 py-0.5 text-[11px] text-[#7B2346]">
-              {required ? 'Required' : 'Skip if you prefer'}
+              {copy(required ? 'Required' : 'Skip if you prefer')}
             </span>
 
             {helper && (
               <p className="mt-2 text-xs leading-5 text-[#765363]">
-                {helper}
+                {copy(helper)}
               </p>
             )}
           </div>
@@ -59,6 +61,7 @@ export function ChoiceButton({
   disabled = false,
   multiple = false,
 }) {
+  const copy = useOnboardingCopy()
   return (
     <button
       type="button"
@@ -98,21 +101,22 @@ export function ChoiceButton({
         </span>
       )}
 
-      <span>{children}</span>
+      <span>{typeof children === 'string' ? copy(children) : children}</span>
     </button>
   )
 }
 
 export function StepHeading({ title, subtitle }) {
+  const copy = useOnboardingCopy()
   return (
     <div className="mb-5 text-center">
       <h1 className="font-['Playfair_Display'] text-[clamp(25px,2.3vw,34px)] font-semibold leading-tight text-[#7B2346]">
-        {title}
+        {copy(title)}
       </h1>
 
       {subtitle && (
         <p className="mt-2 text-sm leading-6 text-[#765363]">
-          {subtitle}
+          {copy(subtitle)}
         </p>
       )}
     </div>
@@ -128,12 +132,13 @@ export function TextField({
   min,
   max,
 }) {
+  const copy = useOnboardingCopy()
   return (
     <input
       type={type}
       value={value ?? ''}
       onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
+      placeholder={copy(placeholder)}
       maxLength={maxLength}
       min={min}
       max={max}

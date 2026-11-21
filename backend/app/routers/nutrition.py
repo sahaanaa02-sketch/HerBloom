@@ -1,6 +1,8 @@
 
 from datetime import date as Date
+from hashlib import sha256
 from io import BytesIO
+from uuid import UUID
 
 from fastapi import (
     APIRouter, Depends, Header, HTTPException,
@@ -8,14 +10,15 @@ from fastapi import (
 )
 from PIL import Image, ImageOps, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
-from sqlalchemy import select, or_
-from sqlalchemy.orm import Session
+from sqlalchemy import inspect, select, or_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, undefer
 
 from app.database import get_db
 from app.models.user import User
 from app.models.mother_profile import MotherProfile
 from app.models.nutrition import (
-    Food, FoodAlias, FoodLog, FavoriteFood,
+    Food, FoodAlias, FoodLog, FoodLogSave, FavoriteFood,
     MealIdea, MealPlan, MealPlanItem, HbRecord, meal_idea_columns
 )
 from app.routers.auth import require_mother
@@ -71,12 +74,13 @@ def own_log(db, user_id, log_id):
 
 
 def own_plan_item(db, user_id, item_id):
-    item = db.get(MealPlanItem, item_id)
+    item = db.scalar(
+        select(MealPlanItem)
+        .join(MealPlan, MealPlan.id == MealPlanItem.plan_id)
+        .where(MealPlanItem.id == item_id, MealPlan.user_id == user_id)
+        .with_for_update(of=MealPlanItem)
+    )
     if not item:
-        raise HTTPException(404, "Plan item not found.")
-
-    plan = db.get(MealPlan, item.plan_id)
-    if not plan or plan.user_id != user_id:
         raise HTTPException(404, "Plan item not found.")
 
     return item
@@ -88,7 +92,10 @@ def search_foods(
     db: Session = Depends(get_db),
     user: User = Depends(require_mother),
 ):
-    stmt = select(Food)
+    extra_fields = ("carbs_g", "fat_g", "fibre_g", "missing_nutrients")
+    columns = {column["name"] for column in inspect(db.connection()).get_columns("foods")}
+    available = tuple(field for field in extra_fields if field in columns)
+    stmt = select(Food).options(*(undefer(getattr(Food, field)) for field in available))
 
     if q.strip():
         term = q.strip()
@@ -107,7 +114,17 @@ def search_foods(
         stmt.order_by(Food.name_en).limit(100)
     ).all()
 
-    return [serialize_food(f) for f in foods]
+    results = []
+    for food in foods:
+        result = serialize_food(food)
+        for field in extra_fields[:-1]:
+            result[field] = getattr(food, field) if food.verified and field in available else None
+        if "missing_nutrients" in available:
+            for field in food.missing_nutrients or []:
+                if field in ("calories", "protein", "iron", "calcium", *extra_fields[:-1]):
+                    result[field] = None
+        results.append(result)
+    return results
 
 
 @router.get("/today")
@@ -130,9 +147,20 @@ def food_logs(
 @router.post("/meals", status_code=201)
 def create_meal(
     payload: FoodLogCreate,
+    idempotency_key: UUID | None = Header(default=None),
     db: Session = Depends(get_db),
     user: User = Depends(require_mother),
 ):
+    receipt_key = (user.id, str(idempotency_key))
+    payload_hash = None
+    if idempotency_key is not None:
+        if not inspect(db.connection()).has_table(FoodLogSave.__tablename__):
+            raise HTTPException(503, "Retry-safe meal saving is unavailable.")
+        payload_hash = sha256(payload.model_dump_json().encode()).hexdigest()
+        previous = db.get(FoodLogSave, receipt_key)
+        if previous is not None:
+            return replay_meal_save(previous, payload_hash)
+
     if not db.get(Food, payload.food_id):
         raise HTTPException(404, "Food not found.")
 
@@ -149,10 +177,29 @@ def create_meal(
         grams=payload.grams,
     )
     db.add(row)
-    db.commit()
-    db.refresh(row)
+    try:
+        db.flush()
+        log_id = row.id
+        if payload_hash is not None:
+            db.add(FoodLogSave(
+                user_id=receipt_key[0], request_key=receipt_key[1],
+                payload_hash=payload_hash, response_id=log_id,
+            ))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        previous = db.get(FoodLogSave, receipt_key) if payload_hash is not None else None
+        if previous is None:
+            raise
+        return replay_meal_save(previous, payload_hash)
 
-    return {"id": row.id, "message": "Meal saved."}
+    return {"id": log_id, "message": "Meal saved."}
+
+
+def replay_meal_save(receipt: FoodLogSave, payload_hash: str):
+    if receipt.payload_hash != payload_hash:
+        raise HTTPException(409, "This save request already used different meal details.")
+    return {"id": receipt.response_id, "message": "Meal saved."}
 
 
 @router.patch("/meals/{log_id}")
@@ -288,15 +335,19 @@ def get_meal_ideas(
         MealIdea.id, MealIdea.title, MealIdea.description, MealIdea.category,
         MealIdea.ingredients, MealIdea.tags,
     )
-    if "editorial_status" in meal_idea_columns(db):
+    columns = meal_idea_columns(db)
+    if "editorial_status" in columns:
         query = query.where(MealIdea.editorial_status.is_(None) | (MealIdea.editorial_status == "published"))
+    language = db.scalar(select(MotherProfile.language).where(MotherProfile.user_id == user.id))
+    if language == "ta" and {"title_ta", "description_ta"} <= columns:
+        query = query.add_columns(MealIdea.title_ta, MealIdea.description_ta)
     rows = db.execute(query.order_by(MealIdea.id)).all()
 
     return [
         {
             "id": r.id,
-            "title": r.title,
-            "description": r.description,
+            "title": getattr(r, "title_ta", None) or r.title,
+            "description": getattr(r, "description_ta", None) or r.description,
             "category": r.category,
             "ingredients": r.ingredients,
             "tags": r.tags,

@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.a14_demo import demo_email, new_credentials, provision
+from app import a14_demo
+from app.a14_demo import new_credentials, provision
 from app.database import engine, get_db
 from app.e2e_fixtures import MOTHER_EMAIL, fixture_credentials, fixture_png
 from app.e2e_guard import authorize_e2e_launcher, preflight
@@ -26,8 +27,16 @@ class SyntheticCredentials(dict):
         return "<private synthetic role credentials>"
 
 
+def demo_email(role):
+    name = role.replace("_", "-")
+    return f"a14-security-{name}.e2e@example.com"
+
+
 @pytest.fixture
-def environment():
+def environment(monkeypatch):
+    monkeypatch.setattr(a14_demo, "demo_email", demo_email)
+    from app.config import settings
+    monkeypatch.setattr(settings, "E2E_ADMIN_PASSWORD_ONLY", False)
     authorize_e2e_launcher()
     preflight()
     from app.main import app
@@ -131,6 +140,9 @@ def expectation(route, role):
     return gate in permissions
 
 
+SESSION_MUTATIONS = {"/api/admin/auth/logout"}
+
+
 def test_admin_route_matrix(environment):
     app,call,credentials,review=environment
     roles={role:login(call,role,credentials) for role in ROLE_PERMISSIONS}
@@ -141,7 +153,7 @@ def test_admin_route_matrix(environment):
     route_count=0
     requests=0
     for route in admin_routes(app.routes):
-        if route.path in PUBLIC:
+        if route.path in PUBLIC | SESSION_MUTATIONS:
             continue
         fields=PARAMS if DYNAMIC.get(route.endpoint.__name__)!="clinical_record" else {**PARAMS,"id":str(review)}
         path=re.sub(r"\{([^}]+)\}",lambda m:fields.get(m[1],"900000001"),route.path_format)
@@ -163,7 +175,7 @@ def test_admin_route_matrix(environment):
                     assert result.status_code not in (401,403,405,500) and result.status_code<510,(method,path,role,result.status_code)
                 requests+=1
     assert route_count==sum(1 for path,operations in app.openapi()["paths"].items()
-                             if path.startswith("/api/admin/") and path not in PUBLIC
+                             if path.startswith("/api/admin/") and path not in PUBLIC | SESSION_MUTATIONS
                              for method in operations if method in {"get","post","put","patch","delete"})
     print(f"Admin role/auth matrix: {route_count} protected operations; {requests} requests.")
 
@@ -289,3 +301,36 @@ def test_scan_photo_privacy_and_upload_size(environment):
     response=call("POST","/api/admin/media",headers={"Content-Length":"20000000"},content=b"")
     assert response.status_code==413
     assert response.headers["cache-control"]=="no-store"
+
+
+def test_admin_challenge_rejects_wrong_and_expired_codes(environment):
+    from datetime import datetime, timedelta, timezone
+
+    from app.services.admin_security import admin_settings
+
+    _, call, credentials, _ = environment
+    role = "support"
+    challenge = call("POST", "/api/admin/auth/login", json={
+        "email": demo_email(role), "password": credentials[role]["password"],
+    })
+    assert challenge.status_code == 200
+    data = challenge.json()
+    assert data["requires_2fa"] and "access_token" not in data
+    token = data["challenge_token"]
+    assert call("GET", "/api/admin/me", token).status_code == 401
+    verifier = pyotp.TOTP(credentials[role]["totp_secret"])
+    now = datetime.now(timezone.utc)
+    neighboring_codes = {verifier.at(now + timedelta(seconds=30 * offset)) for offset in range(-2, 3)}
+    wrong = next(code for code in ("000000", "111111", "222222", "333333", "444444", "555555")
+                 if code not in neighboring_codes)
+    denied = call("POST", "/api/admin/auth/2fa/verify", json={"challenge_token": token, "code": wrong})
+    assert denied.status_code == 401 and "access_token" not in denied.json()
+    assert "authenticator code" in denied.json()["detail"]
+
+    claims = jwt.decode(token, options={"verify_signature": False})
+    claims.update(iat=now - timedelta(minutes=6), exp=now - timedelta(minutes=1))
+    expired = jwt.encode(claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")
+    denied = call("POST", "/api/admin/auth/2fa/verify",
+                  json={"challenge_token": expired, "code": verifier.now()})
+    assert denied.status_code == 401 and "access_token" not in denied.json()
+    assert "expired login challenge" in denied.json()["detail"]

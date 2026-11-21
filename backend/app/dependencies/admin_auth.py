@@ -12,7 +12,7 @@ from app.models.admin import (
     AdminUser,
     AdminRole,
 )
-from app.services.admin_security import admin_session_version, admin_settings
+from app.services.admin_security import admin_session_version, admin_settings, password_only_admin_enabled
 
 
 admin_bearer = HTTPBearer(
@@ -82,6 +82,11 @@ def get_current_admin(
 
     if payload.get("sv", 0) != admin_session_version(db, admin.id):
         raise HTTPException(401, "Invalid or expired Admin token")
+
+    if payload.get("amr") == ["pwd"]:
+        if password_only_admin_enabled():
+            return admin
+        raise HTTPException(401, "This Admin sign-in method is unavailable.")
 
     if not admin.totp_enabled:
         raise HTTPException(

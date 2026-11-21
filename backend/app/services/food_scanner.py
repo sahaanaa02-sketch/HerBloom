@@ -6,11 +6,13 @@ import logging
 import httpx
 from fastapi import HTTPException
 
+from app.schemas.nutrition import ScanResponse
+
 # --------------------------------------------------
 # ENVIRONMENT CONFIGURATION
 # --------------------------------------------------
 
-from app.config import external_setting
+from app.config import E2E_MODE, external_setting, settings
 from app.services import ai_monitor as monitor
 
 logger = logging.getLogger(__name__)
@@ -20,8 +22,25 @@ logger = logging.getLogger(__name__)
 # GEMINI FOOD SCANNER
 # --------------------------------------------------
 
+def scanner_api_key(db, user_id):
+    if not E2E_MODE or not settings.E2E_LIVE_MEAL_SCANNER_ENABLED:
+        return external_setting("GEMINI_API_KEY")
+
+    from app.e2e_guard import require_e2e_launcher, verify_database_identity
+    from sqlalchemy.exc import SQLAlchemyError
+
+    if db is None or user_id is None:
+        raise HTTPException(503, "Live E2E scanning requires an authenticated isolated request.")
+    try:
+        require_e2e_launcher()
+        verify_database_identity(db.connection())
+    except (RuntimeError, SQLAlchemyError):
+        raise HTTPException(503, "Live E2E scanning requires a verified isolated backend.") from None
+    return settings.E2E_MEAL_SCANNER_GEMINI_API_KEY.get_secret_value().strip()
+
+
 async def scan_food(image_bytes: bytes, mime_type: str, *, db=None, user_id=None, entitlement_quota=False):
-    api_key = external_setting("GEMINI_API_KEY")
+    api_key = scanner_api_key(db, user_id)
 
     if not api_key:
         raise HTTPException(
@@ -174,40 +193,13 @@ Rules:
             )
 
         parsed = json.loads("".join(text_parts))
-
-        if not isinstance(parsed, dict):
-            raise ValueError("Gemini response must be an object.")
-
-        raw_items = parsed.get("items", [])
-
-        if not isinstance(raw_items, list):
-            raise ValueError("Gemini items must be a list.")
-
-        items = []
-
-        for item in raw_items[:10]:
-            if not isinstance(item, dict):
-                continue
-
-            name = str(item.get("name", "")).strip()
-
-            try:
-                grams = float(item.get("estimated_grams", 0))
-            except (TypeError, ValueError):
-                continue
-
-            confidence = item.get("confidence", "low")
-
-            if name and 0 < grams <= 3000:
-                items.append({
-                    "name": name,
-                    "estimated_grams": grams,
-                    "confidence": (
-                        confidence
-                        if confidence in ("low", "medium", "high")
-                        else "low"
-                    ),
-                })
+        if not isinstance(parsed, dict) or set(parsed) != {"items"}:
+            raise ValueError("Unexpected Gemini food response.")
+        result = ScanResponse.model_validate({
+            **parsed,
+            "message": "AI estimates may be inaccurate. Review every food and portion before saving.",
+        })
+        items = [item.model_dump() for item in result.items]
 
         logger.info(
             "Gemini food scan completed. Items=%s",
@@ -246,7 +238,7 @@ Rules:
         raise HTTPException(
             status_code=502,
             detail="Gemini returned an invalid food analysis.",
-        )
+        ) from None
     finally:
         usage_id = meter.finish(output is not None)
         if output is not None:

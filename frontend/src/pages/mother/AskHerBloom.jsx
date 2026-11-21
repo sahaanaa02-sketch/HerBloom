@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { apiBase as API } from '../../services/apiBase'
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -29,6 +30,7 @@ const QUESTIONS = {
 }
 
 function SafetyCard({ message, lang }) {
+  const { t: auditText } = useTranslation()
   const crisis = message.type === 'crisis'
 
   return (
@@ -61,7 +63,7 @@ function SafetyCard({ message, lang }) {
             href="tel:1926"
             className="rounded-full bg-[#7B2346] px-5 py-2 text-sm font-semibold text-white"
           >
-            Call 1926
+            {auditText('common:call_1926')}
           </a>
         )}
 
@@ -69,7 +71,7 @@ function SafetyCard({ message, lang }) {
           href="tel:1990"
           className="rounded-full bg-red-700 px-5 py-2 text-sm font-semibold text-white"
         >
-          Call 1990
+          {auditText('common:call_1990')}
         </a>
       </div>
     </div>
@@ -83,9 +85,12 @@ export default function AskHerBloom({
   onOpenArticle,
   selectedArticleId = null,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText, i18n } = useTranslation(['common', 'mother'])
   const token = user?.access_token
 
-  const [lang, setLang] = useState('en')
+  const [responseLanguage, setLang] = useState(null)
+  const lang = responseLanguage ?? i18n.resolvedLanguage
   const [text, setText] = useState('')
   const [messages, setMessages] = useState([])
   const [sessionId, setSessionId] = useState(null)
@@ -270,7 +275,7 @@ export default function AskHerBloom({
   }
 
   async function deleteSession(id) {
-    if (!window.confirm('Delete this conversation?')) return
+    if (!window.confirm(uiText('delete_this_conversation'))) return
 
     try {
       await chatApi.deleteSession(token, id)
@@ -329,7 +334,7 @@ export default function AskHerBloom({
       window.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      setError('Voice input is not supported in this browser.')
+      setError(auditText('common:voice_input_is_not_supported_in_this_browser'))
       return
     }
 
@@ -350,7 +355,7 @@ export default function AskHerBloom({
 
     recognition.onerror = () => {
       setListening(false)
-      setError('Voice recognition could not complete.')
+      setError(auditText('common:voice_recognition_could_not_complete'))
     }
 
     recognition.onend = () => setListening(false)
@@ -361,7 +366,7 @@ export default function AskHerBloom({
       recognition.start()
       setListening(true)
     } catch {
-      setError('Could not start voice recognition.')
+      setError(auditText('common:could_not_start_voice_recognition'))
     }
   }
 
@@ -369,7 +374,7 @@ export default function AskHerBloom({
     if (onOpenArticle) {
       onOpenArticle(articleId)
     } else {
-      setError('Article navigation is not connected yet.')
+      setError(auditText('common:article_navigation_is_not_connected_yet'))
     }
   }
 
@@ -384,21 +389,22 @@ export default function AskHerBloom({
       onNavigate={onNavigate}
       activePage="chat"
     >
-      <div className="flex h-[calc(100vh-110px)] min-h-[580px] flex-col overflow-hidden rounded-3xl border border-[#F1DCE4] bg-[#FFF9F6]">
+      <div className="flex h-[calc(100dvh-118px)] min-h-[28rem] sm:min-h-[34rem] flex-col overflow-hidden rounded-3xl border border-[#F1DCE4] bg-[#FFF9F6]">
 
         <div className="flex items-center justify-between gap-3 border-b border-[#F1DCE4] bg-white px-6 py-4">
           <div>
             <h1 className="flex items-center gap-2 font-['Playfair_Display'] text-2xl font-bold text-[#7B2346]">
-              Ask HerBloom AI
+              {uiText('ask_herbloom_ai')}
               <Sparkles size={19} className="text-[#D9A25B]" />
             </h1>
             <p className="mt-1 text-xs text-[#977A86]">
-              Your friendly recovery education companion
+              {uiText('mother:ai_companion')}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <select
+              aria-label={uiText('mother:ai_response_language')}
               value={lang}
               onChange={(e) => setLang(e.target.value)}
               className="rounded-full border border-[#EBD7DF] px-3 py-2 text-xs text-[#7B2346]"
@@ -410,7 +416,7 @@ export default function AskHerBloom({
             <button
               type="button"
               onClick={newChat}
-              title="New conversation"
+              title={uiText('mother:new_conversation')}
               className="rounded-full bg-[#F6D3DB] p-2 text-[#7B2346]"
             >
               <Plus size={18} />
@@ -422,7 +428,7 @@ export default function AskHerBloom({
               className="flex items-center gap-2 rounded-full bg-[#FFF0F3] px-3 py-2 text-xs font-semibold text-[#7B2346]"
             >
               <History size={16} />
-              History
+              {uiText('history')}
             </button>
           </div>
         </div>
@@ -433,7 +439,7 @@ export default function AskHerBloom({
 
             <div className="min-w-0 flex-1">
               <p className="text-[11px] text-[#977A86]">
-                Asking about this article
+                {auditText('common:asking_about_this_article')}
               </p>
               <p className="truncate text-sm font-medium text-[#7B2346]">
                 {articleTitle}
@@ -445,12 +451,12 @@ export default function AskHerBloom({
               onClick={() => openArticle(article.id)}
               className="text-xs font-semibold text-[#7B2346] underline"
             >
-              View article
+              {uiText('view_article')}
             </button>
           </div>
         )}
 
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-6">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-5 sm:px-6 sm:py-6">
           {!messages.length && (
             <div className="mx-auto max-w-2xl py-8 text-center">
               <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-[30px] bg-[#F6D3DB]">
@@ -458,12 +464,11 @@ export default function AskHerBloom({
               </div>
 
               <h2 className="font-['Playfair_Display'] text-3xl text-[#7B2346]">
-                Hello, I'm HerBloom
+                {uiText('hello_i_m_herbloom')}
               </h2>
 
               <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[#795C69]">
-                Ask about postpartum recovery.
-                Answers are based on available reviewed articles.
+                {auditText('common:ask_about_postpartum_recovery_answers_are_based_on_available_reviewed_articles')}
               </p>
 
               <div className="mt-7 grid gap-3 sm:grid-cols-2">
@@ -497,7 +502,7 @@ export default function AskHerBloom({
                   <SafetyCard message={message} lang={lang} />
                 </div>
               ) : (
-                <div className={`max-w-[85%] rounded-3xl px-5 py-4 ${
+                <div className={`min-w-0 max-w-[93%] rounded-3xl px-3.5 py-3 sm:max-w-[85%] sm:px-5 sm:py-4 ${
                   message.role === 'user'
                     ? 'rounded-tr-md bg-[#F6D3DB] text-[#5C1935]'
                     : 'rounded-tl-md border border-[#F0D8E1] bg-white text-[#593849]'
@@ -535,7 +540,7 @@ export default function AskHerBloom({
                       <button
                         type="button"
                         onClick={() => feedback(message.id, true)}
-                        aria-label="Helpful"
+                        aria-label={uiText('helpful')}
                         className={`rounded-full p-2 ${
                           message.feedback === true
                             ? 'bg-[#F6D3DB]'
@@ -548,7 +553,7 @@ export default function AskHerBloom({
                       <button
                         type="button"
                         onClick={() => feedback(message.id, false)}
-                        aria-label="Not helpful"
+                        aria-label={uiText('not_helpful')}
                         className={`rounded-full p-2 ${
                           message.feedback === false
                             ? 'bg-[#F6D3DB]'
@@ -567,7 +572,7 @@ export default function AskHerBloom({
           {busy && (
             <div className="flex items-center gap-2 text-sm text-[#7B2346]">
               <Loader2 size={17} className="animate-spin" />
-              HerBloom is preparing a response...
+              {auditText('common:herbloom_is_preparing_a_response')}
             </div>
           )}
 
@@ -589,7 +594,7 @@ export default function AskHerBloom({
                   className="flex shrink-0 items-center gap-1 text-xs font-semibold text-red-700"
                 >
                   <RefreshCw size={14} />
-                  Retry
+                  {uiText('retry')}
                 </button>
               )}
             </div>
@@ -602,11 +607,11 @@ export default function AskHerBloom({
                 checked={consent}
                 onChange={toggleConsent}
               />
-              Use my recovery details
+              {auditText('common:use_my_recovery_details')}
             </label>
 
             <span
-              title="Only postpartum week, delivery type and feeding method are shared when enabled. Your question is sent to Gemini when a relevant reviewed article is found."
+              title={auditText('common:only_postpartum_week_delivery_type_and_feeding_method_are_shared_when_enabled_your_question_is_sent_to_gemini_when_a_relevant_reviewed_article_is_found')}
               className="cursor-help text-[#7B2346]"
             >
               <Info size={15} />
@@ -618,24 +623,20 @@ export default function AskHerBloom({
               e.preventDefault()
               sendMessage()
             }}
-            className="flex items-center gap-3 rounded-full border border-[#EBD7DF] bg-[#FFF9F6] px-4 py-2"
+            className="flex items-center gap-2 rounded-2xl border border-[#EBD7DF] bg-[#FFF9F6] px-2 py-1.5 focus-within:border-[#7B2346] sm:gap-3 sm:rounded-full sm:px-4 sm:py-2"
           >
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={1500}
-              placeholder={
-                lang === 'ta'
-                  ? 'உங்கள் கேள்வியை எழுதுங்கள்...'
-                  : 'Ask your question...'
-              }
+              placeholder={uiText('mother:ask_your_question')}
               className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
             />
 
             <button
               type="button"
               onClick={voiceInput}
-              aria-label="Voice input"
+              aria-label={uiText('voice_input')}
               className="text-[#977A86]"
             >
               {listening
@@ -646,8 +647,8 @@ export default function AskHerBloom({
             <button
               type="submit"
               disabled={busy || !text.trim()}
-              aria-label="Send message"
-              className="rounded-full bg-[#7B2346] p-3 text-white disabled:opacity-40"
+              aria-label={uiText('send_message')}
+              className="shrink-0 rounded-full bg-[#7B2346] p-3 text-white hover:bg-[#651C39] disabled:opacity-40"
             >
               <Send size={18} />
             </button>
@@ -665,13 +666,13 @@ export default function AskHerBloom({
           <div className="h-full w-full max-w-sm overflow-y-auto bg-white p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="font-['Playfair_Display'] text-2xl text-[#7B2346]">
-                Chat History
+                {uiText('chat_history')}
               </h2>
 
               <button
                 type="button"
                 onClick={() => setHistoryOpen(false)}
-                aria-label="Close history"
+                aria-label={uiText('close_history')}
               >
                 <X size={22} />
               </button>
@@ -683,7 +684,7 @@ export default function AskHerBloom({
               className="mb-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#7B2346] py-3 text-sm text-white"
             >
               <Plus size={17} />
-              New Conversation
+              {auditText('common:new_conversation')}
             </button>
 
             <div className="space-y-3">
@@ -703,7 +704,7 @@ export default function AskHerBloom({
                   <button
                     type="button"
                     onClick={() => deleteSession(session.id)}
-                    aria-label="Delete conversation"
+                    aria-label={uiText('delete_conversation')}
                     className="text-red-500"
                   >
                     <Trash2 size={17} />
@@ -713,7 +714,7 @@ export default function AskHerBloom({
 
               {!sessions.length && (
                 <p className="text-sm text-[#977A86]">
-                  No conversations yet.
+                  {auditText('common:no_conversations_yet')}
                 </p>
               )}
             </div>

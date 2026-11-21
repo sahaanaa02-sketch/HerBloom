@@ -44,6 +44,10 @@ def verify_admin_password(
         return False
 
 
+def password_only_admin_enabled() -> bool:
+    return E2E_MODE and settings.E2E_ADMIN_PASSWORD_ONLY
+
+
 def admin_session_version(db, admin_id: int, lock: bool = False) -> int:
     if not ready(db):
         return 0

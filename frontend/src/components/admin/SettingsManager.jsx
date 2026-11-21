@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, TextField } from '@mui/material'
 import AdminTable from './AdminTable'
@@ -29,8 +30,9 @@ const columns = {
 }
 
 function RolesSelect({ roles, values, onChange, disabled }) {
+  const { t: uiText } = useTranslation('common')
   return <fieldset className="rounded-lg border border-[#F6D3DB] p-3" disabled={disabled}>
-    <legend>Roles</legend>
+    <legend>{uiText('roles')}</legend>
     {roles.map((role)=><FormControlLabel key={role.id} label={role.name}
       control={<Checkbox checked={values.includes(role.id)} onChange={(event)=>onChange(event.target.checked
         ? [...values,role.id] : values.filter((id)=>id!==role.id))} />} />)}
@@ -38,56 +40,61 @@ function RolesSelect({ roles, values, onChange, disabled }) {
 }
 
 function SiteForm({ settings, canManage, busy, save }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [form,setForm] = useState(settings)
   const change=(key,value)=>setForm((current)=>({...current,[key]:value}))
   return <form className="grid max-w-3xl gap-4" onSubmit={(event)=>{event.preventDefault();save(form)}}>
-    <FormControlLabel label="Support Tamil alongside English" control={<Checkbox disabled={!canManage||busy}
+    <FormControlLabel label={auditText('common:support_tamil_alongside_english')} control={<Checkbox disabled={!canManage||busy}
       checked={form.supported_languages.includes('ta')} onChange={(event)=>change('supported_languages',event.target.checked?['en','ta']:['en'])}/>}/>
     <div className="grid gap-3 sm:grid-cols-2">
       {[['en','English'],['ta','Tamil']].map(([key,label])=><TextField key={key} disabled={!canManage||busy}
         label={label+' maintenance notice'} multiline minRows={3} value={form['maintenance_banner_'+key]}
         slotProps={{htmlInput:{maxLength:500}}} onChange={(event)=>change('maintenance_banner_'+key,event.target.value)}/>)}
     </div>
-    <TextField disabled={!canManage||busy} type="email" label="Support email" value={form.support_email??''}
+    <TextField disabled={!canManage||busy} type="email" label={uiText('support_email')} value={form.support_email??''}
       onChange={(event)=>change('support_email',event.target.value||null)}/>
-    <FormControlLabel label="Show Stage 2 overview tiles" control={<Checkbox disabled={!canManage||busy}
+    <FormControlLabel label={auditText('common:show_stage_2_overview_tiles')} control={<Checkbox disabled={!canManage||busy}
       checked={form.stage2_enabled} onChange={(event)=>change('stage2_enabled',event.target.checked)}/>}/>
-    {canManage && <Button disabled={busy} type="submit" variant="contained">Save settings</Button>}
+    {canManage && <Button disabled={busy} type="submit" variant="contained">{uiText('save_settings')}</Button>}
   </form>
 }
 
 function AuditFilters({ filters, apply, download, busy }) {
+  const { t: auditText } = useTranslation()
   const [form,setForm] = useState(filters)
   const fields=[['admin_id','Admin ID','number'],['entity','Entity','text'],['action','Action','text'],['from_date','From','date'],['to_date','Through','date']]
   return <form className="flex flex-wrap items-end gap-3" onSubmit={(event)=>{event.preventDefault();apply(form)}}>
     {fields.map(([key,label,type])=><TextField key={key} label={label} type={type} size="small" value={form[key]||''}
       slotProps={{inputLabel:{shrink:type==='date'||undefined},htmlInput:{min:type==='number'?1:undefined}}}
       onChange={(event)=>setForm((current)=>({...current,[key]:event.target.value}))}/>)}
-    <Button type="submit">Apply filters</Button>
-    <Button type="button" onClick={()=>download(filters)} disabled={busy}>Download filtered CSV</Button>
+    <Button type="submit">{auditText('common:apply_filters')}</Button>
+    <Button type="button" onClick={()=>download(filters)} disabled={busy}>{auditText('common:download_filtered_csv')}</Button>
   </form>
 }
 
 function AuditDiff({ record }) {
+  const { t: auditText } = useTranslation()
   const fields=[...new Set([...Object.keys(record.before),...Object.keys(record.after)])].sort()
   return <div className="space-y-3">
     <p>{record.entity} · {record.action}</p>
-    <p>Values containing private or unstructured text are redacted.</p>
-    {!fields.length && <p>No shareable fields were recorded.</p>}
+    <p>{auditText('common:values_containing_private_or_unstructured_text_are_redacted')}</p>
+    {!fields.length && <p>{auditText('common:no_shareable_fields_were_recorded')}</p>}
     {fields.map((key)=><div key={key} className={record.changed_fields.includes(key)?'rounded-lg bg-[#FFF6F1] p-3':'p-3'}>
-      <strong>{key}{record.changed_fields.includes(key)?' · Changed':''}</strong>
+      <strong>{key}{record.changed_fields.includes(key)?auditText('common:changed'):''}</strong>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>Before<pre className="whitespace-pre-wrap">{JSON.stringify(record.before[key]??null,null,2)}</pre></div>
-        <div>After<pre className="whitespace-pre-wrap">{JSON.stringify(record.after[key]??null,null,2)}</pre></div>
+        <div>{auditText('common:before')}<pre className="whitespace-pre-wrap">{JSON.stringify(record.before[key]??null,null,2)}</pre></div>
+        <div>{auditText('common:after')}<pre className="whitespace-pre-wrap">{JSON.stringify(record.after[key]??null,null,2)}</pre></div>
       </div>
     </div>)}
   </div>
 }
 
 function LegalForm({ values, disabled, update }) {
+  const { t: auditText } = useTranslation()
   const [lang,setLang] = useState('en')
   return <div className="space-y-4">
-    <TextField fullWidth select label="Legal page" disabled={disabled||Boolean(values.id)} value={values.type}
+    <TextField fullWidth select label={auditText('common:legal_page')} disabled={disabled||Boolean(values.id)} value={values.type}
       onChange={(event)=>update('type',event.target.value)}>
       {Object.entries(legalLabels).map(([key,label])=><MenuItem key={key} value={key}>{label}</MenuItem>)}
     </TextField>
@@ -97,14 +104,17 @@ function LegalForm({ values, disabled, update }) {
         slotProps={{htmlInput:{maxLength:30000}}} onChange={(event)=>update('body_'+key,event.target.value)}/>)}
     </div>
     <div className="rounded-lg border border-[#F6D3DB] p-3">
-      <Button aria-pressed={lang==='en'} onClick={()=>setLang('en')}>English preview</Button>
-      <Button aria-pressed={lang==='ta'} onClick={()=>setLang('ta')}>Tamil preview</Button>
+      <Button aria-pressed={lang==='en'} onClick={()=>setLang('en')}>{auditText('common:english_preview')}</Button>
+      <Button aria-pressed={lang==='ta'} onClick={()=>setLang('ta')}>{auditText('common:tamil_preview')}</Button>
       <div lang={lang}><SafeMarkdown body={values['body_'+lang]} /></div>
     </div>
   </div>
 }
 
 export default function SettingsManager({token,permissions}) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const manage=permissions.includes('settings.manage')
   const view=permissions.includes('settings.view')
   const audits=permissions.includes('audit.view')
@@ -153,7 +163,7 @@ export default function SettingsManager({token,permissions}) {
     setEditor((state)=>({...state,data:{...state.data,[key]:value}}))
   }
   function mutation(method,path,body) {
-    operate(async()=>{await send(path,method,body);setNotice('Change saved.')},true)
+    operate(async()=>{await send(path,method,body);setNotice(auditText('common:change_saved'))},true)
   }
   function download(filters) {
     operate(async()=>{
@@ -173,11 +183,11 @@ export default function SettingsManager({token,permissions}) {
     if(editor.mode==='legal') mutation(data.id?'PUT':'POST','/legal'+(data.id?'/'+data.id:''),{
       type:data.type,body_en:data.body_en,body_ta:data.body_ta})
   }
-  if(!tabs.length)return <Alert severity="warning">Settings access is required.</Alert>
+  if(!tabs.length)return <Alert severity="warning">{auditText('common:settings_access_is_required')}</Alert>
   const data=current?.data??empty
   const names=Object.fromEntries(tabs)
   return <section className="space-y-4">
-    <nav aria-label="Settings sections" className="flex flex-wrap gap-2">
+    <nav aria-label={auditText('common:settings_sections')} className="flex flex-wrap gap-2">
       {tabs.map(([key,label])=><Button key={key} variant={tab===key?'contained':'outlined'} aria-pressed={tab===key}
         onClick={()=>{setTab(key);setPage(0);setFilter({});setError('');setNotice('')}}>{label}</Button>)}
     </nav>
@@ -187,15 +197,15 @@ export default function SettingsManager({token,permissions}) {
     {tab==='audit'&&<AuditFilters filters={filter} apply={(value)=>{setFilter(value);setPage(0)}} busy={busy} download={download}/>}
     {tab==='site' ? current?.data ?
       <SiteForm key={revision} settings={current.data} canManage={manage} busy={busy}
-        save={(value)=>operate(async()=>{await send('','PUT',value);setNotice('Settings saved.')})}/> :
-      !current?.error&&<p role="status">Loading settings…</p> :
+        save={(value)=>operate(async()=>{await send('','PUT',value);setNotice(auditText('common:settings_saved'))})}/> :
+      !current?.error&&<p role="status">{auditText('common:loading_settings')}</p> :
       <AdminTable key={tab} title={names[tab]} columns={columns[tab]} rows={data.items} total={data.total}
         loading={!current} page={page} pageSize={pageSize} onPageChange={setPage}
         onPageSizeChange={(value)=>{setPageSize(value);setPage(0)}} onRefresh={()=>refresh((value)=>value+1)}
         onView={(row)=>{if(tab==='audit')operate(async()=>show('audit',await send('/audit/'+row.id)))
           else show(tab==='admins'?'account':'legal',row)}}
         onCreate={manage&&current?.data&&tab!=='audit'?()=>show(tab==='admins'?'invite':'legal',tab==='legal'?blankLegal:{}):undefined}
-        createLabel={tab==='admins'?'Invite admin':'New legal version'}/>}
+        createLabel={tab==='admins'?auditText('common:invite_admin'):auditText('common:new_legal_version')}/>}
     {editor&&<Dialog open fullWidth maxWidth="md" onClose={()=>{if(!busy)setEditor(null)}}>
       <form onSubmit={saveEditor}>
         <DialogTitle>{{invite:'Invite administrator',account:'Administrator',legal:'Legal page',audit:'Audit entry'}[editor.mode]}</DialogTitle>
@@ -205,24 +215,24 @@ export default function SettingsManager({token,permissions}) {
           {editor.mode==='legal'&&<LegalForm values={editor.data} disabled={!manage||busy||Boolean(editor.data.published_at)} update={update}/>}
           {(editor.mode==='invite'||editor.mode==='account')&&<>
             {editor.mode==='invite'?<>
-              <TextField label="Name" required fullWidth value={editor.data.name??''} onChange={(event)=>update('name',event.target.value)}/>
-              <TextField label="Email" required fullWidth type="email" value={editor.data.email??''} onChange={(event)=>update('email',event.target.value)}/>
+              <TextField label={uiText('name')} required fullWidth value={editor.data.name??''} onChange={(event)=>update('name',event.target.value)}/>
+              <TextField label={uiText('email')} required fullWidth type="email" value={editor.data.email??''} onChange={(event)=>update('email',event.target.value)}/>
             </>:<p>{editor.row.name} · {editor.row.email}</p>}
             <RolesSelect roles={data.roles} values={editor.data.role_ids} disabled={busy} onChange={(value)=>update('role_ids',value)}/>
           </>}
         </DialogContent>
         <DialogActions>
           {editor.mode==='account'&&editor.row.active&&['reset-2fa','deactivate'].map((action)=><Button key={action}
-            color="error" disabled={busy} onClick={()=>{if(window.confirm('Confirm this administrator action?'))
-              mutation('POST','/admins/'+editor.row.id+'/'+action)}}>{action==='reset-2fa'?'Reset 2FA':'Deactivate'}</Button>)}
+            color="error" disabled={busy} onClick={()=>{if(window.confirm(uiText('confirm_this_administrator_action')))
+              mutation('POST','/admins/'+editor.row.id+'/'+action)}}>{action==='reset-2fa'?auditText('common:reset_2fa'):auditText('common:deactivate')}</Button>)}
           {editor.mode==='legal'&&manage&&editor.row.id&&!editor.row.published_at&&<Button disabled={busy} onClick={()=>{
-            if(window.confirm('Publish the saved version? Unsaved text changes are excluded.'))
+            if(window.confirm(uiText('publish_the_saved_version_unsaved_text_changes_are_excluded')))
               mutation('POST','/legal/'+editor.row.id+'/publish')
-          }}>Publish saved version</Button>}
-          <Button disabled={busy} onClick={()=>setEditor(null)}>Close</Button>
+          }}>{auditText('common:publish_saved_version')}</Button>}
+          <Button disabled={busy} onClick={()=>setEditor(null)}>{uiText('close')}</Button>
           {(editor.mode==='account'||editor.mode==='invite'||(editor.mode==='legal'&&manage&&!editor.row.published_at))&&
             <Button type="submit" variant="contained" disabled={busy||(editor.mode!=='legal'&&!editor.data.role_ids.length)}>
-              {editor.mode==='invite'?'Send invitation':'Save'}</Button>}
+              {editor.mode==='invite'?auditText('common:send_invitation'):localizeCopy('common:save')}</Button>}
         </DialogActions>
       </form>
     </Dialog>}

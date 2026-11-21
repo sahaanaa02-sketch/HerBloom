@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { Activity, CalendarCheck, ShieldCheck } from 'lucide-react'
 
 export default function GdmNutritionCard({ data }) {
+  const { t: auditText } = useTranslation()
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <div className="rounded-3xl border border-[#F2DFE5] bg-white p-7">
@@ -8,7 +10,7 @@ export default function GdmNutritionCard({ data }) {
           <Activity size={27} className="text-[#7B2346]" />
 
           <h3 className="font-['Playfair_Display'] text-2xl text-[#7B2346]">
-            GDM Follow-up
+            {auditText('common:gdm_follow_up')}
           </h3>
         </div>
 
@@ -33,7 +35,7 @@ export default function GdmNutritionCard({ data }) {
               </span>
 
               <strong className="text-sm text-[#7B2346]">
-                {value || 'Not recorded'}
+                {value || auditText('common:not_recorded')}
               </strong>
             </div>
           ))}
@@ -48,7 +50,7 @@ export default function GdmNutritionCard({ data }) {
           />
 
           <h3 className="font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Follow-up Guidance
+            {auditText('common:follow_up_guidance')}
           </h3>
 
           <p className="mt-3 text-sm leading-7 text-[#795C69]">
@@ -64,7 +66,7 @@ export default function GdmNutritionCard({ data }) {
           />
 
           <h3 className="font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Nutrition Education
+            {auditText('common:nutrition_education')}
           </h3>
 
           <p className="mt-3 text-sm leading-7 text-[#795C69]">

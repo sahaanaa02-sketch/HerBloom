@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { useRef } from 'react'
 import { Button } from '@mui/material'
 
 const textClass = 'mt-1 w-full rounded-lg border border-[#F6D3DB] bg-white px-3 py-2 text-[#3A1224]'
 
 export default function PairedStepsEditor({ title, steps, onChange }) {
+  const { t: uiText } = useTranslation('common')
   const nextKey = useRef(Math.max(-1, ...steps.map((step) => step.key)) + 1)
   const dragged = useRef(null)
 
@@ -31,10 +33,10 @@ export default function PairedStepsEditor({ title, steps, onChange }) {
               dragged.current = index
               event.dataTransfer.effectAllowed = 'move'
               event.dataTransfer.setData('text/plain', String(index))
-            }} onDragEnd={() => { dragged.current = null }} className="cursor-grab font-semibold">Step {index + 1}</span>
-            <Button size="small" aria-label={'Move step ' + (index + 1) + ' up'} disabled={index === 0} onClick={() => move(index, index - 1)}>Move up</Button>
-            <Button size="small" aria-label={'Move step ' + (index + 1) + ' down'} disabled={index === steps.length - 1} onClick={() => move(index, index + 1)}>Move down</Button>
-            <Button size="small" aria-label={'Remove step ' + (index + 1)} onClick={() => onChange(steps.filter((_, i) => i !== index))}>Remove</Button>
+            }} onDragEnd={() => { dragged.current = null }} className="cursor-grab font-semibold">{uiText('step')} {index + 1}</span>
+            <Button size="small" aria-label={'Move step ' + (index + 1) + ' up'} disabled={index === 0} onClick={() => move(index, index - 1)}>{uiText('move_up')}</Button>
+            <Button size="small" aria-label={'Move step ' + (index + 1) + ' down'} disabled={index === steps.length - 1} onClick={() => move(index, index + 1)}>{uiText('move_down')}</Button>
+            <Button size="small" aria-label={'Remove step ' + (index + 1)} onClick={() => onChange(steps.filter((_, i) => i !== index))}>{uiText('remove')}</Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {[['en', 'English'], ['ta', 'Tamil']].map(([lang, label]) => (
@@ -47,7 +49,7 @@ export default function PairedStepsEditor({ title, steps, onChange }) {
           </div>
         </div>
       ))}
-      <Button disabled={steps.length >= 50} onClick={() => onChange([...steps, { key: nextKey.current++, en: '', ta: '' }])}>Add step</Button>
+      <Button disabled={steps.length >= 50} onClick={() => onChange([...steps, { key: nextKey.current++, en: '', ta: '' }])}>{uiText('add_step')}</Button>
     </section>
   )
 }

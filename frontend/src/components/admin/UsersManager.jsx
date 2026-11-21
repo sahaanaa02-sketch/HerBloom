@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
 import AdminTable, { AdminStatusChip } from './AdminTable'
@@ -38,6 +39,9 @@ function Fields({ labels, record }) {
 }
 
 export default function UsersManager({ token, permissions }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const canManage = permissions.includes('users.manage')
   const canView = permissions.includes('users.view')
   const hasRequests = canManage || permissions.includes('data_requests.confirm')
@@ -88,18 +92,18 @@ export default function UsersManager({ token, permissions }) {
     operate(async () => {
       await send('/users/' + detail.id + '/' + action, 'POST')
       setDetail(await send('/users/' + detail.id))
-      setMessage('Account action completed.')
+      setMessage(auditText('common:account_action_completed'))
     })
   }
   function requestData(type) {
     if (!window.confirm('Open a data ' + type + ' request for this account?')) return
     operate(async () => {
       await send('/data-requests', 'POST', { type, user_id: detail.id })
-      setMessage('Data request submitted for confirmation.')
+      setMessage(auditText('common:data_request_submitted_for_confirmation'))
     })
   }
   function decide(action) {
-    if (!window.confirm(action === 'confirm' ? 'Confirm this data request?' : 'Reject this data request?')) return
+    if (!window.confirm(action === 'confirm' ? uiText('confirm_this_data_request') : uiText('reject_this_data_request'))) return
     operate(async () => {
       await send('/data-requests/' + detail.id + '/' + action, 'POST')
       setDetail(await send('/data-requests/' + detail.id))
@@ -118,7 +122,7 @@ export default function UsersManager({ token, permissions }) {
       link.click()
       link.remove()
       setTimeout(() => URL.revokeObjectURL(href), 1000)
-      setMessage('Export downloaded.')
+      setMessage(auditText('common:export_downloaded'))
     })
   }
 
@@ -126,20 +130,20 @@ export default function UsersManager({ token, permissions }) {
   const data = current?.data ?? empty
   const isUsers = tab === 'users'
   return <section className="space-y-4">
-    <nav aria-label="Users sections" className="flex gap-2">
-      {canView && <Button aria-pressed={isUsers} onClick={() => switchTab('users')}>Users</Button>}
-      {hasRequests && <Button aria-pressed={!isUsers} onClick={() => switchTab('data-requests')}>Data requests</Button>}
+    <nav aria-label={auditText('common:users_sections')} className="flex gap-2">
+      {canView && <Button aria-pressed={isUsers} onClick={() => switchTab('users')}>{localizeCopy('admin:users')}</Button>}
+      {hasRequests && <Button aria-pressed={!isUsers} onClick={() => switchTab('data-requests')}>{uiText('data_requests')}</Button>}
     </nav>
     {current?.error && <Alert severity="error">{current.error}</Alert>}
     {!detail && error && <Alert severity="error">{error}</Alert>}
-    <AdminTable key={tab} title={isUsers ? 'Mother accounts' : 'Data requests'} columns={isUsers ? accountColumns : requestColumns}
+    <AdminTable key={tab} title={isUsers ? auditText('common:mother_accounts') : localizeCopy('common:data_requests')} columns={isUsers ? accountColumns : requestColumns}
       rows={data.items} total={data.total} loading={!current} page={page} pageSize={pageSize}
       filters={isUsers ? usersFilters : requestFilters} onFilterChange={(values) => { setFilters(values); setPage(0) }}
       onSearchChange={isUsers ? onSearch : undefined} onPageChange={setPage}
       onPageSizeChange={(value) => { setPageSize(value); setPage(0) }} onView={open}
       onRefresh={() => refresh((value) => value + 1)} />
     {detail && <Dialog open fullWidth maxWidth="md" onClose={() => { if (!busy) setDetail(null) }}>
-      <DialogTitle>{isUsers ? 'Mother account' : 'Data request #' + detail.id}</DialogTitle>
+      <DialogTitle>{isUsers ? auditText('common:mother_account') : 'Data request #' + detail.id}</DialogTitle>
       <DialogContent dividers className="space-y-4">
         {error && <Alert severity="error">{error}</Alert>}
         {message && <Alert severity="success">{message}</Alert>}
@@ -147,32 +151,32 @@ export default function UsersManager({ token, permissions }) {
         {isUsers ? <>
           {canManage && detail.status !== 'anonymized' && <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => accountAction(detail.status === 'active' ? 'deactivate' : 'reactivate', detail.status === 'active' ? 'Deactivate account' : 'Reactivate account')}>
-              {detail.status === 'active' ? 'Deactivate' : 'Reactivate'}
+              {detail.status === 'active' ? auditText('common:deactivate') : auditText('common:reactivate')}
             </Button>
-            <Button disabled={busy || detail.status !== 'active'} onClick={() => accountAction('send-reset', 'Send password reset email')}>Send password reset</Button>
-            <Button disabled={busy || detail.status !== 'active'} onClick={() => accountAction('resend-verification', 'Resend verification email')}>Resend verification</Button>
-            <Button disabled={busy} onClick={() => requestData('export')}>Request export</Button>
-            <Button disabled={busy} onClick={() => requestData('delete')}>Request deletion</Button>
+            <Button disabled={busy || detail.status !== 'active'} onClick={() => accountAction('send-reset', 'Send password reset email')}>{uiText('send_password_reset')}</Button>
+            <Button disabled={busy || detail.status !== 'active'} onClick={() => accountAction('resend-verification', 'Resend verification email')}>{uiText('resend_verification')}</Button>
+            <Button disabled={busy} onClick={() => requestData('export')}>{auditText('common:request_export')}</Button>
+            <Button disabled={busy} onClick={() => requestData('delete')}>{auditText('common:request_deletion')}</Button>
           </div>}
-          <h3 className="font-semibold">Administrative history</h3>
-          {detail.history.length ? <ul>{detail.history.map((item) => <li key={item.id}>{item.action} · {item.admin_name ?? 'Former admin'} · {item.created_at}</li>)}</ul> : <p>No administrative actions recorded.</p>}
+          <h3 className="font-semibold">{auditText('common:administrative_history')}</h3>
+          {detail.history.length ? <ul>{detail.history.map((item) => <li key={item.id}>{item.action} · {item.admin_name ?? auditText('common:former_admin')} · {item.created_at}</li>)}</ul> : <p>{auditText('common:no_administrative_actions_recorded')}</p>}
         </> : <>
-          {detail.type === 'delete' && <Alert severity="warning">Production deletion execution requires separate authorization.</Alert>}
+          {detail.type === 'delete' && <Alert severity="warning">{auditText('common:production_deletion_execution_requires_separate_authorization')}</Alert>}
           <div className="flex flex-wrap gap-2">
             {detail.can_confirm && detail.type === 'delete' && <Button disabled={busy} onClick={() => operate(async () => {
               setImpact(await send('/data-requests/' + detail.id + '/impact'))
-            })}>Review deletion impact</Button>}
-            {detail.can_confirm && detail.status === 'requested' && <Button disabled={busy || (detail.type === 'delete' && !impact)} onClick={() => decide('confirm')}>Confirm</Button>}
-            {detail.can_confirm && ['requested','confirmed'].includes(detail.status) && <Button disabled={busy} onClick={() => decide('reject')}>Reject</Button>}
-            {detail.can_download && <Button disabled={busy} onClick={download}>Download export</Button>}
+            })}>{auditText('common:review_deletion_impact')}</Button>}
+            {detail.can_confirm && detail.status === 'requested' && <Button disabled={busy || (detail.type === 'delete' && !impact)} onClick={() => decide('confirm')}>{auditText('common:confirm')}</Button>}
+            {detail.can_confirm && ['requested','confirmed'].includes(detail.status) && <Button disabled={busy} onClick={() => decide('reject')}>{auditText('common:reject')}</Button>}
+            {detail.can_download && <Button disabled={busy} onClick={download}>{auditText('common:download_export')}</Button>}
           </div>
-          {impact && <div><h3 className="font-semibold">Owned records</h3>
+          {impact && <div><h3 className="font-semibold">{auditText('common:owned_records')}</h3>
             <ul>{Object.entries(impact.records).map(([name, count]) => <li key={name}>{name.replaceAll('_', ' ')} · {count}</li>)}</ul>
-            <p>Private export files · {impact.private_export_files}</p>
+            <p>{auditText('common:private_export_files')} {impact.private_export_files}</p>
           </div>}
         </>}
       </DialogContent>
-      <DialogActions><Button disabled={busy} onClick={() => setDetail(null)}>Close</Button></DialogActions>
+      <DialogActions><Button disabled={busy} onClick={() => setDetail(null)}>{uiText('close')}</Button></DialogActions>
     </Dialog>}
   </section>
 }

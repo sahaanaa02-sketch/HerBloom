@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
 import {
   Baby,
@@ -23,6 +25,8 @@ export default function Step1AboutBaby({
   updateAnswer,
   userName = '',
 }) {
+  const { t: auditText } = useTranslation()
+  const t = useOnboardingCopy()
   const today = new Date()
 
   const maxDate = [
@@ -53,9 +57,7 @@ export default function Step1AboutBaby({
       <div className="flex items-start gap-3 rounded-2xl border border-[#F6D3DB] bg-[#FFF1F3] p-4">
         <Heart size={19} className="mt-0.5 shrink-0 text-[#7B2346]" />
         <p className="text-sm leading-6 text-[#765363]">
-          Every recovery journey is different. A few details help
-          personalize your experience. You can skip optional
-          questions and update your answers later.
+          {t("Every recovery journey is different. A few details help personalize your experience. You can skip optional questions and update your answers later.")}
         </p>
       </div>
 
@@ -101,7 +103,7 @@ export default function Step1AboutBaby({
         title="How many babies did you have this time?"
         helper="This helps personalize feeding and rest suggestions."
       >
-        <div role="radiogroup" aria-label="Number of babies" className="flex flex-wrap gap-2">
+        <div role="radiogroup" aria-label={auditText('common:number_of_babies')} className="flex flex-wrap gap-2">
           {[
             [1, 'One baby'],
             [2, 'Twins'],
@@ -123,18 +125,18 @@ export default function Step1AboutBaby({
         title="Is this your first baby?"
         helper="First-time mothers can receive extra newborn-care basics."
       >
-        <div role="radiogroup" aria-label="First baby" className="flex flex-wrap gap-2">
+        <div role="radiogroup" aria-label={auditText('common:first_baby')} className="flex flex-wrap gap-2">
           <ChoiceButton
             selected={answers.first_baby === true}
             onClick={() => updateAnswer('first_baby', true)}
           >
-            Yes
+            {auditText('common:yes')}
           </ChoiceButton>
           <ChoiceButton
             selected={answers.first_baby === false}
             onClick={() => updateAnswer('first_baby', false)}
           >
-            No
+            {auditText('common:no')}
           </ChoiceButton>
         </div>
       </QuestionCard>

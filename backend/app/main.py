@@ -215,7 +215,7 @@ app.include_router(notifications_mother)
 @app.exception_handler(RequestValidationError)
 async def protect_account_link_validation(request, error):
     path = request.url.path
-    account_links = {"/auth/forgot-password", "/auth/reset-password", "/auth/verify-email", "/api/admin/auth/accept-invite"}
+    account_links = {"/auth/forgot-password", "/auth/reset-password", "/auth/verify-email", "/auth/password-reset/verify", "/auth/google", "/api/admin/auth/accept-invite"}
     if path in account_links or (path.startswith("/api/admin/data-requests/") and path.endswith("/download")):
         return JSONResponse({"detail": "Invalid account or download request."}, status_code=422,
                             headers={"Cache-Control": "no-store"})

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useRef, useState } from 'react'
 import { publishedFaqs, ticketRequest } from '../../services/supportApi'
 
@@ -24,6 +25,7 @@ const labels = {
 const categories = ['account','technical','billing','feedback','other']
 
 export default function MotherSupport({ token, initialLanguage, onClose }) {
+  const { t: uiText } = useTranslation('common')
   const dialog=useRef(null)
   const [tab,setTab]=useState('faq')
   const [language,setLanguage]=useState(initialLanguage === 'ta' ? 'ta' : 'en')
@@ -71,16 +73,16 @@ export default function MotherSupport({ token, initialLanguage, onClose }) {
     } catch {setError(true)}
   }
 
-  return <dialog ref={dialog} onClose={onClose} className="m-auto w-[min(94vw,42rem)] rounded-2xl border-0 bg-white p-5 text-[#593849] shadow-2xl backdrop:bg-black/35" aria-label={copy.support}>
+  return <dialog ref={dialog} onClose={onClose} className="m-auto max-h-[calc(100dvh-2rem)] w-[min(94vw,42rem)] overflow-y-auto overscroll-contain rounded-2xl border border-[#F2DEE5] bg-white p-4 sm:p-6 text-[#593849] shadow-2xl backdrop:bg-black/35" aria-label={copy.support}>
     <header className="mb-4 flex items-center justify-between">
       <h2 className="font-['Playfair_Display'] text-xl font-semibold text-[#7B2346]">{copy.support}</h2>
       <button type="button" onClick={()=>dialog.current.close()}>{copy.close}</button>
     </header>
     <div className="mb-4 flex flex-wrap gap-3">
       {['faq','contact','tickets'].map((key)=><button type="button" key={key} aria-pressed={tab===key}
-        className="rounded-lg bg-[#FFF6F1] px-3 py-2 text-sm aria-pressed:bg-[#F6D3DB]"
+        className="min-h-11 rounded-xl bg-[#FFF6F1] px-3 py-2 text-sm hover:bg-[#FBE8ED] aria-pressed:bg-[#F6D3DB]"
         onClick={()=>{setTab(key);setTicket(null);setError(false)}}>{copy[key]}</button>)}
-      <select aria-label="Language" value={language} onChange={(event)=>{setFaqs([]);setLanguage(event.target.value)}}>
+      <select aria-label={uiText('language')} value={language} onChange={(event)=>{setFaqs([]);setLanguage(event.target.value)}}>
         <option value="en">English</option><option value="ta">தமிழ்</option>
       </select>
     </div>
@@ -91,11 +93,11 @@ export default function MotherSupport({ token, initialLanguage, onClose }) {
     </details>)}</div>}
     {tab==='contact' && <form className="grid gap-3" onSubmit={send}>
       <p className="text-sm">{copy.note}</p>
-      <label className="grid gap-1">{copy.category}<select required name="category" className="rounded-lg border p-2">
+      <label className="grid gap-1">{copy.category}<select required name="category" className="min-h-11 min-w-0 rounded-xl border border-[#E8C3CC] bg-white px-3 py-2">
         {categories.map((key)=><option key={key} value={key}>{copy[key]}</option>)}
       </select></label>
-      <label className="grid gap-1">{copy.subject}<input required name="subject" maxLength={160} className="rounded-lg border p-2"/></label>
-      <label className="grid gap-1">{copy.body}<textarea required name="message" maxLength={4000} className="rounded-lg border p-2"/></label>
+      <label className="grid gap-1">{copy.subject}<input required name="subject" maxLength={160} className="min-h-11 min-w-0 rounded-xl border border-[#E8C3CC] bg-white px-3 py-2"/></label>
+      <label className="grid gap-1">{copy.body}<textarea required name="message" maxLength={4000} className="min-h-11 min-w-0 rounded-xl border border-[#E8C3CC] bg-white px-3 py-2"/></label>
       <button disabled={busy} className="rounded-lg bg-[#7B2346] px-4 py-2 text-white">{copy.send}</button>
     </form>}
     {tab==='tickets' && (ticket ? <article className="space-y-3">

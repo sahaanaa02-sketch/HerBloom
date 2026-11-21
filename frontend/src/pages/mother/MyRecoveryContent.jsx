@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -122,6 +123,9 @@ function Metric({ icon: Icon, title, value, subtitle, onClick }) {
 }
 
 function SleepTab({ rows, save, remove }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [form, setForm] = useState({
     date: todayISO(),
     bed_time: '22:00',
@@ -147,10 +151,10 @@ function SleepTab({ rows, save, remove }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <Section title="Sleep and Rest Log" icon={BedDouble}>
+      <Section title={localizeCopy('common:sleep_and_rest_log')} icon={BedDouble}>
         <form onSubmit={submit} className="space-y-4">
           <label className="block text-sm text-[#765363]">
-            Date
+            {uiText('date')}
             <input type="date" max={todayISO()} required
               className={`${INPUT} mt-2`}
               value={form.date}
@@ -175,7 +179,7 @@ function SleepTab({ rows, save, remove }) {
           </div>
 
           <div>
-            <p className="mb-3 text-sm text-[#765363]">Sleep quality</p>
+            <p className="mb-3 text-sm text-[#765363]">{localizeCopy('common:sleep_quality')}</p>
             <div className="flex gap-2">
               {['😞', '😕', '😐', '🙂', '😊'].map((face, index) => (
                 <button key={face} type="button"
@@ -194,7 +198,7 @@ function SleepTab({ rows, save, remove }) {
 
           <div className="flex items-center justify-between">
             <span className="text-sm text-[#765363]">
-              Night wakings
+              {localizeCopy('common:night_wakings')}
             </span>
             <div className="flex items-center gap-4">
               <button type="button"
@@ -212,31 +216,31 @@ function SleepTab({ rows, save, remove }) {
           </div>
 
           <textarea className={INPUT} rows={3}
-            placeholder="Optional sleep notes"
+            placeholder={uiText('optional_sleep_notes')}
             value={form.note}
             onChange={(e) => change('note', e.target.value)}
           />
 
           <button className={BUTTON} type="submit">
-            {editing ? 'Update Sleep' : 'Save Sleep'}
+            {editing ? auditText('common:update_sleep') : auditText('common:save_sleep')}
           </button>
           {editing && (
             <button type="button" className="ml-3 text-sm"
               onClick={() => setEditing(null)}>
-              Cancel
+              {uiText('cancel')}
             </button>
           )}
         </form>
       </Section>
 
       <div className="space-y-5">
-        <Section title="Last 7 Days" icon={TrendingUp}>
-          <WeeklyChart rows={rows} valueKey="hours" label="Hours" />
+        <Section title={localizeCopy('common:last_7_days')} icon={TrendingUp}>
+          <WeeklyChart rows={rows} valueKey="hours" label={localizeCopy('common:hours')} />
         </Section>
 
-        <Section title="Sleep History" icon={Clock}>
+        <Section title={auditText('common:sleep_history')} icon={Clock}>
           {rows.length === 0 ? <Empty /> : (
-            <div className="max-h-80 space-y-2 overflow-auto">
+            <div className="max-h-80 space-y-2 overflow-auto overscroll-contain">
               {rows.map((row) => (
                 <div key={row.id}
                   className="flex items-center justify-between rounded-xl bg-[#FFF6F1] p-3"
@@ -246,7 +250,7 @@ function SleepTab({ rows, save, remove }) {
                       {row.hours} hours
                     </p>
                     <p className="text-xs text-[#977685]">
-                      {row.date} · Quality {row.quality}/5
+                      {row.date} {auditText('common:quality')} {row.quality}/5
                     </p>
                   </div>
                   <div className="flex gap-3">
@@ -263,9 +267,9 @@ function SleepTab({ rows, save, remove }) {
                           note: row.note || '',
                         })
                       }}
-                    >Edit</button>
+                    >{uiText('edit')}</button>
                     <button type="button"
-                      aria-label="Delete sleep entry"
+                      aria-label={uiText('delete_sleep_entry')}
                       onClick={() => remove('sleep', row.id)}
                     ><Trash2 size={17} /></button>
                   </div>
@@ -280,6 +284,8 @@ function SleepTab({ rows, save, remove }) {
 }
 
 function WalkingTab({ rows, summary, save, remove }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [date, setDate] = useState(todayISO())
   const [minutes, setMinutes] = useState(10)
   const [note, setNote] = useState('')
@@ -298,16 +304,16 @@ function WalkingTab({ rows, summary, save, remove }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <Section title="Walking Tracker" icon={Footprints}>
+      <Section title={auditText('common:walking_tracker')} icon={Footprints}>
         <div className="mb-5 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-[#FFF6F1] p-4">
-            <p className="text-xs text-[#977685]">Last 7 days</p>
+            <p className="text-xs text-[#977685]">{auditText('common:last_7_days_2')}</p>
             <p className="text-2xl font-bold text-[#7B2346]">
               {summary?.weekly_walk_minutes || 0} min
             </p>
           </div>
           <div className="rounded-xl bg-[#FFF6F1] p-4">
-            <p className="text-xs text-[#977685]">Current streak</p>
+            <p className="text-xs text-[#977685]">{auditText('common:current_streak')}</p>
             <p className="text-2xl font-bold text-[#7B2346]">
               {summary?.walking_streak || 0} days
             </p>
@@ -341,33 +347,33 @@ function WalkingTab({ rows, summary, save, remove }) {
           />
 
           <textarea rows={3} className={INPUT}
-            placeholder="Optional walking notes"
+            placeholder={uiText('optional_walking_notes')}
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
 
           <button type="submit" className={BUTTON}>
-            {editing ? 'Update Walk' : 'Save Walk'}
+            {editing ? auditText('common:update_walk') : auditText('common:save_walk')}
           </button>
           {editing && (
             <button type="button" className="ml-3 text-sm"
               onClick={() => setEditing(null)}>
-              Cancel
+              {uiText('cancel')}
             </button>
           )}
         </form>
       </Section>
 
       <div className="space-y-5">
-        <Section title="Weekly Walking Progress" icon={TrendingUp}>
-          <WeeklyChart rows={rows} valueKey="minutes" label="Minutes" />
+        <Section title={auditText('common:weekly_walking_progress')} icon={TrendingUp}>
+          <WeeklyChart rows={rows} valueKey="minutes" label={uiText('minutes')} />
           <p className="mt-3 text-xs text-[#977685]">
             Track at your own comfortable pace. No fixed activity target
             is required.
           </p>
         </Section>
 
-        <Section title="Walking History" icon={CalendarDays}>
+        <Section title={auditText('common:walking_history')} icon={CalendarDays}>
           {rows.length === 0 ? <Empty /> : (
             <div className="space-y-2">
               {rows.map((row) => (
@@ -389,9 +395,9 @@ function WalkingTab({ rows, summary, save, remove }) {
                         setMinutes(row.minutes)
                         setNote(row.note || '')
                       }}
-                    >Edit</button>
+                    >{uiText('edit')}</button>
                     <button type="button"
-                      aria-label="Delete walk entry"
+                      aria-label={uiText('delete_walk_entry')}
                       onClick={() => remove('walks', row.id)}
                     ><Trash2 size={17} /></button>
                   </div>
@@ -414,6 +420,8 @@ const SYMPTOMS = [
 ]
 
 function BodyTab({ rows, save, remove }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const empty = {
     date: todayISO(),
     wound: false,
@@ -444,7 +452,7 @@ function BodyTab({ rows, save, remove }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <Section title="Rest and Discomfort Notes" icon={Heart}>
+      <Section title={auditText('common:rest_and_discomfort_notes')} icon={Heart}>
         <form onSubmit={submit} className="space-y-5">
           <input type="date" max={todayISO()} required
             className={INPUT} value={form.date}
@@ -452,10 +460,10 @@ function BodyTab({ rows, save, remove }) {
           />
 
           <p className="text-sm text-[#765363]">
-            Select anything you would like to record:
+            {auditText('common:select_anything_you_would_like_to_record')}
           </p>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             {SYMPTOMS.map(([key, label]) => (
               <button key={key} type="button"
                 aria-pressed={form[key]}
@@ -472,7 +480,7 @@ function BodyTab({ rows, save, remove }) {
           </div>
 
           <label className="block text-sm text-[#765363]">
-            Bleeding level
+            {auditText('common:bleeding_level')}
             <select className={`${INPUT} mt-2`}
               value={form.bleeding_level}
               onChange={(e) => change('bleeding_level', e.target.value)}
@@ -484,7 +492,7 @@ function BodyTab({ rows, save, remove }) {
           </label>
 
           <label className="block text-sm text-[#765363]">
-            Energy level: {form.energy}/5
+            {auditText('common:energy_level')} {form.energy}/5
             <input type="range" min="1" max="5"
               className="mt-3 w-full accent-[#7B2346]"
               value={form.energy}
@@ -493,20 +501,20 @@ function BodyTab({ rows, save, remove }) {
           </label>
 
           <textarea className={INPUT} rows={4}
-            placeholder="How are you feeling today?"
+            placeholder={uiText('how_are_you_feeling_today')}
             value={form.note}
             onChange={(e) => change('note', e.target.value)}
           />
 
           <button type="submit" className={BUTTON}>
-            {editing ? 'Update Body Check' : 'Save Body Check'}
+            {editing ? auditText('common:update_body_check') : auditText('common:save_body_check')}
           </button>
         </form>
       </Section>
 
-      <Section title="Previous Body Checks" icon={CalendarDays}>
+      <Section title={auditText('common:previous_body_checks')} icon={CalendarDays}>
         {rows.length === 0 ? <Empty /> : (
-          <div className="max-h-[550px] space-y-3 overflow-auto">
+          <div className="max-h-[550px] space-y-3 overflow-auto overscroll-contain">
             {rows.map((row) => (
               <div key={row.id}
                 className="rounded-2xl bg-[#FFF6F1] p-4"
@@ -525,19 +533,19 @@ function BodyTab({ rows, save, remove }) {
                           ...row,
                         })
                       }}
-                    >Edit</button>
+                    >{uiText('edit')}</button>
                     <button type="button"
-                      aria-label="Delete body check"
+                      aria-label={uiText('delete_body_check')}
                       onClick={() => remove('body', row.id)}
                     ><Trash2 size={17} /></button>
                   </div>
                 </div>
 
                 <p className="mt-2 text-xs text-[#765363]">
-                  Bleeding: {row.bleeding_level} · Energy: {row.energy}/5
+                  {auditText('common:bleeding')} {row.bleeding_level} {auditText('common:energy')} {row.energy}/5
                 </p>
                 <p className="mt-2 text-sm text-[#765363]">
-                  {row.note || 'No additional notes'}
+                  {row.note || auditText('common:no_additional_notes')}
                 </p>
               </div>
             ))}
@@ -549,6 +557,8 @@ function BodyTab({ rows, save, remove }) {
 }
 
 function ExerciseTab({ exercises, reload }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [category, setCategory] = useState('All')
   const [selected, setSelected] = useState(null)
   const [step, setStep] = useState(0)
@@ -579,19 +589,18 @@ function ExerciseTab({ exercises, reload }) {
           className="mb-5 flex items-center gap-2 text-sm text-[#7B2346]"
           onClick={() => setSelected(null)}
         >
-          <ArrowLeft size={17} /> Back to exercises
+          <ArrowLeft size={17} /> {auditText('common:back_to_exercises')}
         </button>
 
         <div className="rounded-2xl bg-[#FFF6F1] p-8 text-center">
           {finished ? (
             <p className="text-xl font-semibold text-[#3A1224]">
-              Activity steps completed.
-              Please record how you felt.
+              {auditText('common:activity_steps_completed_please_record_how_you_felt')}
             </p>
           ) : (
             <>
               <p className="mb-4 text-sm text-[#977685]">
-                Step {step + 1} of {instructions.length}
+                {uiText('step')} {step + 1} of {instructions.length}
               </p>
               <p className="text-xl font-semibold leading-9 text-[#3A1224]">
                 {instructions[step]}
@@ -612,7 +621,7 @@ function ExerciseTab({ exercises, reload }) {
               disabled={step === 0}
               onClick={() => setStep((s) => s - 1)}
             >
-              Back
+              {uiText('back')}
             </button>
 
             {!last ? (
@@ -621,7 +630,7 @@ function ExerciseTab({ exercises, reload }) {
                 className={BUTTON}
                 onClick={() => setStep((s) => s + 1)}
               >
-                Next
+                {uiText('next')}
               </button>
             ) : (
               <button
@@ -629,7 +638,7 @@ function ExerciseTab({ exercises, reload }) {
                 className={BUTTON}
                 onClick={() => setStep(instructions.length)}
               >
-                Done
+                {auditText('common:done')}
               </button>
             )}
           </div>
@@ -637,7 +646,7 @@ function ExerciseTab({ exercises, reload }) {
 
         {step >= instructions.length && (
           <div className="mt-6 space-y-4 rounded-2xl bg-[#FFF6F1] p-5">
-            <p className="font-semibold">How did it feel?</p>
+            <p className="font-semibold">{auditText('common:how_did_it_feel')}</p>
             <div className="flex gap-2">
               {['easy', 'ok', 'hard'].map((value) => (
                 <button key={value} type="button"
@@ -682,7 +691,7 @@ function ExerciseTab({ exercises, reload }) {
                 }
               }}
             >
-              Save Session
+              {auditText('common:save_session')}
             </button>
             {error && <p className="text-sm text-red-700">{error}</p>}
           </div>
@@ -692,13 +701,13 @@ function ExerciseTab({ exercises, reload }) {
   }
 
   return (
-    <Section title="Gentle Exercise Guidance" icon={Activity}>
+    <Section title={auditText('common:gentle_exercise_guidance')} icon={Activity}>
       <p className="mb-5 text-sm leading-7 text-[#765363]">
         Activities are educational guidance. Availability depends on
         recovery details, reported symptoms and clinical content review.
       </p>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap gap-2.5">
         {categories.map((name) => (
           <button key={name} type="button"
             onClick={() => setCategory(name)}
@@ -742,7 +751,7 @@ function ExerciseTab({ exercises, reload }) {
                     setSelected(item)
                     setStep(0)
                   }}
-                >Start</button>
+                >{auditText('common:start')}</button>
               )}
             </div>
           ))}
@@ -753,6 +762,7 @@ function ExerciseTab({ exercises, reload }) {
 }
 
 function CareTab({ context }) {
+  const { t: auditText } = useTranslation()
   const cSection = ['csection', 'c_section'].includes(context?.delivery_type)
   const week = context?.postpartum_week ?? 0
 
@@ -778,12 +788,12 @@ function CareTab({ context }) {
 
   return (
     <Section
-      title={cSection ? 'C-section Recovery Care' : 'Birth Recovery Care'}
+      title={cSection ? auditText('common:c_section_recovery_care') : auditText('common:birth_recovery_care')}
       icon={Baby}
     >
       {!context?.configured && (
         <p className="mb-5 text-sm text-[#977685]">
-          Complete your recovery profile for personalized stage information.
+          {auditText('common:complete_your_recovery_profile_for_personalized_stage_information')}
         </p>
       )}
 
@@ -806,6 +816,8 @@ function CareTab({ context }) {
 }
 
 function WarningTab({ token }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [published, setPublished] = useState({ signs: [], helplines: [] })
   const [lang, setLang] = useState('en')
   useEffect(() => {
@@ -828,28 +840,28 @@ function WarningTab({ token }) {
     <div className="space-y-5">
       <Section title="When to Seek Medical Help" icon={ShieldAlert}>
         {(published.signs.length > 0 || published.helplines.length > 0) &&
-          <label className="mb-4 block text-sm">Language <select aria-label="Safety guidance language" value={lang} onChange={(event) => setLang(event.target.value)}>
+          <label className="mb-4 block text-sm">{uiText('language')} <select aria-label={uiText('safety_guidance_language')} value={lang} onChange={(event) => setLang(event.target.value)}>
             <option value="en">English</option><option value="ta" lang="ta">தமிழ்</option>
           </select></label>}
-        {motherSigns.length ? <><h3 className="mb-2 text-sm font-semibold">Mother</h3>{renderSigns(motherSigns)}</> : <p className="mb-5 text-sm leading-7 text-[#765363]">
+        {motherSigns.length ? <><h3 className="mb-2 text-sm font-semibold">{uiText('mother')}</h3>{renderSigns(motherSigns)}</> : <p className="mb-5 text-sm leading-7 text-[#765363]">
           Seek urgent medical help for heavy bleeding, breathing
           difficulty, chest pain, seizures, severe headache with
           visual changes, or other sudden serious symptoms.
         </p>}
-        {babySigns.length ? <><h3 className="mb-2 text-sm font-semibold">Baby</h3>{renderSigns(babySigns)}</> : <p className="text-sm leading-7 text-[#765363]">
+        {babySigns.length ? <><h3 className="mb-2 text-sm font-semibold">{uiText('baby')}</h3>{renderSigns(babySigns)}</> : <p className="text-sm leading-7 text-[#765363]">
           For a baby, urgent concerns include breathing difficulty,
           poor responsiveness, seizures or difficulty feeding with
           signs of illness.
         </p>}
         <div className="mt-5 rounded-2xl bg-[#FFF0F3] p-5">
           <p className="text-sm font-semibold text-[#7B2346]">
-            Sri Lanka Ambulance Service
+            {auditText('common:sri_lanka_ambulance_service')}
           </p>
           <p className="mt-2 text-3xl font-bold text-[#3A1224]">
             1990
           </p>
           <p className="mt-2 text-xs text-[#977685]">
-            Number display only — no automatic call or connection.
+            {auditText('common:number_display_only_no_automatic_call_or_connection')}
           </p>
         </div>
         {published.helplines.map((line, index) => <div className="mt-4 rounded-2xl bg-[#FFF0F3] p-5" key={index} lang={lang}>
@@ -867,6 +879,7 @@ function WarningTab({ token }) {
 }
 
 function CalendarTab({ data, month, setMonth, selected, setSelected }) {
+  const { t: auditText } = useTranslation()
   const [year, mm] = month.split('-').map(Number)
   const firstDay = new Date(year, mm - 1, 1).getDay()
   const count = new Date(year, mm, 0).getDate()
@@ -880,7 +893,7 @@ function CalendarTab({ data, month, setMonth, selected, setSelected }) {
   }
 
   return (
-    <Section title="Postpartum Calendar" icon={CalendarDays}>
+    <Section title={auditText('common:postpartum_calendar')} icon={CalendarDays}>
       <div className="mb-5 flex items-center justify-between">
         <button type="button" onClick={() => move(-1)}>
           <ChevronLeft />
@@ -932,7 +945,7 @@ function CalendarTab({ data, month, setMonth, selected, setSelected }) {
           <p className="font-semibold text-[#7B2346]">{selected}</p>
           <p className="mt-2 text-sm text-[#765363]">
             {(data?.days?.[selected] || []).join(', ') ||
-              'No recovery entries recorded.'}
+              auditText('common:no_recovery_entries_recorded')}
           </p>
         </div>
       )}
@@ -941,6 +954,9 @@ function CalendarTab({ data, month, setMonth, selected, setSelected }) {
 }
 
 export default function MyRecovery({ user, onNavigate, onLogout }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const token = user?.access_token
   const [tab, setTab] = useState('overview')
   const [context, setContext] = useState(null)
@@ -1024,7 +1040,7 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
   }
 
   async function remove(kind, id) {
-    if (!window.confirm('Delete this entry?')) return
+    if (!window.confirm(uiText('delete_this_entry'))) return
 
     try {
       if (kind === 'sleep') await api.deleteSleep(token, id)
@@ -1059,18 +1075,18 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
       <div className="space-y-6">
         <header>
           <h1 className="font-['Playfair_Display'] text-3xl font-bold text-[#7B2346]">
-            My Recovery
+            {localizeCopy('mother:my_recovery')}
           </h1>
           <p className="mt-2 text-sm text-[#977685]">
-            Track, heal and regain your strength step by step.
+            {auditText('common:track_heal_and_regain_your_strength_step_by_step')}
           </p>
         </header>
 
-        <nav className="flex flex-wrap gap-2">
+        <nav className="flex flex-wrap gap-2.5">
           {TABS.map(([id, label]) => (
             <button key={id} type="button"
               onClick={() => setTab(id)}
-              className={`rounded-full px-5 py-2.5 text-xs font-semibold ${
+              className={`min-h-11 rounded-full px-4 py-2.5 text-xs font-semibold sm:px-5 ${
                 tab === id
                   ? 'bg-[#7B2346] text-white'
                   : 'bg-[#FBE8ED] text-[#3A1224]'
@@ -1088,7 +1104,7 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
             {error}
             <button type="button" onClick={load}
               className="ml-4 font-semibold underline"
-            >Retry</button>
+            >{uiText('retry')}</button>
           </div>
         )}
 
@@ -1101,23 +1117,20 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
         )}
 
         {loading ? (
-          <div className={CARD}>Loading recovery information...</div>
+          <div className={CARD}>{auditText('common:loading_recovery_information')}</div>
         ) : (
           <>
             {!context?.configured && (
-              <Section title="Recovery Profile" icon={Baby}>
+              <Section title={auditText('common:recovery_profile')} icon={Baby}>
                 <p className="text-sm leading-7 text-[#765363]">
-                  Your recovery stage is linked to your
-                  onboarding profile. Please complete your
-                  onboarding details before using
-                  personalized recovery guidance.
+                  {auditText('common:your_recovery_stage_is_linked_to_your_onboarding_profile_please_complete_your_onboarding_details_before_using_personalized_recovery_guidance')}
                 </p>
                 <button
                   type="button"
                   className={`${BUTTON} mt-4`}
                   onClick={() => onNavigate?.('settings')}
                 >
-                  View Profile Settings
+                  {auditText('common:view_profile_settings')}
                 </button>
               </Section>
             )}
@@ -1125,27 +1138,27 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
             {tab === 'overview' && (
               <div className="space-y-5">
                 <div className="grid gap-5 xl:grid-cols-2">
-                  <Section title="Your Recovery Stage" icon={Baby}>
+                  <Section title={auditText('common:your_recovery_stage')} icon={Baby}>
                     <div className="rounded-2xl bg-gradient-to-r from-[#FBE6EB] to-[#FFF6F1] p-6">
                       <p className="text-xs text-[#977685]">
-                        Your postpartum journey
+                        {auditText('common:your_postpartum_journey')}
                       </p>
                       <h3 className="mt-3 font-['Playfair_Display'] text-3xl font-bold text-[#7B2346]">
                         {context?.configured
                           ? `Week ${context.postpartum_week} · Day ${context.postpartum_day}`
-                          : 'Set up your profile'}
+                          : auditText('common:set_up_your_profile')}
                       </h3>
                       <p className="mt-3 text-sm text-[#765363]">
                         {['csection', 'c_section'].includes(context?.delivery_type)
-                          ? 'C-section recovery'
+                          ? auditText('common:c_section_recovery')
                           : context?.delivery_type === 'vaginal'
-                            ? 'Vaginal birth recovery'
-                            : 'Your recovery journey'}
+                            ? auditText('common:vaginal_birth_recovery')
+                            : auditText('common:your_recovery_journey')}
                       </p>
                     </div>
                   </Section>
 
-                  <Section title="Recovery Tips" icon={Heart}>
+                  <Section title={auditText('common:recovery_tips')} icon={Heart}>
                     <p className="text-sm leading-8 text-[#765363]">
                       Give yourself time to rest, keep track of how you
                       feel and follow the care instructions provided
@@ -1155,7 +1168,7 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
                       onClick={() => setTab('care')}
                       className="mt-4 text-sm font-semibold text-[#7B2346]"
                     >
-                      View birth recovery care →
+                      {auditText('common:view_birth_recovery_care')}
                     </button>
                   </Section>
                 </div>
@@ -1165,7 +1178,7 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
                     <ShieldAlert className="shrink-0 text-amber-700" />
                     <div>
                       <p className="font-semibold text-amber-900">
-                        Symptom reported
+                        {auditText('common:symptom_reported')}
                       </p>
                       <p className="mt-1 text-sm text-amber-900">
                         Exercise guidance is paused. Please seek
@@ -1176,41 +1189,41 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
                 )}
 
                 <h2 className="font-['Playfair_Display'] text-2xl font-semibold text-[#3A1224]">
-                  This Week Progress
+                  {auditText('common:this_week_progress')}
                 </h2>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={Footprints} title="Walking Today"
+                  <Metric icon={Footprints} title={auditText('common:walking_today')}
                     value={`${summary?.today_walk_minutes || 0} min`}
-                    subtitle="Open walking tracker"
+                    subtitle={auditText('common:open_walking_tracker')}
                     onClick={() => setTab('walking')}
                   />
-                  <Metric icon={BedDouble} title="Sleep Logged Today"
+                  <Metric icon={BedDouble} title={auditText('common:sleep_logged_today')}
                     value={`${summary?.today_sleep_hours || 0} h`}
-                    subtitle="Open sleep tracker"
+                    subtitle={auditText('common:open_sleep_tracker')}
                     onClick={() => setTab('sleep')}
                   />
-                  <Metric icon={Heart} title="Body Checks"
+                  <Metric icon={Heart} title={auditText('common:body_checks')}
                     value={summary?.body_check_count || 0}
-                    subtitle="Last 7 days"
+                    subtitle={auditText('common:last_7_days_2')}
                     onClick={() => setTab('body')}
                   />
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-2">
-                  <Section title="Weekly Walking" icon={Footprints}>
+                  <Section title={auditText('common:weekly_walking')} icon={Footprints}>
                     <WeeklyChart rows={walks}
-                      valueKey="minutes" label="Minutes"
+                      valueKey="minutes" label={uiText('minutes')}
                     />
                   </Section>
-                  <Section title="Weekly Sleep" icon={BedDouble}>
+                  <Section title={auditText('common:weekly_sleep')} icon={BedDouble}>
                     <WeeklyChart rows={sleeps}
-                      valueKey="hours" label="Hours"
+                      valueKey="hours" label={localizeCopy('common:hours')}
                     />
                   </Section>
                 </div>
 
-                <Section title="Next Steps" icon={Check}>
+                <Section title={auditText('common:next_steps')} icon={Check}>
                   <div className="grid gap-3 md:grid-cols-3">
                     {[
                       ['Track your sleep', 'sleep'],
@@ -1232,7 +1245,7 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
                       onClick={() => setTab('exercises')}
                       className="mt-4 text-sm font-semibold text-[#7B2346]"
                     >
-                      View available activities
+                      {auditText('common:view_available_activities')}
                     </button>
                   )}
                 </Section>

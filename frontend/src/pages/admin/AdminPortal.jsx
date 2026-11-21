@@ -1,3 +1,5 @@
+import LanguageSwitcher from '../../components/LanguageSwitcher'
+import { useTranslation } from 'react-i18next'
 
 import { lazy, Suspense, useEffect, useState } from 'react'
 import {
@@ -47,18 +49,18 @@ const SafetyManager = lazy(() => import('../../components/admin/SafetyManager'))
 const NutritionDataManager = lazy(() => import('../../components/admin/NutritionDataManager'))
 
 const navigation = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard, permissions: ['overview.', 'dashboard.', 'analytics.'] },
-  { id: 'content', label: 'Content', icon: BookOpen, permissions: ['content.'] },
-  { id: 'nutrition', label: 'Nutrition Data', icon: Apple, permissions: ['nutrition.'] },
-  { id: 'safety', label: 'Safety', icon: ShieldAlert, permissions: ['safety.'] },
-  { id: 'review', label: 'Clinical Review', icon: ClipboardCheck, permissions: ['review.', 'clinical.', 'content.approve', 'nutrition.approve', 'safety.approve', 'content.edit', 'nutrition.edit', 'safety.edit'] },
-  { id: 'users', label: 'Users', icon: Users, permissions: ['users.', 'data_requests.confirm'] },
-  { id: 'settings', label: 'Settings', icon: Settings, permissions: ['settings.', 'admin.', 'roles.', 'audit.'] },
-  { id: 'ai', label: 'AI Monitor', icon: Bot, permissions: ['ai.'] },
-  { id: 'notifications', label: 'Notifications', icon: Bell, permissions: ['notifications.'] },
-  { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, permissions: ['billing.', 'subscriptions.'] },
-  { id: 'analytics', label: 'Analytics', icon: ChartNoAxesCombined, permissions: ['analytics.'] },
-  { id: 'support', label: 'Support', icon: Headset, permissions: ['support.'] },
+  { id: 'overview', label: 'overview', icon: LayoutDashboard, permissions: ['overview.', 'dashboard.', 'analytics.'] },
+  { id: 'content', label: 'content', icon: BookOpen, permissions: ['content.'] },
+  { id: 'nutrition', label: 'nutrition_data', icon: Apple, permissions: ['nutrition.'] },
+  { id: 'safety', label: 'safety', icon: ShieldAlert, permissions: ['safety.'] },
+  { id: 'review', label: 'clinical_review', icon: ClipboardCheck, permissions: ['review.', 'clinical.', 'content.approve', 'nutrition.approve', 'safety.approve', 'content.edit', 'nutrition.edit', 'safety.edit'] },
+  { id: 'users', label: 'users', icon: Users, permissions: ['users.', 'data_requests.confirm'] },
+  { id: 'settings', label: 'settings', icon: Settings, permissions: ['settings.', 'admin.', 'roles.', 'audit.'] },
+  { id: 'ai', label: 'ai_monitor', icon: Bot, permissions: ['ai.'] },
+  { id: 'notifications', label: 'notifications', icon: Bell, permissions: ['notifications.'] },
+  { id: 'subscriptions', label: 'subscriptions', icon: CreditCard, permissions: ['billing.', 'subscriptions.'] },
+  { id: 'analytics', label: 'analytics', icon: ChartNoAxesCombined, permissions: ['analytics.'] },
+  { id: 'support', label: 'support', icon: Headset, permissions: ['support.'] },
 ]
 
 function roleNames(value) {
@@ -100,6 +102,10 @@ const upcoming = {
 }
 
 export default function AdminPortal({ user, onLogout }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
+  const { t } = useTranslation('admin')
   const [page, setPage] = useState('overview')
   const [contentSection, setContentSection] = useState('articles')
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -133,7 +139,7 @@ export default function AdminPortal({ user, onLogout }) {
 
   function navigate(id, destination = 'queue') {
     if (!allowedNavigation.some((item) => item.id === id)) {
-      setError('You do not have permission to access this module.')
+      setError(auditText('common:you_do_not_have_permission_to_access_this_module'))
       return
     }
     setError('')
@@ -152,12 +158,12 @@ export default function AdminPortal({ user, onLogout }) {
       >
         <div className="ha-brand">
           <img src={logo} alt="HerBloom" />
-          <span>ADMIN PORTAL</span>
+          <span>{auditText('common:admin_portal')}</span>
         </div>
 
-        <div className="ha-nav-heading">WORKSPACE</div>
+        <div className="ha-nav-heading">{t('workspace')}</div>
 
-        <nav className="ha-navigation" aria-label="Admin navigation">
+        <nav className="ha-navigation" aria-label={t('admin_navigation')}>
           {allowedNavigation.map((item) => {
             const Icon = item.icon
 
@@ -171,7 +177,7 @@ export default function AdminPortal({ user, onLogout }) {
                 onClick={() => navigate(item.id)}
               >
                 <Icon size={19} />
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
                 {page === item.id && <ArrowRight size={15} />}
               </button>
             )
@@ -185,8 +191,8 @@ export default function AdminPortal({ user, onLogout }) {
             </div>
 
             <div>
-              <strong>{profile?.name || user?.name || 'Administrator'}</strong>
-              <span>{isSuperAdmin ? 'Super Admin' : roles.join(', ') || 'Administrator'}</span>
+              <strong>{profile?.name || user?.name || auditText('common:administrator')}</strong>
+              <span>{isSuperAdmin ? auditText('common:super_admin') : roles.join(', ') || auditText('common:administrator')}</span>
             </div>
           </div>
 
@@ -196,7 +202,7 @@ export default function AdminPortal({ user, onLogout }) {
             onClick={onLogout}
           >
             <LogOut size={18} />
-            Log out
+            {t('log_out')}
           </button>
         </div>
       </aside>
@@ -208,18 +214,19 @@ export default function AdminPortal({ user, onLogout }) {
               type="button"
               className="ha-icon-button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label="Toggle sidebar"
+              aria-label={t('toggle_sidebar')}
             >
               {sidebarOpen ? <X size={21} /> : <Menu size={21} />}
             </button>
 
-            <span>HerBloom / {currentPage.label}</span>
+            <span>HerBloom / {t(currentPage.label)}</span>
+            <LanguageSwitcher />
           </div>
 
           <div className="ha-topbar-right">
             <span className="ha-live-indicator">
               <span className="ha-live-dot" />
-              Admin Workspace
+              {auditText('common:admin_workspace')}
             </span>
 
             <div className="ha-top-avatar">
@@ -231,11 +238,11 @@ export default function AdminPortal({ user, onLogout }) {
         <main className="ha-content">
           <div className="ha-page-heading">
             <div>
-              <span className="ha-eyebrow">HERBLOOM ADMINISTRATION</span>
-              <h1>{currentPage.label}</h1>
+              <span className="ha-eyebrow">{localizeCopy('common:herbloom_administration')}</span>
+              <h1>{t(currentPage.label)}</h1>
               <p>
                 {currentPage.id === 'overview'
-                  ? 'Welcome to your HerBloom management workspace.'
+                  ? auditText('common:welcome_to_your_herbloom_management_workspace')
                   : upcoming[page]}
               </p>
             </div>
@@ -247,7 +254,7 @@ export default function AdminPortal({ user, onLogout }) {
                 onClick={() => setOverviewRefresh((value) => value + 1)}
               >
                 <RefreshCw size={17} />
-                Refresh
+                {uiText('refresh')}
               </button>
             )}
           </div>
@@ -259,7 +266,7 @@ export default function AdminPortal({ user, onLogout }) {
           )}
 
           {currentPage.id === 'overview' ? (
-            <Suspense fallback={<div className="ha-message">Loading dashboard…</div>}>
+            <Suspense fallback={<div className="ha-message">{localizeCopy('common:loading_dashboard')}</div>}>
               <OverviewDashboard token={token} refreshKey={overviewRefresh}
                 name={profile?.name || user?.name || 'Admin'}
                 quickLinks={allowedNavigation.filter((item) => item.id !== 'overview').slice(0, 6)}
@@ -268,14 +275,14 @@ export default function AdminPortal({ user, onLogout }) {
             </Suspense>
           ) : currentPage.id === 'content' ? (
             <>
-              <nav aria-label="Content sections" className="mb-4 flex flex-wrap gap-2">
-                {[['articles', 'Articles'], ['exercises', 'Exercises'], ['wellbeing', 'Wellbeing Activities'], ['meals', 'Meal Ideas']].map(([id, label]) => (
+              <nav aria-label={t('content_sections')} className="mb-4 flex flex-wrap gap-2">
+                {[['articles', 'articles'], ['exercises', 'exercises'], ['wellbeing', 'wellbeing_activities'], ['meals', 'meal_ideas']].map(([id, label]) => (
                   <button type="button" key={id} aria-pressed={contentSection === id}
                     className={`rounded-full border border-[#F6D3DB] px-4 py-2 text-sm font-semibold ${contentSection === id ? 'bg-[#7B2346] text-white' : 'bg-white text-[#7B2346]'}`}
-                    onClick={() => setContentSection(id)}>{label}</button>
+                    onClick={() => setContentSection(id)}>{t(label)}</button>
                 ))}
               </nav>
-              <Suspense fallback={<div className="ha-message">Loading content...</div>}>
+              <Suspense fallback={<div className="ha-message">{auditText('common:loading_content')}</div>}>
                 {contentSection === 'articles' && <ArticleManager token={token} permissions={permissions} />}
                 {contentSection === 'exercises' && <ExerciseManager token={token} permissions={permissions} />}
                 {contentSection === 'wellbeing' && <WellbeingManager token={token} permissions={permissions} />}
@@ -283,43 +290,43 @@ export default function AdminPortal({ user, onLogout }) {
               </Suspense>
             </>
           ) : currentPage.id === 'analytics' ? (
-            <Suspense fallback={<div className="ha-message">Loading analytics...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_analytics_2')}</div>}>
               <AnalyticsPanel token={token} />
             </Suspense>
           ) : currentPage.id === 'support' ? (
-            <Suspense fallback={<div className="ha-message">Loading support...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_support')}</div>}>
               <SupportPanel token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'subscriptions' ? (
-            <Suspense fallback={<div className="ha-message">Loading billing...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_billing')}</div>}>
               <BillingMonitor token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'notifications' ? (
-            <Suspense fallback={<div className="ha-message">Loading notifications...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_notifications')}</div>}>
               <NotificationsManager token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'ai' ? (
-            <Suspense fallback={<div className="ha-message">Loading AI monitoring...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_ai_monitoring_2')}</div>}>
               <AIMonitor token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'settings' ? (
-            <Suspense fallback={<div className="ha-message">Loading settings...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_settings_2')}</div>}>
               <SettingsManager token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'users' ? (
-            <Suspense fallback={<div className="ha-message">Loading users...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_users')}</div>}>
               <UsersManager token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'review' ? (
-            <Suspense fallback={<div className="ha-message">Loading clinical reviews...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_clinical_reviews')}</div>}>
               <ClinicalReviewManager token={token} initialTab={reviewTab} />
             </Suspense>
           ) : currentPage.id === 'safety' ? (
-            <Suspense fallback={<div className="ha-message">Loading safety management...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_safety_management')}</div>}>
               <SafetyManager token={token} permissions={permissions} />
             </Suspense>
           ) : currentPage.id === 'nutrition' ? (
-            <Suspense fallback={<div className="ha-message">Loading nutrition data...</div>}>
+            <Suspense fallback={<div className="ha-message">{auditText('common:loading_nutrition_data')}</div>}>
               <NutritionDataManager token={token} permissions={permissions} />
             </Suspense>
           ) : (
@@ -328,11 +335,11 @@ export default function AdminPortal({ user, onLogout }) {
                 <CurrentIcon size={30} />
               </div>
 
-              <h2>{currentPage.label} Management</h2>
+              <h2>{t(currentPage.label)} {auditText('common:management')}</h2>
               <p>{upcoming[page]}</p>
 
               <span>
-                This module will be implemented in its dedicated phase.
+                {auditText('common:this_module_will_be_implemented_in_its_dedicated_phase')}
               </span>
             </section>
           )}

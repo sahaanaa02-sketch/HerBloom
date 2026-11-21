@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import {
   Camera,
@@ -10,7 +11,7 @@ import {
 const actions = [
   {
     id: 'scan',
-    label: 'Scan a Meal',
+    label: 'common:scan_a_meal',
     description: 'Food recognition',
     Icon: Camera,
     bg: '#FFF0E4',
@@ -18,7 +19,7 @@ const actions = [
   },
   {
     id: 'water',
-    label: 'Log Water',
+    label: 'common:log_water',
     description: 'Stay hydrated',
     Icon: Droplets,
     bg: '#E9F5FF',
@@ -26,7 +27,7 @@ const actions = [
   },
   {
     id: 'breathing',
-    label: 'Start Breathing',
+    label: 'common:start_breathing',
     description: 'A calm moment',
     Icon: Wind,
     bg: '#F3EAFB',
@@ -34,7 +35,7 @@ const actions = [
   },
   {
     id: 'ask',
-    label: 'Ask HerBloom',
+    label: 'common:ask_herbloom',
     description: 'Find guidance',
     Icon: MessageCircle,
     bg: '#FBE9EF',
@@ -43,14 +44,16 @@ const actions = [
 ]
 
 export default function DashboardQuickActions({ onAction }) {
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   return (
     <section className="rounded-[26px] border border-[#F3E2E6] bg-white p-6 shadow-sm">
       <div className="mb-5">
         <h2 className="font-['Playfair_Display'] text-xl font-semibold text-[#3A1224]">
-          Quick Actions
+          {uiText('quick_actions')}
         </h2>
         <p className="mt-1 text-xs text-[#987B86]">
-          Everything you need, just a tap away
+          {localizeCopy('common:everything_you_need_just_a_tap_away')}
         </p>
       </div>
 
@@ -71,7 +74,7 @@ export default function DashboardQuickActions({ onAction }) {
 
             <div className="flex w-full items-center justify-between gap-2">
               <span className="text-sm font-semibold text-[#3A1224]">
-                {label}
+                {localizeCopy(label)}
               </span>
 
               <ArrowUpRight

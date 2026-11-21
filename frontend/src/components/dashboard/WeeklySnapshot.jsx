@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import {
   CalendarDays,
@@ -20,6 +21,8 @@ export default function WeeklySnapshot({
   summary,
   onOpenSummary,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   // Supports the existing dashboard weekly response
   // and the new /reports/weekly response.
   const data = summary?.data ?? summary ?? {}
@@ -97,15 +100,15 @@ export default function WeeklySnapshot({
 
           <div>
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#B77C91]">
-              YOUR WEEK AT A GLANCE
+              {auditText('common:your_week_at_a_glance')}
             </p>
 
             <h2 className="font-['Playfair_Display'] text-2xl font-semibold text-[#3A1224]">
-              This Week's Snapshot
+              {uiText('this_week_s_snapshot')}
             </h2>
 
             <p className="mt-1 text-xs text-[#987B86]">
-              A gentle reflection on your recorded activities
+              {auditText('common:a_gentle_reflection_on_your_recorded_activities')}
             </p>
           </div>
         </div>
@@ -115,7 +118,7 @@ export default function WeeklySnapshot({
           onClick={onOpenSummary}
           className="inline-flex items-center gap-2 rounded-full bg-[#7B2346] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#641D39]"
         >
-          View Full Summary
+          {uiText('view_full_summary')}
           <ArrowUpRight size={16} />
         </button>
       </div>
@@ -126,12 +129,12 @@ export default function WeeklySnapshot({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-[#3A1224]">
-                Weekly Tracking
+                {uiText('weekly_tracking')}
               </p>
 
               <p className="mt-1 text-xs text-[#987B86]">
                 {daysWithData === null
-                  ? 'Open your weekly summary to see your tracking details.'
+                  ? auditText('common:open_your_weekly_summary_to_see_your_tracking_details')
                   : `You recorded information on ${daysWithData} of ${daysInWeek} days.`}
               </p>
             </div>
@@ -145,7 +148,7 @@ export default function WeeklySnapshot({
 
           <div
             role="progressbar"
-            aria-label="Weekly tracking completeness"
+            aria-label={auditText('common:weekly_tracking_completeness')}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percentage ?? 0}
@@ -160,8 +163,7 @@ export default function WeeklySnapshot({
           </div>
 
           <p className="mt-3 text-[11px] text-[#A08590]">
-            Tracking completeness reflects recorded information,
-            not your health or recovery progress.
+            {auditText('common:tracking_completeness_reflects_recorded_information_not_your_health_or_recovery_progress')}
           </p>
         </div>
 
@@ -202,7 +204,7 @@ export default function WeeklySnapshot({
 
         {!summary && (
           <p className="mt-5 text-center text-xs text-[#987B86]">
-            Your recorded weekly information will appear here when available.
+            {auditText('common:your_recorded_weekly_information_will_appear_here_when_available')}
           </p>
         )}
 

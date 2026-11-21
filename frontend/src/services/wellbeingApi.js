@@ -43,8 +43,8 @@ export const getWellbeingHistory = (token) =>
 export const getWellbeingSuggestions = (token) =>
   request('/suggestions', token)
 
-export const getWellbeingActivities = (token) =>
-  request('/activities', token)
+export const getWellbeingActivities = (token, language, signal) =>
+  request('/activities?' + new URLSearchParams({ language }), token, { signal })
 
 export const completeWellbeingActivity = (token, activity_id) =>
   request('/activities/complete', token, {

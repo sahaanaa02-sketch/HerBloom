@@ -1,7 +1,10 @@
+import { useTranslation } from 'react-i18next'
 
 import { AlertCircle, ArrowRight } from 'lucide-react'
 
 export default function DashboardAlerts({ alerts = [], onNavigate }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   if (!alerts.length) return null
 
   return (
@@ -19,7 +22,7 @@ export default function DashboardAlerts({ alerts = [], onNavigate }) {
 
             <div>
               <p className="text-sm font-semibold text-[#754A20]">
-                {alert.title || 'A gentle reminder'}
+                {alert.title || auditText('common:a_gentle_reminder')}
               </p>
 
               <p className="mt-1 text-xs leading-5 text-[#936B41]">
@@ -34,7 +37,7 @@ export default function DashboardAlerts({ alerts = [], onNavigate }) {
               onClick={() => onNavigate?.(alert.page)}
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#7B2346]"
             >
-              View details
+              {uiText('view_details')}
               <ArrowRight size={14} />
             </button>
           )}

@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useCallback, useEffect, useState } from 'react'
 import AdminTable, { AdminStatusChip } from './AdminTable'
 import { notificationsRequest } from '../../services/adminApi'
 
@@ -16,6 +17,9 @@ const localTime = (value) => {
 }
 
 function Editor({ resource, record, token, canEdit, canPublish, canDelete, close, reload }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const announcement = resource === 'announcements'
   const tip = resource === 'daily_tips'
   const editable = canEdit && (!record.id || record.status === 'draft')
@@ -92,7 +96,7 @@ function Editor({ resource, record, token, canEdit, canPublish, canDelete, close
       {label(name)}
       {choices ? <select disabled={!editable} value={values[name] ?? fallback}
         onChange={(event) => update(name, event.target.value)}>
-        {choices.map((option) => <option key={option} value={option}>{option ? label(option) : 'Any'}</option>)}
+        {choices.map((option) => <option key={option} value={option}>{option ? label(option) : auditText('common:any')}</option>)}
       </select> : text ? <textarea readOnly={!editable} required={required} value={values[name] ?? ''}
         onChange={(event) => update(name, event.target.value)} rows={4} maxLength={5000} /> :
         <input readOnly={!editable} required={required} type={type} value={values[name] ?? ''}
@@ -104,7 +108,7 @@ function Editor({ resource, record, token, canEdit, canPublish, canDelete, close
   return (
     <section className="ha-panel space-y-4">
       <h2>{resources[resource][0]} · {label(stage)}</h2>
-      {tip && record.reviewed_by && <p>Clinical reviewer #{record.reviewed_by} · {record.reviewed_at}</p>}
+      {tip && record.reviewed_by && <p>{auditText('common:clinical_reviewer')}{record.reviewed_by} · {record.reviewed_at}</p>}
       {message && <p role="alert">{message}</p>}
       <form onSubmit={(event) => { event.preventDefault(); run('save') }}>
         <fieldset disabled={busy} className="grid gap-4 md:grid-cols-2 [&_label]:grid [&_label]:gap-1 [&_input]:rounded-lg [&_input]:border [&_input]:p-2 [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:p-2 [&_select]:rounded-lg [&_select]:border [&_select]:p-2">
@@ -119,40 +123,42 @@ function Editor({ resource, record, token, canEdit, canPublish, canDelete, close
             {field('delivery_type', { choices: ['', 'vaginal', 'csection'] })}
             {field('language', { choices: ['', 'en', 'ta'] })}
             {field('plan', { required: false })}
-            <p>Use local time. A specific plan matches zero accounts until subscription data is available.</p>
-            <button type="button" onClick={() => run('preview')}>Preview audience count</button>
-            {count !== null && <p role="status">{count} eligible accounts</p>}
+            <p>{auditText('common:use_local_time_enter_free_trial_or_premium_to_target_mothers_on_that_plan')}</p>
+            <button type="button" onClick={() => run('preview')}>{uiText('preview_audience_count')}</button>
+            {count !== null && <p role="status">{count} {auditText('common:eligible_accounts')}</p>}
           </>}
           {tip && field('week', { type: 'number' })}
           {resource === 'reminder_templates' && field('key', { choices: keys, fallback: 'water' })}
         </fieldset>
         <div className="my-4 flex flex-wrap gap-3 [&_button]:rounded-lg [&_button]:border [&_button]:border-[#F2DEE5] [&_button]:px-3 [&_button]:py-2 [&_button]:text-[#7B2346]">
           <button type="button" disabled={busy} onClick={() => {
-            if (!dirty || window.confirm('Discard unsaved changes?')) close()
-          }}>Close</button>
-          {editable && <button type="submit" disabled={busy}>Save draft</button>}
+            if (!dirty || window.confirm(uiText('discard_unsaved_changes'))) close()
+          }}>{uiText('close')}</button>
+          {editable && <button type="submit" disabled={busy}>{uiText('save_draft')}</button>}
           {canDelete && announcement && record.id && stage === 'draft' && !dirty &&
-            <button type="button" disabled={busy} onClick={() => setConfirmation('delete')}>Delete draft</button>}
+            <button type="button" disabled={busy} onClick={() => setConfirmation('delete')}>{uiText('delete_draft')}</button>}
           {!dirty && record.id && (tip ? <>
-            {canEdit && stage === 'draft' && <button type="button" disabled={busy} onClick={() => setConfirmation('submit')}>Submit for review</button>}
-            {canEdit && ['draft', 'in_review'].includes(stage) && <button type="button" disabled={busy} onClick={() => setConfirmation('archive')}>Archive</button>}
+            {canEdit && stage === 'draft' && <button type="button" disabled={busy} onClick={() => setConfirmation('submit')}>{uiText('submit_for_review')}</button>}
+            {canEdit && ['draft', 'in_review'].includes(stage) && <button type="button" disabled={busy} onClick={() => setConfirmation('archive')}>{uiText('archive')}</button>}
           </> : canPublish && <button type="button" disabled={busy}
             onClick={() => setConfirmation(record.status === 'draft' ? 'publish' : 'unpublish')}>
-            {record.status === 'draft' ? 'Publish' : 'Unpublish'}
+            {record.status === 'draft' ? localizeCopy('common:publish') : localizeCopy('common:unpublish')}
           </button>)}
         </div>
-        {confirmation && <div role="group" aria-label="Confirm editorial action">
-          <p>Confirm {confirmation}?</p>
-          <button type="button" disabled={busy} onClick={() => run(confirmation)}>Confirm</button>
-          <button type="button" disabled={busy} onClick={() => setConfirmation('')}>Cancel</button>
+        {confirmation && <div role="group" aria-label={auditText('common:confirm_editorial_action')}>
+          <p>{auditText('common:confirm')} {confirmation}?</p>
+          <button type="button" disabled={busy} onClick={() => run(confirmation)}>{auditText('common:confirm')}</button>
+          <button type="button" disabled={busy} onClick={() => setConfirmation('')}>{uiText('cancel')}</button>
         </div>}
       </form>
-      {tip && stage === 'in_review' && <p>Approval and publication are managed in Clinical Review.</p>}
+      {tip && stage === 'in_review' && <p>{auditText('common:approval_and_publication_are_managed_in_clinical_review')}</p>}
     </section>
   )
 }
 
 function NotificationTable({ token, resource, canEdit, canPublish, canDelete, onEditorOpen }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   const [params, setParams] = useState({ page: 1, page_size: 10 })
   const [rows, setRows] = useState({ items: [], total: 0 })
   const [record, setRecord] = useState(null)
@@ -178,7 +184,7 @@ function NotificationTable({ token, resource, canEdit, canPublish, canDelete, on
     close={() => openEditor(null)} reload={refresh} />
   const field = resource === 'announcements' ? 'title_en' : resource === 'daily_tips' ? 'text_en' : 'key'
   const columns = [
-    { field, headerName: resource === 'reminder_templates' ? 'Template' : 'English content', flex: 1, minWidth: 180 },
+    { field, headerName: resource === 'reminder_templates' ? auditText('common:template') : auditText('common:english_content'), flex: 1, minWidth: 180 },
     { field: resource === 'announcements' ? 'lifecycle' : 'status', headerName: 'Status', width: 125, renderCell: ({ value }) => <AdminStatusChip status={value} /> },
     ...(resource === 'daily_tips' ? [{ field: 'week', headerName: 'Week', width: 90 }] : []),
   ]
@@ -188,20 +194,21 @@ function NotificationTable({ token, resource, canEdit, canPublish, canDelete, on
       loading={loading} page={params.page - 1} pageSize={params.page_size} onSearchChange={search}
       onPageChange={(page) => { setLoading(true); setParams((state) => ({ ...state, page: page + 1 })) }}
       onPageSizeChange={(page_size) => { setLoading(true); setParams((state) => ({ ...state, page: 1, page_size })) }}
-      filters={[{ key: 'status', label: 'Status', options: resources[resource][1].map((value) => ({ value, label: label(value) })) }]}
+      filters={[{ key: 'status', label: localizeCopy('common:status'), options: resources[resource][1].map((value) => ({ value, label: label(value) })) }]}
       onFilterChange={({ status }) => setParams((state) => ({ ...state, page: 1, status: status || '' }))}
       onView={openEditor} onCreate={canEdit ? () => openEditor({}) : undefined} onRefresh={refresh} />
   </>
 }
 
 export default function NotificationsManager({ token, permissions }) {
+  const { t: auditText } = useTranslation()
   const [resource, setResource] = useState('announcements')
   const [editorOpen, setEditorOpen] = useState(false)
   const canEdit = permissions.includes('notifications.create')
   const canPublish = permissions.includes('notifications.send')
   return (
     <div>
-      <nav className="my-4 flex flex-wrap gap-3 [&_button]:rounded-lg [&_button]:border [&_button]:border-[#F2DEE5] [&_button]:px-3 [&_button]:py-2 [&_button]:text-[#7B2346]" aria-label="Notification resources">
+      <nav className="my-4 flex flex-wrap gap-3 [&_button]:rounded-lg [&_button]:border [&_button]:border-[#F2DEE5] [&_button]:px-3 [&_button]:py-2 [&_button]:text-[#7B2346]" aria-label={auditText('common:notification_resources')}>
         {Object.entries(resources).map(([key, [title]]) => <button type="button" key={key}
           disabled={editorOpen} aria-pressed={resource === key} onClick={() => setResource(key)}>{title}</button>)}
       </nav>

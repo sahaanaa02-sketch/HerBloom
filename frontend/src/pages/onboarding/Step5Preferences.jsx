@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
 import {
   Languages,
@@ -42,6 +44,8 @@ export default function Step5Preferences({
   updateAnswer,
   healthAnswers = {},
 }) {
+  const { t: auditText } = useTranslation()
+  const t = useOnboardingCopy()
   const reminders = Array.isArray(answers.reminders)
     ? answers.reminders
     : []
@@ -98,9 +102,7 @@ export default function Step5Preferences({
       <div className="flex items-start gap-3 rounded-2xl border border-[#F6D3DB] bg-[#FFF1F3] p-4">
         <Heart size={19} className="mt-0.5 shrink-0 text-[#7B2346]" />
         <p className="text-sm leading-6 text-[#765363]">
-          Just a few preferences before your HerBloom journey
-          begins. These settings are optional and can be
-          updated later.
+          {t("Just a few preferences before your HerBloom journey begins. These settings are optional and can be updated later.")}
         </p>
       </div>
 
@@ -123,7 +125,7 @@ export default function Step5Preferences({
         <div className="space-y-3">
           <div
             role="group"
-            aria-label="Reminder preferences"
+            aria-label={t("Reminder preferences")}
             className="flex flex-wrap gap-2"
           >
             {availableReminders.map((item) => {
@@ -138,7 +140,7 @@ export default function Step5Preferences({
                 >
                   <span className="inline-flex items-center gap-2">
                     <Icon size={15} />
-                    {item.label}
+                    {t(item.label)}
                   </span>
                 </ChoiceButton>
               )
@@ -147,15 +149,14 @@ export default function Step5Preferences({
 
           <p className="text-xs leading-5 text-[#765363]">
             {selectedReminders.length === 0
-              ? 'No reminders selected.'
+              ? auditText('common:no_reminders_selected')
               : `${selectedReminders.length} reminder preference${
                   selectedReminders.length === 1 ? '' : 's'
                 } selected.`}
           </p>
 
           <p className="text-xs leading-5 text-[#765363]">
-            Reminders are optional. You can change them
-            in Settings.
+            {t("Reminders are optional. You can change them in Settings.")}
           </p>
         </div>
       </QuestionCard>
@@ -168,7 +169,7 @@ export default function Step5Preferences({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[#765363]">
-              Quiet hours start
+              {t('Quiet hours start')}
             </label>
             <TextField
               type="time"
@@ -179,7 +180,7 @@ export default function Step5Preferences({
 
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[#765363]">
-              Quiet hours end
+              {t('Quiet hours end')}
             </label>
             <TextField
               type="time"
@@ -198,7 +199,7 @@ export default function Step5Preferences({
         <div className="space-y-3">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[#765363]">
-              Contact name
+              {t('Contact name')}
             </label>
             <TextField
               value={answers.care_contact_name ?? ''}
@@ -210,7 +211,7 @@ export default function Step5Preferences({
 
           <div>
             <label className="mb-1.5 block text-xs font-medium text-[#765363]">
-              Phone number
+              {t('Phone number')}
             </label>
             <TextField
               type="tel"
@@ -235,9 +236,7 @@ export default function Step5Preferences({
           ])}
 
           <p className="text-xs leading-5 text-[#765363]">
-            Without consent, your personal profile information
-            should not be shared with the AI assistant.
-            General educational content remains available.
+            {auditText('common:without_consent_your_personal_profile_information_should_not_be_shared_with_the_ai_assistant_general_educational_content_remains_available')}
           </p>
         </div>
       </QuestionCard>
@@ -245,9 +244,7 @@ export default function Step5Preferences({
       <div className="flex items-start gap-3 rounded-2xl border border-[#E8C3CC] bg-[#FFF6F1] p-4">
         <Info size={19} className="mt-0.5 shrink-0 text-[#7B2346]" />
         <p className="text-xs leading-6 text-[#765363]">
-          Notification delivery requires browser permission
-          and a connected notification service. Your AI privacy
-          choice must also be respected by the backend.
+          {auditText('common:notification_delivery_requires_browser_permission_and_a_connected_notification_service_your_ai_privacy_choice_must_also_be_respected_by_the_backend')}
         </p>
       </div>
     </div>

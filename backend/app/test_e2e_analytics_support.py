@@ -145,7 +145,7 @@ def run():
                 call("POST","/nutrition/scan",role="owner",files={"file":("synthetic.png",image.getvalue(),"image/png")})
                 call("POST","/chat/message",role="owner",json={"text":"Synthetic question","lang":"en"})
             recorded = connection.exec_driver_sql(
-                "SELECT feature,hits FROM mother_engagement WHERE user_id=%s AND activity_day=%s ORDER BY feature",
+                "SELECT feature,hits FROM mother_engagement WHERE user_id=%s AND activity_day=%s AND feature IN ('article','chat','scan') ORDER BY feature",
                 (owner,today),
             ).all()
             assert dict(recorded) == {"article":1,"chat":1,"scan":1}

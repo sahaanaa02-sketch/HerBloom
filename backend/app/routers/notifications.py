@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, model_validator
-from sqlalchemy import and_, column, false, func, inspect, literal, or_, select, table as table_clause
+from sqlalchemy import and_, false, func, inspect, literal, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.models.mother_profile import MotherProfile
 from app.models.user import User
 from app.routers.auth import require_mother
 from app.services import clinical_review as review
+from app.services import entitlements, free_quota
 from app.services.admin_audit import record_admin_audit
 from app.services.recovery_rules import local_today
 
@@ -32,7 +33,6 @@ Week = Annotated[int, Field(ge=0, le=65535)]
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=180)]
 Body = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
 ReminderKey = Literal["water", "rest", "mood", "meals", "recovery", "medicine", "appointment", "gdm_test"]
-account_plans = table_clause("v_admin_users", column("id"), column("plan_name"))
 
 
 class Audience(BaseModel):
@@ -115,18 +115,15 @@ def postpartum_week():
     return func.if_(days >= 0, func.floor(days / 7), None)
 
 
-def eligible(week_min, week_max, delivery_type, language, plan):
+def eligible(db, week_min, week_max, delivery_type, language, plan):
     week = postpartum_week()
-    assigned_plan = select(account_plans.c.id).where(
-        account_plans.c.id == User.id, account_plans.c.plan_name == plan
-    ).correlate(User.__table__).exists()
+    assigned_plan = entitlements.current_plan_expression(db, User.__table__, free_quota.utc_now())
     return and_(
         or_(week_min.is_(None), week >= week_min),
         or_(week_max.is_(None), week <= week_max),
         or_(delivery_type.is_(None), MotherProfile.delivery_type == delivery_type),
         or_(language.is_(None), MotherProfile.language == language),
-        # The existing account view reports NULL when no entitlement is known.
-        or_(plan.is_(None), assigned_plan),
+        or_(plan.is_(None), assigned_plan == plan if assigned_plan is not None else false()),
     )
 
 
@@ -135,7 +132,7 @@ def preview(body: Audience, admin: Viewer, db: Db):
     table(db, "announcements")
     targeting = {name: literal(value) for name, value in body.model_dump().items()}
     q = select(func.count(User.id)).outerjoin(MotherProfile, MotherProfile.user_id == User.id).where(
-        User.role == "MOTHER", User.is_active.is_(True), eligible(**targeting))
+        User.role == "MOTHER", User.is_active.is_(True), eligible(db, **targeting))
     return {"count": db.scalar(q)}
 
 
@@ -274,7 +271,7 @@ def active_announcements(user: Mother, db: Db):
     q = select(t.c.id, t.c.channel, func.if_(lang == "ta", t.c.title_ta, t.c.title_en).label("title"),
                func.if_(lang == "ta", t.c.body_ta, t.c.body_en).label("body")).select_from(
         User.__table__.outerjoin(MotherProfile, MotherProfile.user_id == User.id).join(
-            t, eligible(t.c.week_min, t.c.week_max, t.c.delivery_type, t.c.language, t.c.plan))
+            t, eligible(db, t.c.week_min, t.c.week_max, t.c.delivery_type, t.c.language, t.c.plan))
     ).where(User.id == user.id, status_conditions(t, review.now())["active"]).order_by(t.c.start_at.desc(), t.c.id.desc())
     return [dict(row) for row in db.execute(q).mappings()]
 

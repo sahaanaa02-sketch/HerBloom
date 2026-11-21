@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useState } from'react'
 import {
   Heart,
@@ -36,6 +37,7 @@ import {
 } from '../../services/weeklyReportApi'
 
 import useReminders from '../../hooks/useReminders'
+import { getProfile } from '../../services/profileApi'
 
 
 // ---------------------------------------
@@ -67,6 +69,9 @@ export default function MotherDashboard({
   onLogout,
   onNavigate,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const token = user?.access_token
 
   const [stage, setStage] = useState(null)
@@ -75,6 +80,7 @@ export default function MotherDashboard({
 
   const [tasks, setTasks] = useState([])
   const [reminders, setReminders] = useState([])
+  const [reminderPreferences, setReminderPreferences] = useState(null)
 
   const [loading, setLoading] = useState(true)
   const [savingWater, setSavingWater] = useState(false)
@@ -86,7 +92,7 @@ export default function MotherDashboard({
   const {
     permission,
     requestPermission,
-  } = useReminders(reminders)
+  } = useReminders(reminders, reminderPreferences)
 
   const notify = (message) => {
     setToast(message)
@@ -98,7 +104,7 @@ export default function MotherDashboard({
 
   const loadDashboard = useCallback(async () => {
     if (!token) {
-      setError('Please log in again.')
+      setError("common:please_log_in_again")
       setLoading(false)
       return
     }
@@ -112,6 +118,7 @@ export default function MotherDashboard({
       getWeeklyReport(token, getCurrentMonday()),
       getDashboardTodos(token),
       getDashboardReminders(token),
+      getProfile(token),
     ])
 
     const [
@@ -120,7 +127,10 @@ export default function MotherDashboard({
       weeklyResult,
       tasksResult,
       remindersResult,
+      profileResult,
     ] = results
+
+    setReminderPreferences(profileResult.status === 'fulfilled' ? profileResult.value.profile : null)
 
     setStage(
       stageResult.status === 'fulfilled'
@@ -163,7 +173,7 @@ export default function MotherDashboard({
 
       setError(
         failed?.reason?.message ||
-        'Some dashboard information could not beloaded.'
+        "common:some_dashboard_information_could_not_beloaded"
       )
     }
 
@@ -196,7 +206,7 @@ export default function MotherDashboard({
     }
 
     if (results.some((item) => item.status === 'rejected')) {
-      setError('Unable to refresh dashboard statistics.')
+      setError("common:unable_to_refresh_dashboard_statistics")
     }
   }
 
@@ -464,17 +474,16 @@ export default function MotherDashboard({
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#D09A66]">
-              MY HERBLOOM
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#80512C]">
+              {localizeCopy('common:my_herbloom')}
             </p>
 
             <h1 className="font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346] md:text-4xl">
               {greeting}, {firstName}!
             </h1>
 
-            <p className="mt-2 text-sm leading-6text-[#967384]">
-              Welcome to your recovery companion.
-              Every little step matters.
+            <p className="mt-2 text-sm leading-6 text-[#795C69]">
+              {auditText('common:welcome_to_your_recovery_companion_every_little_step_matters')}
             </p>
           </div>
 
@@ -489,7 +498,7 @@ export default function MotherDashboard({
               className={loading ? 'animate-spin' : ''}
             />
 
-            {loading ? 'Refreshing...' : 'Refresh'}
+            {loading ? auditText('common:refreshing') : localizeCopy('common:refresh')}
           </button>
         </div>
 
@@ -507,18 +516,18 @@ export default function MotherDashboard({
 
             <div className="flex-1">
               <p className="text-sm font-semibold text-[#80512C]">
-                Dashboard information
+                {localizeCopy('common:dashboard_information')}
               </p>
 
               <p className="mt-1 text-xs leading-6 text-[#987052]">
-                {error}
+                {error.startsWith('common:') ? auditText(error) : error}
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => setError('')}
-              aria-label="Dismiss message"
+              aria-label={uiText('dismiss_message')}
               className="text-[#987052]"
             >
               <X size={16} />
@@ -550,7 +559,7 @@ export default function MotherDashboard({
 
         {/* TASKS AND REMINDERS */}
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid items-start gap-4 sm:gap-6 xl:grid-cols-2">
           <DashboardTodo
             tasks={tasks}
             onAdd={addTask}
@@ -578,12 +587,11 @@ export default function MotherDashboard({
 
                 <div>
                   <p className="text-sm font-semibold text-[#7B2346]">
-                    Enable Reminder Notifications
+                    {localizeCopy('common:enable_reminder_notifications')}
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-[#987887]">
-                    Allow HerBloom to show reminders while
-                    this page is open.
+                    {localizeCopy('common:allow_herbloom_to_show_reminders_while_this_page_is_open')}
                   </p>
                 </div>
               </div>
@@ -591,9 +599,9 @@ export default function MotherDashboard({
               <button
                 type="button"
                 onClick={requestPermission}
-                className="rounded-full bg-[#7B2346] px-5 py-2.5 text-xs font-semibold text-whitehover:bg-[#68203C]"
+                className="rounded-full bg-[#7B2346] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#68203C]"
               >
-                Enable Notifications
+                {auditText('common:enable_notifications')}
               </button>
             </div>
           )}
@@ -621,7 +629,7 @@ export default function MotherDashboard({
             />
 
             <p className="text-sm text-[#987887]">
-              Loading your recovery information...
+              {auditText('common:loading_your_recovery_information')}
             </p>
           </div>
         )}
@@ -641,7 +649,7 @@ export default function MotherDashboard({
       {toast && (
         <div
           role="status"
-          className="fixed bottom-6 right-6 z-50flex max-w-sm items-center gap-3 rounded-2xl bg-[#3A1224] px-5 py-4 text-sm text-white shadow-xl"
+          className="fixed bottom-4 left-4 right-4 z-50 flex sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm items-center gap-3 rounded-2xl bg-[#3A1224] px-5 py-4 text-sm text-white shadow-xl"
         >
           <Heart
             size={17}
@@ -655,7 +663,7 @@ export default function MotherDashboard({
           <button
             type="button"
             onClick={() => setToast('')}
-            aria-label="Dismiss notification"
+            aria-label={uiText('dismiss_notification')}
             className="rounded-full p-1 text-white/80 hover:bg-white/10"
           >
             <X size={16} />

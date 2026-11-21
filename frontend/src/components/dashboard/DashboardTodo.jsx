@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import { Check, Plus, Trash2 } from 'lucide-react'
@@ -8,6 +9,8 @@ export default function DashboardTodo({
   onToggle,
   onDelete,
 }) {
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [newTask, setNewTask] = useState('')
 
   const completed = tasks.filter((task) => task.done).length
@@ -28,10 +31,10 @@ export default function DashboardTodo({
       <div className="mb-5 flex items-start justify-between">
         <div>
           <h2 className="font-['Playfair_Display'] text-xl font-semibold text-[#3A1224]">
-            Today's To-Do
+            {uiText('today_s_to_do')}
           </h2>
           <p className="mt-1 text-xs text-[#987B86]">
-            Little steps matter
+            {localizeCopy('common:little_steps_matter')}
           </p>
         </div>
 
@@ -43,7 +46,7 @@ export default function DashboardTodo({
       <div className="space-y-3">
         {tasks.length === 0 ? (
           <p className="rounded-xl bg-[#FFF8F6] p-4 text-sm text-[#987B86]">
-            No tasks yet. Add your first gentle reminder.
+            {localizeCopy('common:no_tasks_yet_add_your_first_gentle_reminder')}
           </p>
         ) : (
           tasks.map((task) => (
@@ -91,7 +94,7 @@ export default function DashboardTodo({
         <input
           value={newTask}
           onChange={(event) => setNewTask(event.target.value)}
-          placeholder="Add a personal task..."
+          placeholder={uiText('add_a_personal_task')}
           maxLength={120}
           className="min-w-0 flex-1 rounded-xl border border-[#F0DEE4] bg-[#FFFAF8] px-3 py-3 text-sm outline-none focus:border-[#7B2346]"
         />
@@ -99,7 +102,7 @@ export default function DashboardTodo({
         <button
           type="submit"
           className="rounded-xl bg-[#7B2346] px-4 text-white"
-          aria-label="Add task"
+          aria-label={uiText('add_task')}
         >
           <Plus size={18} />
         </button>

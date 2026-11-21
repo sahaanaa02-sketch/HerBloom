@@ -1,19 +1,22 @@
+import { useTranslation } from 'react-i18next'
 import { ChefHat, Leaf } from 'lucide-react'
 
 export default function MealIdeas({ ideas = [] }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   return (
     <div className="rounded-3xl border border-[#F2DFE5] bg-white p-6">
       <div className="mb-6 flex items-center gap-3">
         <ChefHat size={25} className="text-[#7B2346]" />
 
         <h3 className="font-['Playfair_Display'] text-xl text-[#7B2346]">
-          Sri Lankan Meal Ideas
+          {uiText('sri_lankan_meal_ideas')}
         </h3>
       </div>
 
       {!ideas.length ? (
         <p className="text-sm text-[#977A86]">
-          Meal ideas will appear here after importing the catalog.
+          {auditText('common:meal_ideas_will_appear_here_after_importing_the_catalog')}
         </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -51,7 +54,7 @@ export default function MealIdeas({ ideas = [] }) {
 
       <div className="mt-6 rounded-2xl bg-[#FCE9EF] p-5">
         <h4 className="font-semibold text-[#7B2346]">
-          Feeding and Nutrition
+          {auditText('common:feeding_and_nutrition')}
         </h4>
 
         <p className="mt-2 text-sm leading-6 text-[#795C69]">

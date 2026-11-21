@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
 import AdminTable, { AdminStatusChip } from './AdminTable'
@@ -29,17 +30,19 @@ const empty = { title: '', title_ta: '', description: '', description_ta: '', ca
 const isDraft = (row) => row.status === 'draft'
 
 function MealPreview({ form, token, totals, legacyIngredients }) {
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [language, setLanguage] = useState('en')
   return (
     <article className="space-y-4 rounded-xl bg-[#FFF6F1] p-5 text-[#3A1224]">
-      <div className="flex gap-2" aria-label="Preview language">
+      <div className="flex gap-2" aria-label={uiText('preview_language')}>
         <Button aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</Button>
         <Button aria-pressed={language === 'ta'} onClick={() => setLanguage('ta')}>Tamil</Button>
       </div>
       <section className="space-y-3" lang={language}>
         <AdminMediaImage key={form.photo_media_id} token={token} mediaId={form.photo_media_id} />
         <p className="text-xs font-semibold">{slots[form.category] ?? form.category}</p>
-        <h3 className="text-2xl font-bold">{(language === 'en' ? form.title : form.title_ta) || 'Title missing'}</h3>
+        <h3 className="text-2xl font-bold">{(language === 'en' ? form.title : form.title_ta) || localizeCopy('common:title_missing')}</h3>
         <p className="whitespace-pre-wrap">{language === 'en' ? form.description : form.description_ta}</p>
         <ul className="list-disc space-y-2 pl-5">
           {form.ingredients.map((food) => <li key={food.food_id}>{language === 'ta' ? food.name_ta || food.name_en : food.name_en} ({food.grams || '-'} g)</li>)}
@@ -48,7 +51,7 @@ function MealPreview({ form, token, totals, legacyIngredients }) {
         <div className="flex flex-wrap gap-2">
           {form.tags.map((tag, index) => <span key={index} className="rounded-full bg-white px-3 py-1 text-xs">{tagLabels[tag] ?? tag}</span>)}
         </div>
-        {form.allergens && <p className="text-sm"><strong>Allergens</strong> {form.allergens.split('\n').filter(Boolean).join(', ')}</p>}
+        {form.allergens && <p className="text-sm"><strong>{uiText('allergens')}</strong> {form.allergens.split('\n').filter(Boolean).join(', ')}</p>}
         <Totals result={totals} />
       </section>
     </article>
@@ -56,19 +59,23 @@ function MealPreview({ form, token, totals, legacyIngredients }) {
 }
 
 function Totals({ result }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   if (!result) return null
   if (!result.totals) {
     return <p className="text-sm">{result.unverified_food_ids.length
-      ? 'Totals are unavailable because one or more foods have unverified nutrition data.'
-      : 'Add catalog ingredients to calculate totals.'}</p>
+      ? auditText('common:totals_are_unavailable_because_one_or_more_foods_have_unverified_nutrition_data')
+      : localizeCopy('common:add_catalog_ingredients_to_calculate_totals')}</p>
   }
   const { calories, protein, iron, calcium } = result.totals
   return <p className="rounded-lg bg-white p-3 text-sm" role="status">
-    Total for entered quantities: {calories} kcal, {protein} g protein, {iron} mg iron, {calcium} mg calcium
+    {localizeCopy('common:total_for_entered_quantities')} {calories} {auditText('common:kcal')} {protein} {auditText('common:g_protein')} {iron} {auditText('common:mg_iron')} {calcium} {auditText('common:mg_calcium')}
   </p>
 }
 
 function IngredientPicker({ token, items, onChange }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [search, setSearch] = useState('')
   const [result, setResult] = useState([])
   const [error, setError] = useState('')
@@ -91,12 +98,12 @@ function IngredientPicker({ token, items, onChange }) {
 
   return (
     <section className="space-y-3 rounded-lg border border-[#F6D3DB] p-3">
-      <h3 className="font-semibold">Ingredients</h3>
+      <h3 className="font-semibold">{uiText('ingredients')}</h3>
       <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-40 flex-1">Search the food catalog
+        <label className="min-w-40 flex-1">{auditText('common:search_the_food_catalog')}
           <input className={control} maxLength={150} value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
-        <Button type="button" disabled={loading} onClick={find}>Find foods</Button>
+        <Button type="button" disabled={loading} onClick={find}>{auditText('common:find_foods')}</Button>
       </div>
       {error && <Alert severity="error">{error}</Alert>}
       {result.length > 0 && <ul className="max-h-48 overflow-auto rounded-lg bg-[#FFF6F1] p-2">
@@ -106,11 +113,11 @@ function IngredientPicker({ token, items, onChange }) {
         </li>)}
       </ul>}
       {items.map((food) => <div key={food.food_id} className="flex flex-wrap items-end justify-between gap-2">
-        <label>{food.name_en} (grams)
+        <label>{food.name_en} {auditText('common:grams')}
           <input type="number" required min={0.01} step={0.01} max={99999999.99} className={control} value={food.grams}
             onChange={(event) => onChange(items.map((item) => item.food_id === food.food_id ? { ...item, grams: event.target.value } : item))} />
         </label>
-        <Button aria-label={'Remove ' + food.name_en} onClick={() => onChange(items.filter((item) => item.food_id !== food.food_id))}>Remove</Button>
+        <Button aria-label={'Remove ' + food.name_en} onClick={() => onChange(items.filter((item) => item.food_id !== food.food_id))}>{uiText('remove')}</Button>
       </div>)}
     </section>
   )
@@ -125,6 +132,9 @@ function formFrom(record) {
 }
 
 function MealDialog({ detail, token, permissions, onClose, onSaved }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const { record, mode } = detail
   const [initial] = useState(() => formFrom(record))
   const [form, setForm] = useState(initial)
@@ -148,7 +158,7 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
   }, [dirty])
 
   function close() {
-    if (!busy.current && (!dirty || window.confirm('Discard your unsaved meal idea changes?'))) onClose()
+    if (!busy.current && (!dirty || window.confirm(uiText('discard_your_unsaved_meal_idea_changes')))) onClose()
   }
 
   const change = (field, value) => setForm((current) => ({ ...current, [field]: value }))
@@ -193,7 +203,7 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
   }
 
   function archive() {
-    if (!dirty && !busy.current && window.confirm('Archive this meal idea? It will become read-only.')) {
+    if (!dirty && !busy.current && window.confirm(uiText('archive_this_meal_idea_it_will_become_read_only'))) {
       mutate(() => archiveAdminMeal(token, record.id))
     }
   }
@@ -201,14 +211,14 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
   return (
     <Dialog open onClose={close} fullWidth maxWidth="md">
       <form onSubmit={save}>
-        <DialogTitle>{mode === 'view' ? 'Meal idea preview' : record ? 'Edit meal idea draft' : 'New meal idea draft'}</DialogTitle>
+        <DialogTitle>{mode === 'view' ? auditText('common:meal_idea_preview') : record ? auditText('common:edit_meal_idea_draft') : auditText('common:new_meal_idea_draft')}</DialogTitle>
         <DialogContent dividers>
           <div className="space-y-3">
             {error && <Alert severity="error">{error}</Alert>}
             {record && <AdminStatusChip status={record.status} />}
             {preview ? <MealPreview form={form} token={token} totals={totals} legacyIngredients={record?.ingredients} /> : (
               <fieldset disabled={saving || calculating} className="space-y-4 text-[#3A1224]">
-                {missingTamil && <Alert severity="warning">Complete the Tamil title and any preparation translation before submitting.</Alert>}
+                {missingTamil && <Alert severity="warning">{auditText('common:complete_the_tamil_title_and_any_preparation_translation_before_submitting')}</Alert>}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[['title', 'English title'], ['title_ta', 'Tamil title']].map(([field, label]) => (
                     <label key={field}>{label}
@@ -222,18 +232,18 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
                         onChange={(event) => change(field, event.target.value)} />
                     </label>
                   ))}
-                  <label>Meal slot
+                  <label>{uiText('meal_slot')}
                     <select className={control} value={form.category} onChange={(event) => change('category', event.target.value)}>
                       {options(slots).map(({value,label}) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
-                  <label>Allergens (one per line)
+                  <label>{auditText('common:allergens_one_per_line')}
                     <textarea rows={2} maxLength={5049} className={control} value={form.allergens}
                       onChange={(event) => change('allergens', event.target.value)} />
                   </label>
                 </div>
                 <fieldset className="flex flex-wrap gap-4">
-                  <legend className="font-semibold">Dietary tags</legend>
+                  <legend className="font-semibold">{auditText('common:dietary_tags')}</legend>
                   {options(tagLabels).map(({value,label}) => (
                     <label key={value} className="flex items-center gap-2">
                       <input type="checkbox" checked={form.tags.includes(value)} onChange={(event) => {
@@ -247,12 +257,12 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
                   setTotals(null)
                 }} />
                 <Button disabled={calculating || !form.ingredients.length}
-                  onClick={calculateTotals}>Calculate nutrient totals</Button>
+                  onClick={calculateTotals}>{auditText('common:calculate_nutrient_totals')}</Button>
                 <Totals result={totals} />
                 {permissions.includes('media.view') && (
                   <div>
-                    <Button onClick={() => setPicker((value) => !value)}>Choose library photo</Button>
-                    {form.photo_media_id && <Button onClick={() => change('photo_media_id', null)}>Remove selected photo</Button>}
+                    <Button onClick={() => setPicker((value) => !value)}>{auditText('common:choose_library_photo')}</Button>
+                    {form.photo_media_id && <Button onClick={() => change('photo_media_id', null)}>{auditText('common:remove_selected_photo')}</Button>}
                     {form.photo_media_id && <AdminMediaImage key={form.photo_media_id} token={token} mediaId={form.photo_media_id} />}
                     {picker && <ImagePicker token={token} onSelect={(id) => { change('photo_media_id', id); setPicker(false) }} />}
                   </div>
@@ -262,11 +272,11 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
           </div>
         </DialogContent>
         <DialogActions sx={{ flexWrap: 'wrap' }}>
-          <Button disabled={saving} onClick={close}>Close</Button>
-          {canArchive && <Button disabled={saving || dirty} onClick={archive}>Archive</Button>}
-          {canSubmit && <Button disabled={saving || dirty} onClick={() => mutate(() => submitAdminMeal(token, record.id))}>Submit for Review</Button>}
-          {mode === 'edit' && <Button disabled={saving} onClick={() => setPreview((value) => !value)}>{preview ? 'Back to editor' : 'Preview'}</Button>}
-          {mode === 'edit' && !preview && <Button type="submit" variant="contained" disabled={saving}>{saving ? 'Saving…' : 'Save draft'}</Button>}
+          <Button disabled={saving} onClick={close}>{uiText('close')}</Button>
+          {canArchive && <Button disabled={saving || dirty} onClick={archive}>{uiText('archive')}</Button>}
+          {canSubmit && <Button disabled={saving || dirty} onClick={() => mutate(() => submitAdminMeal(token, record.id))}>{localizeCopy('common:submit_for_review_2')}</Button>}
+          {mode === 'edit' && <Button disabled={saving} onClick={() => setPreview((value) => !value)}>{preview ? localizeCopy('common:back_to_editor') : localizeCopy('common:preview')}</Button>}
+          {mode === 'edit' && !preview && <Button type="submit" variant="contained" disabled={saving}>{saving ? localizeCopy('common:saving') : localizeCopy('common:save_draft')}</Button>}
         </DialogActions>
       </form>
     </Dialog>
@@ -274,6 +284,8 @@ function MealDialog({ detail, token, permissions, onClose, onSaved }) {
 }
 
 export default function MealIdeasManager({ token, permissions }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
@@ -312,21 +324,21 @@ export default function MealIdeasManager({ token, permissions }) {
     }
   }
 
-  if (!canRead) return <Alert severity="warning">Meal idea viewing permission is required.</Alert>
+  if (!canRead) return <Alert severity="warning">{auditText('common:meal_idea_viewing_permission_is_required')}</Alert>
   return (
     <>
       {(error || current?.error) && <Alert severity="error">{error || current.error}</Alert>}
-      <AdminTable title="Meal Ideas" columns={columns} rows={current?.data?.items ?? []}
+      <AdminTable title={localizeCopy('admin:meal_ideas')} columns={columns} rows={current?.data?.items ?? []}
         total={list?.data?.total ?? 0} loading={!current || opening} page={page} pageSize={pageSize}
         onPageChange={setPage} onPageSizeChange={(size) => { setPage(0); setPageSize(size) }}
         onSearchChange={onSearch} onFilterChange={(values) => { setPage(0); setSelection(values) }}
         filters={[{
-          key: 'category', label: 'Meal slot',
+          key: 'category', label: localizeCopy('common:meal_slot'),
           options: options({ ...Object.fromEntries((list?.data?.categories ?? []).map((key) => [key,key])), ...slots }),
         }, ...filters]} onRefresh={() => setRevision((value) => value + 1)}
         onCreate={() => setDetail({ mode: 'edit' })} onView={(row) => open(row, 'view')} onEdit={(row) => open(row, 'edit')}
         canCreate={!current?.error && permissions.includes('content.create')}
-        canEdit={permissions.includes('content.edit')} canEditRow={isDraft} createLabel="New meal idea draft"
+        canEdit={permissions.includes('content.edit')} canEditRow={isDraft} createLabel={auditText('common:new_meal_idea_draft')}
       />
       {detail && <MealDialog detail={detail} token={token} permissions={permissions}
         onClose={() => setDetail(null)} onSaved={() => { setDetail(null); setRevision((value) => value + 1) }} />}

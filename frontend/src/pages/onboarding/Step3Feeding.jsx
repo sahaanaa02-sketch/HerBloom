@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
 import {
   Baby,
@@ -41,6 +43,8 @@ export default function Step3Feeding({
   answers = {},
   updateAnswer,
 }) {
+  const { t: auditText } = useTranslation()
+  const t = useOnboardingCopy()
   const allergies = Array.isArray(answers.allergies)
     ? answers.allergies
     : []
@@ -114,8 +118,7 @@ export default function Step3Feeding({
       <div className="flex items-start gap-3 rounded-2xl border border-[#F6D3DB] bg-[#FFF1F3] p-4">
         <Info size={19} className="mt-0.5 shrink-0 text-[#7B2346]" />
         <p className="text-sm leading-6 text-[#765363]">
-          Your feeding journey and food choices are personal.
-          All questions here are optional.
+          {t("Your feeding journey and food choices are personal. All questions here are optional.")}
         </p>
       </div>
 
@@ -151,7 +154,7 @@ export default function Step3Feeding({
         helper="Select Yes if you'd like to share specific allergies."
       >
         <div className="space-y-3">
-          <div role="radiogroup" aria-label="Food allergy status" className="flex flex-wrap gap-2">
+          <div role="radiogroup" aria-label={auditText('common:food_allergy_status')} className="flex flex-wrap gap-2">
             {[
               ['none', 'None'],
               ['yes', 'Yes'],
@@ -170,10 +173,10 @@ export default function Step3Feeding({
           {answers.allergy_status === 'yes' && (
             <div className="rounded-xl border border-[#F1D9DF] bg-[#FFFBF8] p-3">
               <p className="mb-3 text-xs font-medium text-[#765363]">
-                Select all that apply
+                {t('Select all that apply')}
               </p>
 
-              <div role="group" aria-label="Food allergies" className="flex flex-wrap gap-2">
+              <div role="group" aria-label={auditText('common:food_allergies')} className="flex flex-wrap gap-2">
                 {allergyOptions.map((item) => (
                   <ChoiceButton
                     key={item}
@@ -189,7 +192,7 @@ export default function Step3Feeding({
               {allergies.includes('Other') && (
                 <div className="mt-3">
                   <label className="mb-1.5 block text-xs text-[#765363]">
-                    Other allergies
+                    {t('Other allergies')}
                   </label>
                   <TextField
                     value={answers.allergy_other ?? ''}
@@ -210,7 +213,7 @@ export default function Step3Feeding({
         helper="Choose as many as you need, or leave everything unselected."
       >
         <div className="space-y-3">
-          <div role="group" aria-label="Foods to avoid" className="flex flex-wrap gap-2">
+          <div role="group" aria-label={auditText('common:foods_to_avoid')} className="flex flex-wrap gap-2">
             {avoidOptions.map((item) => (
               <ChoiceButton
                 key={item}
@@ -226,7 +229,7 @@ export default function Step3Feeding({
           {avoidFoods.includes('Other') && (
             <div>
               <label className="mb-1.5 block text-xs text-[#765363]">
-                Other foods
+                {t('Other foods')}
               </label>
               <TextField
                 value={answers.avoid_foods_other ?? ''}

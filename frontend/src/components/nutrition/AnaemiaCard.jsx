@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import { HeartPulse, Trash2 } from 'lucide-react'
@@ -8,6 +9,9 @@ export default function AnaemiaCard({
   data,
   onRefresh,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [value, setValue] = useState('')
   const [date, setDate] = useState('')
   const [busy, setBusy] = useState(false)
@@ -29,7 +33,7 @@ export default function AnaemiaCard({
       setValue('')
       setDate('')
       await onRefresh()
-      setSuccess('Hb result saved successfully.')
+      setSuccess(auditText('common:hb_result_saved_successfully'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -38,7 +42,7 @@ export default function AnaemiaCard({
   }
 
   async function deleteRecord(id) {
-    if (!window.confirm('Delete this Hb result?')) return
+    if (!window.confirm(uiText('delete_this_hb_result'))) return
 
     setBusy(true)
     setError('')
@@ -47,7 +51,7 @@ export default function AnaemiaCard({
     try {
       await nutritionApi.deleteHb(token, id)
       await onRefresh()
-      setSuccess('Hb result deleted.')
+      setSuccess(auditText('common:hb_result_deleted'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -68,25 +72,25 @@ export default function AnaemiaCard({
         <div className="mb-5 flex items-center gap-3">
           <HeartPulse size={26} className="text-[#7B2346]" />
           <h3 className="font-['Playfair_Display'] text-2xl text-[#7B2346]">
-            Anaemia Care
+            {auditText('common:anaemia_care')}
           </h3>
         </div>
 
         <p className="text-sm text-[#795C69]">
-          Anaemia history: {data?.anaemia_history || 'Not recorded'}
+          {auditText('common:anaemia_history')} {data?.anaemia_history || auditText('common:not_recorded')}
         </p>
 
         <p className="mt-2 text-sm text-[#795C69]">
-          Iron treatment recorded: {data?.iron_prescribed || 'Not recorded'}
+          {auditText('common:iron_treatment_recorded')} {data?.iron_prescribed || auditText('common:not_recorded')}
         </p>
 
         <form onSubmit={save} className="mt-6 space-y-4">
           <h4 className="font-semibold text-[#7B2346]">
-            Record Hb Result
+            {auditText('common:record_hb_result')}
           </h4>
 
           <label className="block text-sm text-[#795C69]">
-            Haemoglobin (g/dL)
+            {auditText('common:haemoglobin_g_dl')}
             <input
               type="number"
               step="0.1"
@@ -100,7 +104,7 @@ export default function AnaemiaCard({
           </label>
 
           <label className="block text-sm text-[#795C69]">
-            Test date
+            {auditText('common:test_date')}
             <input
               type="date"
               max={maxDate}
@@ -114,7 +118,7 @@ export default function AnaemiaCard({
             disabled={busy}
             className="rounded-full bg-[#7B2346] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {busy ? 'Saving...' : 'Save Hb Result'}
+            {busy ? localizeCopy('common:saving_dots') : auditText('common:save_hb_result')}
           </button>
         </form>
 
@@ -127,7 +131,7 @@ export default function AnaemiaCard({
 
         <div className="mt-7 rounded-2xl bg-[#FFF6F1] p-5">
           <h4 className="font-semibold text-[#7B2346]">
-            About Your Hb Results
+            {auditText('common:about_your_hb_results')}
           </h4>
           <p className="mt-2 text-sm leading-6 text-[#795C69]">
             Keep a record of your laboratory results and
@@ -141,7 +145,7 @@ export default function AnaemiaCard({
       <div className="space-y-5">
         <div className="rounded-3xl border border-[#F2DFE5] bg-white p-6">
           <h3 className="mb-4 font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Hb History
+            {auditText('common:hb_history')}
           </h3>
 
           {data?.hb_records?.length ? (
@@ -156,7 +160,7 @@ export default function AnaemiaCard({
                       {record.date}
                     </p>
                     <strong className="text-[#7B2346]">
-                      {record.value} g/dL
+                      {record.value} {auditText('common:g_dl')}
                     </strong>
                   </div>
 
@@ -165,7 +169,7 @@ export default function AnaemiaCard({
                     disabled={busy}
                     onClick={() => deleteRecord(record.id)}
                     className="rounded-lg p-2 text-red-500 disabled:opacity-50"
-                    aria-label="Delete Hb record"
+                    aria-label={auditText('common:delete_hb_record')}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -174,14 +178,14 @@ export default function AnaemiaCard({
             </div>
           ) : (
             <p className="text-sm text-[#977A86]">
-              No Hb results recorded.
+              {auditText('common:no_hb_results_recorded')}
             </p>
           )}
         </div>
 
         <div className="rounded-3xl border border-[#F2DFE5] bg-white p-6">
           <h3 className="mb-4 font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Iron-Rich Food Ideas
+            {auditText('common:iron_rich_food_ideas')}
           </h3>
 
           {data?.iron_foods?.length ? (
@@ -194,13 +198,13 @@ export default function AnaemiaCard({
                   {food.name_en}
                 </p>
                 <p className="mt-1 text-xs text-[#795C69]">
-                  {food.iron} mg iron / 100 g
+                  {food.iron} {auditText('common:mg_iron_100_g')}
                 </p>
               </div>
             ))
           ) : (
             <p className="text-sm text-[#977A86]">
-              Reviewed food data is not available yet.
+              {auditText('common:reviewed_food_data_is_not_available_yet')}
             </p>
           )}
         </div>

@@ -103,7 +103,7 @@ def get_permissions(admin: AdminUser):
     return sorted(permissions)
 
 
-def create_admin_access_token(admin_id: int, session_version: int = 0):
+def create_admin_access_token(admin_id: int, session_version: int = 0, *, password_only: bool = False):
     now = datetime.now(timezone.utc)
 
     payload = {
@@ -111,6 +111,7 @@ def create_admin_access_token(admin_id: int, session_version: int = 0):
         "sv": session_version,
         "aud": "admin",
         "purpose": "admin_access",
+        "amr": ["pwd"] if password_only else ["pwd", "otp"],
         "iat": now,
         "exp": now + timedelta(
             minutes=admin_settings.ADMIN_TOKEN_MINUTES

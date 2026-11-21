@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.services.admin_overview import overview
+from app.services.app_settings import ready as session_schema_ready
+from app.routers.admin_2fa import create_admin_access_token
 from app.services import rate_limits
 from app.models.admin import AdminUser, AuditLog
 
@@ -20,6 +22,8 @@ from app.services.admin_security import (
     verify_admin_password,
     create_admin_2fa_challenge,
     admin_session_version,
+    admin_settings,
+    password_only_admin_enabled,
 )
 
 from app.dependencies.admin_auth import (
@@ -131,6 +135,25 @@ def admin_login(
             detail="Invalid email or password",
         )
 
+    if password_only_admin_enabled():
+        if not session_schema_ready(db):
+            raise HTTPException(503, "Admin session revocation is unavailable.")
+        version = admin_session_version(db, admin.id, lock=True)
+        admin.failed_attempts = 0
+        admin.locked_until = None
+        admin.last_login_at = now_naive
+        db.add(AuditLog(admin_id=admin.id, action="admin.login.success", entity="admin_auth",
+                        entity_id=str(admin.id), ip=client_ip, after_json={"method": "password"}))
+        payload = get_admin_profile(admin)
+        db.commit()
+        return {
+            "requires_2fa": False,
+            "access_token": create_admin_access_token(admin.id, version, password_only=True),
+            "token_type": "bearer",
+            "expires_in": admin_settings.ADMIN_TOKEN_MINUTES * 60,
+            "admin": payload,
+        }
+
     challenge_token = create_admin_2fa_challenge(
         admin.id, admin_session_version(db, admin.id)
     )
@@ -162,6 +185,18 @@ def admin_login(
 # ==========================================
 # CURRENT ADMIN PROFILE
 # ==========================================
+
+@router.post("/auth/logout", status_code=204)
+def admin_logout(request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
+    if not session_schema_ready(db):
+        raise HTTPException(503, "Admin session revocation is unavailable.")
+    db.connection().exec_driver_sql(
+        "UPDATE admin_users SET session_version=session_version+1 WHERE id=%s", (admin.id,)
+    )
+    db.add(AuditLog(admin_id=admin.id, action="admin.logout", entity="admin_auth",
+                    entity_id=str(admin.id), ip=request.client.host if request.client else None))
+    db.commit()
+
 
 @router.get("/me")
 def get_admin_profile(

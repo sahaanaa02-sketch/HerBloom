@@ -103,6 +103,30 @@ def generate_plan(db: Session, user_id: int):
     )
 
     if existing:
+        items = db.scalars(
+            select(MealPlanItem)
+            .where(MealPlanItem.plan_id == existing.id)
+            .order_by(MealPlanItem.date, MealPlanItem.id)
+            .with_for_update()
+        ).all()
+        used_by_day = {}
+        for item in items:
+            used_by_day.setdefault(item.date, set()).add(item.food_id)
+        for item in items:
+            if item.eaten or item.food_log_id is not None:
+                continue
+            used = used_by_day[item.date]
+            replacement = next(
+                (food for food in pools[item.meal_type] if food.id not in used),
+                None,
+            )
+            if replacement is not None:
+                previous_id = item.food_id
+                item.food_id = replacement.id
+                if not any(peer.date == item.date and peer.food_id == previous_id for peer in items):
+                    used.discard(previous_id)
+                used.add(replacement.id)
+        db.commit()
         return existing
 
     plan = MealPlan(

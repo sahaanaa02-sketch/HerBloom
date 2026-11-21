@@ -10,8 +10,10 @@ from app.e2e_fixtures import ADMIN_EMAIL, MOTHER_EMAIL
 from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.nutrition import Food
+from app.models.mother_profile import MotherProfile
 from app.models.user import User
 from app.routers.admin_2fa import create_admin_access_token
+from app.services import entitlements, free_quota
 from app.services.auth_service import create_access_token
 from app.services.clinical_review import now
 
@@ -47,6 +49,11 @@ def run():
                 reviewer.name = "Synthetic A6 clinical reviewer"
                 rid = reviewer.id
                 mid = session.scalar(select(User.id).where(User.email == MOTHER_EMAIL))
+                profile = session.scalar(select(MotherProfile).where(MotherProfile.user_id == mid))
+                profile.language = "en"
+                profile.baby_birth_date = date.today() - timedelta(weeks=12)
+                profile.delivery_type = "vaginal"
+                profile.onboarding_done = True
                 food = session.scalar(select(Food.id))
                 session.commit()
             headers = {
@@ -125,11 +132,21 @@ def run():
                 ("wellbeing-activities","wellbeing_activities",{"title":"Synthetic A6 activity","title_ta":"சோதனை","activity_type":"breathing",
                  "duration_minutes":3,"steps":["Synthetic"],"steps_ta":["சோதனை"]}),
                 ("meal-ideas","meal_ideas",{"title":"Synthetic A6 meal","title_ta":"சோதனை","category":"lunch",
+                 "description":"Synthetic description", "description_ta":"\u0b9a\u0bcb\u0ba4\u0ba9\u0bc8",
                  "ingredients":[{"food_id":food,"grams":30}]}),
             ]
+            mother_paths = {
+                "exercises": "/recovery/exercises/for-me",
+                "wellbeing-activities": "/wellbeing/activities",
+                "meal-ideas": "/nutrition/ideas",
+            }
+            published_ids = {}
             for route,entity,data in cases:
                 row=admin("POST",route,201,json=data)
+                published_ids[route] = row["id"]
+                assert all(item["id"] != row["id"] for item in call("GET", mother_paths[route], role="mother"))
                 admin("POST",f"{route}/{row['id']}/submit")
+                assert all(item["id"] != row["id"] for item in call("GET", mother_paths[route], role="mother"))
                 pending=review_id(entity,row["id"])
                 decision(pending,"approve")
                 decision(pending,"publish")
@@ -141,6 +158,59 @@ def run():
             )
             assert any(m["title"] == "Synthetic A6 activity" for m in call("GET", "/wellbeing/activities", role="mother"))
             assert any(m["title"]=="Synthetic A6 meal" for m in call("GET","/nutrition/ideas",role="mother"))
+            with Session(bind=conn, join_transaction_mode="create_savepoint") as session:
+                profile = session.scalar(select(MotherProfile).where(MotherProfile.user_id == mid))
+                profile.language = "ta"
+                session.commit()
+            for route, _, data in cases:
+                item = next(item for item in call("GET", mother_paths[route], role="mother")
+                            if item["id"] == published_ids[route])
+                field = "name" if route == "exercises" else "title"
+                assert item[field] == data[field + "_ta"], (route, item)
+                if route == "exercises":
+                    assert item["safety_notes"] == data["safety_notes_ta"]
+                    assert item["contraindications"] == data["contraindications_ta"]
+                    assert item["locked"] and item["steps"] == []
+                if route == "wellbeing-activities":
+                    assert item["steps"] == data["steps_ta"]
+                    english = call("GET", mother_paths[route], role="mother", params={"language": "en"})
+                    assert any(row["id"] == item["id"] and row["steps"] == data["steps"] for row in english)
+                if route == "meal-ideas":
+                    assert item["description"] == data["description_ta"]
+            with Session(bind=conn, join_transaction_mode="create_savepoint") as session:
+                session.connection().exec_driver_sql(
+                    "UPDATE meal_ideas SET description_ta=NULL WHERE id=%s", (published_ids["meal-ideas"],))
+                profile = session.scalar(select(MotherProfile).where(MotherProfile.user_id == mid))
+                profile.exercise_cleared = "yes"
+                moment = free_quota.utc_now()
+                if not entitlements.guided_access(session, mid, moment):
+                    entitlements.insert_period(session, mid, "trial", "a6-localization-trial",
+                                               entitlements.utc_naive(moment))
+                session.commit()
+            meals = call("GET", mother_paths["meal-ideas"], role="mother")
+            assert next(row for row in meals if row["id"] == published_ids["meal-ideas"])["description"] == cases[2][2]["description"]
+            exercises = call("GET", mother_paths["exercises"], role="mother")
+            exercise = next(row for row in exercises if row["id"] == published_ids["exercises"])
+            assert not exercise["locked"] and exercise["steps"] == cases[0][2]["steps_ta"], exercise["lock_reason"]
+            session_api = "/recovery/exercise-sessions"
+            exercise_id = published_ids["exercises"]
+            call("POST", session_api, 422, role="mother", json={"exercise_id": exercise_id, "feeling": "invalid"})
+            call("POST", session_api, 404, role="mother", json={"exercise_id": 2147483647, "feeling": "ok"})
+            saved = call("POST", session_api, role="mother",
+                         json={"exercise_id": exercise_id, "feeling": "hard", "pain": True})
+            assert saved["paused_symptoms"] and saved["session"]["exercise_id"] == exercise_id
+            visible = call("GET", mother_paths["exercises"], role="mother")
+            assert all(item["locked"] and item["paused_symptoms"] and not item["steps"] for item in visible)
+            assert call("GET", "/recovery/exercises/today", role="mother") == []
+            call("POST", session_api, 409, role="mother", json={"exercise_id": exercise_id, "feeling": "ok"})
+            with Session(bind=conn, join_transaction_mode="create_savepoint") as session:
+                session.connection().exec_driver_sql(
+                    "UPDATE exercise_sessions SET completed_at=%s WHERE id=%s",
+                    (now() - timedelta(days=4), saved["session"]["id"]),
+                )
+                session.commit()
+            assert any(item["id"] == exercise_id for item in call("GET", "/recovery/exercises/today", role="mother"))
+            print("PASS published Tamil exercise, session validation, pause and resumption")
             published = None
             for text in ("Synthetic safety version one", "Synthetic safety version two"):
                 safety=admin("POST","safety/messages",201,json={"message_key":"no_info","body_en":text,"body_ta":"சோதனை"})

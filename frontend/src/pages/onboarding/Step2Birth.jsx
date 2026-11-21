@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
 import {
   Baby,
@@ -24,6 +26,8 @@ export default function Step2Birth({
   answers = {},
   updateAnswer,
 }) {
+  const { t: auditText } = useTranslation()
+  const t = useOnboardingCopy()
   const update = (field, value) => {
     updateAnswer(field, value)
 
@@ -73,8 +77,7 @@ export default function Step2Birth({
       <div className="flex items-start gap-3 rounded-2xl border border-[#F6D3DB] bg-[#FFF1F3] p-4">
         <Info size={19} className="mt-0.5 shrink-0 text-[#7B2346]" />
         <p className="text-sm leading-6 text-[#765363]">
-          Only your delivery type is required. You can skip
-          the remaining questions and update them later.
+          {t("Only your delivery type is required. You can skip the remaining questions and update them later.")}
         </p>
       </div>
 
@@ -148,7 +151,7 @@ export default function Step2Birth({
           {answers.exercise_cleared === 'yes' && (
             <div>
               <label className="mb-1.5 block text-xs text-[#765363]">
-                When were you cleared?
+                {t('When were you cleared?')}
               </label>
               <TextField
                 type="month"
@@ -180,7 +183,7 @@ export default function Step2Birth({
               onChange={(event) =>
                 update('activity_limits_note', event.target.value)
               }
-              placeholder="Tell us about your restrictions"
+              placeholder={t('Tell us about your restrictions')}
               className="w-full resize-none rounded-xl border border-[#E8C3CC] bg-white px-4 py-3 text-sm outline-none focus:border-[#7B2346]"
             />
           )}
@@ -205,7 +208,7 @@ export default function Step2Birth({
             <ShieldAlert size={22} className="shrink-0 text-amber-700" />
             <div>
               <h3 className="font-semibold text-amber-900">
-                Your wellbeing matters
+                {auditText('common:your_wellbeing_matters')}
               </h3>
               <p className="mt-2 text-sm leading-6 text-amber-900">
                 Please speak with your doctor or midwife about

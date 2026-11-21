@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, TextField } from '@mui/material'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -24,6 +25,7 @@ function fieldsFor(resource, row) {
 }
 
 function EventChart({ counts }) {
+  const { t: auditText } = useTranslation()
   const series = [...new Set(counts.map(({ category, source }) => category + ' / ' + source))]
   const weeks = Object.values(counts.reduce((values, { week, category, source, count }) => {
     const entry = values[week] ?? { week }
@@ -31,8 +33,8 @@ function EventChart({ counts }) {
     values[week] = entry
     return values
   }, {}))
-  if (!weeks.length) return <Alert severity="info">No safety events in the past eight weeks.</Alert>
-  return <div className="h-80" role="img" aria-label="Weekly safety event totals by category and source">
+  if (!weeks.length) return <Alert severity="info">{auditText('common:no_safety_events_in_the_past_eight_weeks')}</Alert>
+  return <div className="h-80" role="img" aria-label={auditText('common:weekly_safety_event_totals_by_category_and_source')}>
     <ResponsiveContainer width="100%" height="100%"><BarChart data={weeks}>
       <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="week" /><YAxis allowDecimals={false} /><Tooltip /><Legend />
       {series.map((key, index) => <Bar key={key} dataKey={key} fill={['#7B2346', '#D9A25B', '#3A1224', '#A65C74'][index % 4]} />)}
@@ -41,6 +43,8 @@ function EventChart({ counts }) {
 }
 
 function Tester({ send }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [text, setText] = useState('')
   const [lang, setLang] = useState('en')
   const [result, setResult] = useState(null)
@@ -56,19 +60,21 @@ function Tester({ send }) {
     finally { setBusy(false) }
   }
   return <form className="grid max-w-2xl gap-4" onSubmit={test}>
-    <p>Use a synthetic phrase to test the rules currently used by the chatbot. The tester does not store your input.</p>
-    <TextField select label="Language" value={lang} onChange={(event) => setLang(event.target.value)}>
+    <p>{auditText('common:use_a_synthetic_phrase_to_test_the_rules_currently_used_by_the_chatbot_the_tester_does_not_store_your_input')}</p>
+    <TextField select label={uiText('language')} value={lang} onChange={(event) => setLang(event.target.value)}>
       {Object.entries(choices.lang).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}
     </TextField>
-    <TextField required multiline minRows={3} label="Test phrase" value={text} onChange={(event) => setText(event.target.value)}
+    <TextField required multiline minRows={3} label={uiText('test_phrase')} value={text} onChange={(event) => setText(event.target.value)}
       slotProps={{ htmlInput: { maxLength: 4000 } }} />
-    <Button type="submit" variant="contained" disabled={busy || !text.trim()}>Test phrase</Button>
+    <Button type="submit" variant="contained" disabled={busy || !text.trim()}>{uiText('test_phrase')}</Button>
     {error && <Alert severity="error">{error}</Alert>}
-    {result && <Alert severity="info">{result.result === 'none' ? 'No match' : result.result + ' matched: ' + result.matched_term}</Alert>}
+    {result && <Alert severity="info">{result.result === 'none' ? auditText('common:no_match') : result.result + ' matched: ' + result.matched_term}</Alert>}
   </form>
 }
 
 export default function SafetyManager({ token, permissions }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [tab, setTab] = useState('warning-signs')
   const [page, setPage] = useState(0)
   const [pageSize, setSize] = useState(10)
@@ -108,7 +114,7 @@ export default function SafetyManager({ token, permissions }) {
     finally { setBusy(false) }
   }
 
-  if (!canRead) return <Alert severity="warning">Safety viewing permission is required.</Alert>
+  if (!canRead) return <Alert severity="warning">{auditText('common:safety_viewing_permission_is_required')}</Alert>
   const selected = result?.query === query ? result : null
   const activeResource = resources[tab]
   const readOnly = !canEdit || (editor?.row && editor.row.status !== 'in_review')
@@ -121,15 +127,15 @@ export default function SafetyManager({ token, permissions }) {
     { field: 'status', headerName: 'Status', width: 130, renderCell: ({ value }) => <AdminStatusChip status={value} /> },
   ] : []
   return <div className="space-y-4">
-    <Alert severity="error">Changes here affect mothers’ safety. All changes need clinical approval.</Alert>
-    <nav aria-label="Safety sections" className="flex flex-wrap gap-2">
+    <Alert severity="error">{auditText('common:changes_here_affect_mothers_safety_all_changes_need_clinical_approval')}</Alert>
+    <nav aria-label={auditText('common:safety_sections')} className="flex flex-wrap gap-2">
       {[...Object.entries(resources).map(([key, [label]]) => [key, label]), ['test', 'Term tester'], ['events', 'Safety events']].map(([key, label]) =>
         <Button key={key} aria-pressed={tab === key} variant={tab === key ? 'contained' : 'outlined'} onClick={() => { setTab(key); setPage(0) }}>{label}</Button>)}
     </nav>
     {selected?.error && <Alert severity="error">{selected.error}</Alert>}
     {tab === 'test' && <Tester send={send} />}
     {tab === 'events' && selected?.data && <EventChart counts={selected.data} />}
-    {tab === 'events' && !selected && <p>Loading safety event counts…</p>}
+    {tab === 'events' && !selected && <p>{auditText('common:loading_safety_event_counts')}</p>}
     {activeResource && <AdminTable key={tab} title={activeResource[0]} rows={(selected?.data ?? empty).items}
       total={(selected?.data ?? empty).total} columns={columns} loading={!selected} page={page} pageSize={pageSize}
       onPageChange={setPage} onPageSizeChange={(value) => { setSize(value); setPage(0) }}
@@ -156,10 +162,10 @@ export default function SafetyManager({ token, permissions }) {
         </DialogContent>
         <DialogActions>
           {!readOnly && editor.row && <Button color="error" disabled={busy} onClick={() => {
-            if (window.confirm('Archive this safety proposal?')) mutate('DELETE')
-          }}>Archive</Button>}
-          <Button disabled={busy} onClick={() => setEditor(null)}>Close</Button>
-          {!readOnly && <Button disabled={busy} type="submit" variant="contained">Save for review</Button>}
+            if (window.confirm(uiText('archive_this_safety_proposal'))) mutate('DELETE')
+          }}>{uiText('archive')}</Button>}
+          <Button disabled={busy} onClick={() => setEditor(null)}>{uiText('close')}</Button>
+          {!readOnly && <Button disabled={busy} type="submit" variant="contained">{auditText('common:save_for_review')}</Button>}
         </DialogActions>
       </form>
     </Dialog>}

@@ -67,7 +67,7 @@ def run():
             def generate(**kw):
                 model_args.append(kw)
                 return fake
-            mock_response={"candidates":[{"content":{"parts":[{"text":'{"items":[{"name":"rice","estimated_grams":120}]}' }]}}],
+            mock_response={"candidates":[{"content":{"parts":[{"text":'{"items":[{"name":"rice","estimated_grams":120,"confidence":"high"}]}' }]}}],
                            "usageMetadata":{"promptTokenCount":20,"candidatesTokenCount":10}}
             class MockHTTP:
                 def __init__(self,**kwargs): pass

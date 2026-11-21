@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import {
@@ -12,6 +13,7 @@ export default function ExerciseDisclaimer({
   onAccept,
   onClose,
 }) {
+  const { t: auditText } = useTranslation()
   const [understood, setUnderstood] = useState(false)
 
   const handleContinue = () => {
@@ -39,7 +41,7 @@ export default function ExerciseDisclaimer({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close disclaimer"
+            aria-label={auditText('common:close_disclaimer')}
             className="rounded-full p-2 text-[#7B2346] transition hover:bg-[#FFF0F3]"
           >
             <X size={20} />
@@ -54,7 +56,7 @@ export default function ExerciseDisclaimer({
           fontFamily: "'Playfair Display', serif",
         }}
       >
-        Before You Begin
+        {auditText('common:before_you_begin')}
       </h2>
 
       <p className="mb-6 text-sm leading-7 text-[#765363]">
@@ -73,7 +75,7 @@ export default function ExerciseDisclaimer({
           />
 
           <h3 className="font-semibold text-[#3A1224]">
-            A Gentle Reminder
+            {auditText('common:a_gentle_reminder_2')}
           </h3>
         </div>
 
@@ -135,13 +137,13 @@ export default function ExerciseDisclaimer({
             : 'cursor-not-allowed bg-[#F6D3DB] text-[#9B7886]'
         }`}
       >
-        Explore Exercise Library
+        {auditText('common:explore_exercise_library')}
 
         <ArrowRight size={18} />
       </button>
 
       <p className="mt-4 text-center text-xs text-[#977685]">
-        HerBloom • Supporting your recovery journey
+        {auditText('common:herbloom_supporting_your_recovery_journey')}
       </p>
 
     </div>

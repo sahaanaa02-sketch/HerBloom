@@ -1,12 +1,21 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-function isQuietHours(date) {
-  const hour = date.getHours()
-  return hour >= 22 || hour < 6
+export function isQuietHours(date, from = '22:00', to = '06:00') {
+  const clock = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+  if (!clock.test(from) || !clock.test(to) || from === to) {
+    from = '22:00'
+    to = '06:00'
+  }
+  const now = [date.getHours(), date.getMinutes()]
+    .map((value) => String(value).padStart(2, '0')).join(':')
+  return from < to ? now >= from && now < to : now >= from || now < to
 }
 
-export default function useReminders(reminders = []) {
+export default function useReminders(reminders = [], preferences = null) {
+  const quietFrom = preferences?.quiet_from
+  const quietTo = preferences?.quiet_to
+  const preferencesLoaded = preferences !== null
   const [permission, setPermission] = useState(() => {
     if (typeof Notification === 'undefined') {
       return 'unsupported'
@@ -34,12 +43,12 @@ export default function useReminders(reminders = []) {
   }
 
   useEffect(() => {
-    if (permission !== 'granted') return
+    if (permission !== 'granted' || !preferencesLoaded) return
 
     const checkReminders = () => {
       const now = new Date()
 
-      if (isQuietHours(now)) return
+      if (isQuietHours(now, quietFrom, quietTo)) return
 
       reminders.forEach((reminder) => {
         if (!reminder.remind_at) return
@@ -70,7 +79,7 @@ export default function useReminders(reminders = []) {
     const interval = setInterval(checkReminders, 15000)
 
     return () => clearInterval(interval)
-  }, [reminders, permission])
+  }, [reminders, permission, preferencesLoaded, quietFrom, quietTo])
 
   return {
     permission,

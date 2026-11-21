@@ -47,3 +47,43 @@ button:disabled {
   background: var(--hb-soft);
   color: var(--hb-primary);
 }
+/* Mother Portal and onboarding */
+:where(.hb-mother-shell, .hb-mother-onboarding) {
+  overflow-wrap: anywhere;
+}
+
+:where(.hb-mother-shell, .hb-mother-onboarding)
+  :is(button, a[href], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid #7B2346;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px #FFF6F1;
+}
+
+.hb-mother-shell aside :is(button, a[href]):focus-visible {
+  outline-color: #FFF6F1;
+  box-shadow: 0 0 0 2px #3A1224;
+}
+
+.hb-mother-main :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+:where(.hb-mother-shell, .hb-mother-onboarding) :where([lang="ta"]) {
+  line-height: 1.75;
+  letter-spacing: normal;
+}
+
+:where(.hb-mother-main, .hb-mother-shell dialog, .hb-mother-onboarding)
+  :where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]), select, textarea) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+:where(.hb-mother-shell, .hb-mother-onboarding)
+  :where(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+  accent-color: #7B2346;
+}
+
+.hb-mother-main :where([role="alert"], [role="status"]) {
+  line-height: 1.55;
+}

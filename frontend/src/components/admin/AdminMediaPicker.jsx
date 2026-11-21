@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { Alert, Button } from '@mui/material'
 import { getAdminMedia, getAdminMediaImage } from '../../services/adminApi'
 
 export function AdminMediaImage({ token, mediaId, legacyUrl }) {
+  const { t: uiText } = useTranslation('common')
   const [source, setSource] = useState('')
   const [failed, setFailed] = useState(false)
   useEffect(() => {
@@ -22,11 +24,12 @@ export function AdminMediaImage({ token, mediaId, legacyUrl }) {
   }, [mediaId, token])
   const safeLegacy = /^https?:\/\/[^\s]+$/i.test(legacyUrl || '') ? legacyUrl : ''
   const image = mediaId ? source : safeLegacy
-  if (failed) return <p role="status">Image unavailable.</p>
+  if (failed) return <p role="status">{uiText('image_unavailable')}</p>
   return image ? <img src={image} alt="" referrerPolicy="no-referrer" className="max-h-60 w-full rounded-xl object-cover" /> : null
 }
 
 export function MediaPicker({ token, onSelect, mediaType }) {
+  const { t: uiText } = useTranslation('common')
   const [page, setPage] = useState(1)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -45,15 +48,15 @@ export function MediaPicker({ token, onSelect, mediaType }) {
   return (
     <div className="space-y-2 rounded-lg border border-[#F6D3DB] p-3">
       {error && <Alert severity="error">{error}</Alert>}
-      {!result && !error && <p role="status">Loading media…</p>}
-      {result?.total === 0 && <p>No matching active files in the Media Library.</p>}
+      {!result && !error && <p role="status">{uiText('loading_media')}</p>}
+      {result?.total === 0 && <p>{uiText('no_matching_active_files_in_the_media_library')}</p>}
       {result?.items.map((image) => (
         <Button key={image.id} onClick={() => onSelect(image.id)}>{image.original_filename}</Button>
       ))}
       {result && (
         <div>
-          <Button disabled={page === 1} onClick={() => move(-1)}>Previous files</Button>
-          <Button disabled={page * 10 >= result.total} onClick={() => move(1)}>Next files</Button>
+          <Button disabled={page === 1} onClick={() => move(-1)}>{uiText('previous_files')}</Button>
+          <Button disabled={page * 10 >= result.total} onClick={() => move(1)}>{uiText('next_files')}</Button>
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
 import AdminTable, { AdminStatusChip } from './AdminTable'
@@ -78,52 +79,60 @@ function youtubeId(value) {
 }
 
 function VideoPreview({ value }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   if (!value) return null
   const id = youtubeId(value)
-  if (!id) return <p className="text-sm text-[#7B2346]">A valid HTTPS YouTube link is required for a thumbnail.</p>
+  if (!id) return <p className="text-sm text-[#7B2346]">{auditText('common:a_valid_https_youtube_link_is_required_for_a_thumbnail')}</p>
   return (
     <a className="inline-block text-sm font-semibold text-[#7B2346]" target="_blank" rel="noreferrer"
       href={'https://www.youtube.com/watch?v=' + id}>
       <img className="mb-1 max-h-40 rounded-lg" src={'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg'}
-        alt="YouTube video thumbnail" referrerPolicy="no-referrer" />
-      Open video on YouTube
+        alt={auditText('common:youtube_video_thumbnail')} referrerPolicy="no-referrer" />
+      {uiText('open_video_on_youtube')}
     </a>
   )
 }
 
 function ExercisePreview({ form, token, legacyUrl }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [language, setLanguage] = useState('en')
   const suffix = language === 'ta' ? '_ta' : ''
   const text = (key) => form[key + suffix]
   const deliveryLabel = { both: 'Vaginal and C-section', vaginal: 'Vaginal', csection: 'C-section' }
   return (
     <article className="space-y-4 rounded-xl bg-[#FFF6F1] p-5 text-[#3A1224]">
-      <div className="flex gap-2" aria-label="Preview language">
+      <div className="flex gap-2" aria-label={uiText('preview_language')}>
         <Button aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</Button>
         <Button aria-pressed={language === 'ta'} onClick={() => setLanguage('ta')}>Tamil</Button>
       </div>
       <div className="space-y-3" lang={language}>
-        <h3 className="text-2xl font-bold">{text('name') || 'Name missing'}</h3>
+        <h3 className="text-2xl font-bold">{text('name') || localizeCopy('common:name_missing')}</h3>
         <p>{categoryLabel(form.category)} · {form.level} · {form.duration_minutes} min
           {form.repetitions !== '' && ' · ' + form.repetitions + ' repetitions'}</p>
-        <p>From week {form.min_week} · {deliveryLabel[form.delivery] || 'Delivery type missing'}</p>
-        {form.equipment && <p>Equipment: {form.equipment}</p>}
-        {form.needs_clearance && <p>Professional clearance required</p>}
+        <p>{localizeCopy('common:from_week')} {form.min_week} · {deliveryLabel[form.delivery] || localizeCopy('common:delivery_type_missing')}</p>
+        {form.equipment && <p>{localizeCopy('common:equipment')} {form.equipment}</p>}
+        {form.needs_clearance && <p>{auditText('common:professional_clearance_required')}</p>}
         <AdminMediaImage key={form.image_media_id} token={token} mediaId={form.image_media_id} legacyUrl={legacyUrl} />
         <VideoPreview value={form.video_url} />
         <ol className="list-decimal space-y-3 pl-5">
           {form.steps.map((step) => (
-            <li key={step.key} className="rounded-xl bg-white px-4 py-3">{step[language] || 'Translation missing'}</li>
+            <li key={step.key} className="rounded-xl bg-white px-4 py-3">{step[language] || localizeCopy('common:translation_missing')}</li>
           ))}
         </ol>
-        <p className="whitespace-pre-line rounded-lg bg-white p-3"><strong>Safety notes</strong><br />{text('safety_notes') || 'Missing'}</p>
-        <p className="whitespace-pre-line rounded-lg bg-white p-3"><strong>Contraindications</strong><br />{text('contraindications') || 'Missing'}</p>
+        <p className="whitespace-pre-line rounded-lg bg-white p-3"><strong>{auditText('common:safety_notes')}</strong><br />{text('safety_notes') || localizeCopy('common:missing')}</p>
+        <p className="whitespace-pre-line rounded-lg bg-white p-3"><strong>{auditText('common:contraindications')}</strong><br />{text('contraindications') || localizeCopy('common:missing')}</p>
       </div>
     </article>
   )
 }
 
 function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const { record, mode } = detail
   const [initial] = useState(() => toForm(record))
   const [form, setForm] = useState(initial)
@@ -149,7 +158,7 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
   }, [dirty])
 
   function close() {
-    if (!pending.current && (!dirty || window.confirm('Discard your unsaved exercise changes?'))) onClose()
+    if (!pending.current && (!dirty || window.confirm(uiText('discard_your_unsaved_exercise_changes')))) onClose()
   }
   const change = (field, value) => setForm((current) => ({ ...current, [field]: value }))
   async function mutate(operation) {
@@ -172,7 +181,7 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
     if (mode === 'edit' && !preview) mutate(() => saveAdminExercise(token, record?.id, toPayload(form, initial)))
   }
   function archive() {
-    if (!dirty && !pending.current && window.confirm('Archive this exercise? It will become read-only.')) {
+    if (!dirty && !pending.current && window.confirm(uiText('archive_this_exercise_it_will_become_read_only'))) {
       mutate(() => archiveAdminExercise(token, record.id))
     }
   }
@@ -180,7 +189,7 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
   return (
     <Dialog open onClose={close} fullWidth maxWidth="md">
       <form onSubmit={save}>
-        <DialogTitle>{mode === 'view' ? 'Exercise preview' : record ? 'Edit exercise draft' : 'New exercise draft'}</DialogTitle>
+        <DialogTitle>{mode === 'view' ? localizeCopy('common:exercise_preview') : record ? localizeCopy('common:edit_exercise_draft') : localizeCopy('common:new_exercise_draft')}</DialogTitle>
         <DialogContent dividers>
           <div className="space-y-3">
             {error && <Alert severity="error">{error}</Alert>}
@@ -189,7 +198,7 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
               <ExercisePreview form={form} token={token} legacyUrl={record?.image_url} />
             ) : (
               <fieldset disabled={saving} className="space-y-4 text-[#3A1224]">
-                {missingTamil && <Alert severity="warning">Complete the Tamil name, steps, safety notes, and contraindications before submitting.</Alert>}
+                {missingTamil && <Alert severity="warning">{auditText('common:complete_the_tamil_name_steps_safety_notes_and_contraindications_before_submitting')}</Alert>}
                 {fields.map(([field, label, max]) => (
                   <div key={field} className="grid gap-3 sm:grid-cols-2">
                     {[['', 'English'], ['_ta', 'Tamil']].map(([suffix, language]) => {
@@ -204,16 +213,16 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
                     })}
                   </div>
                 ))}
-                <PairedStepsEditor title="Exercise steps" steps={form.steps} onChange={(steps) => change('steps', steps)} />
+                <PairedStepsEditor title={auditText('common:exercise_steps')} steps={form.steps} onChange={(steps) => change('steps', steps)} />
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label>Category
+                  <label>{uiText('category')}
                     <select className={textClass} value={form.category} onChange={(event) => change('category', event.target.value)}>
                       {options(categories).map(({value,label}) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
-                  <label>Allowed deliveries
+                  <label>{auditText('common:allowed_deliveries')}
                     <select className={textClass} value={form.delivery} onChange={(event) => change('delivery', event.target.value)}>
-                      <option value="both">Both</option><option value="vaginal">Vaginal</option><option value="csection">C-section</option>
+                      <option value="both">{localizeCopy('onboarding:both')}</option><option value="vaginal">{auditText('common:vaginal')}</option><option value="csection">{localizeCopy('onboarding:c_section')}</option>
                     </select>
                   </label>
                   {[['level','Difficulty level',30],['equipment','Equipment',200]].map(([key,label,maxLength]) => (
@@ -238,13 +247,13 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
                 </div>
                 {permissions.includes('media.view') && (
                   <div>
-                    <Button onClick={() => setPicker((value) => !value)}>Choose library image</Button>
-                    {form.image_media_id && <Button onClick={() => change('image_media_id', null)}>Remove selected image</Button>}
+                    <Button onClick={() => setPicker((value) => !value)}>{localizeCopy('common:choose_library_image')}</Button>
+                    {form.image_media_id && <Button onClick={() => change('image_media_id', null)}>{localizeCopy('common:remove_selected_image')}</Button>}
                     {form.image_media_id && <AdminMediaImage key={form.image_media_id} token={token} mediaId={form.image_media_id} />}
                     {picker && <ImagePicker token={token} onSelect={(id) => { change('image_media_id', id); setPicker(false) }} />}
                   </div>
                 )}
-                <label className="block">HTTPS YouTube link
+                <label className="block">{localizeCopy('common:https_youtube_link')}
                   <input className={textClass} type="url" maxLength={500} value={form.video_url} onChange={(event) => change('video_url', event.target.value)} />
                 </label>
                 <VideoPreview value={form.video_url} />
@@ -253,11 +262,11 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
           </div>
         </DialogContent>
         <DialogActions sx={{ flexWrap: 'wrap' }}>
-          <Button disabled={saving} onClick={close}>Close</Button>
-          {canArchive && <Button disabled={saving || dirty} onClick={archive}>Archive</Button>}
-          {canSubmit && <Button disabled={saving || dirty} onClick={() => mutate(() => submitAdminExercise(token, record.id))}>Submit for Review</Button>}
-          {mode === 'edit' && <Button disabled={saving} onClick={() => setPreview((value) => !value)}>{preview ? 'Back to editor' : 'Preview'}</Button>}
-          {mode === 'edit' && !preview && <Button type="submit" variant="contained" disabled={saving}>{saving ? 'Saving…' : 'Save draft'}</Button>}
+          <Button disabled={saving} onClick={close}>{uiText('close')}</Button>
+          {canArchive && <Button disabled={saving || dirty} onClick={archive}>{uiText('archive')}</Button>}
+          {canSubmit && <Button disabled={saving || dirty} onClick={() => mutate(() => submitAdminExercise(token, record.id))}>{localizeCopy('common:submit_for_review_2')}</Button>}
+          {mode === 'edit' && <Button disabled={saving} onClick={() => setPreview((value) => !value)}>{preview ? localizeCopy('common:back_to_editor') : localizeCopy('common:preview')}</Button>}
+          {mode === 'edit' && !preview && <Button type="submit" variant="contained" disabled={saving}>{saving ? localizeCopy('common:saving') : localizeCopy('common:save_draft')}</Button>}
         </DialogActions>
       </form>
     </Dialog>
@@ -265,6 +274,7 @@ function ExerciseDialog({ detail, token, permissions, onClose, onSaved }) {
 }
 
 export default function ExerciseManager({ token, permissions }) {
+  const { t: localizeCopy } = useTranslation()
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [search, setSearch] = useState('')
@@ -306,24 +316,24 @@ export default function ExerciseManager({ token, permissions }) {
     }
   }
 
-  if (!canRead) return <Alert severity="warning">Exercise viewing permission is required.</Alert>
+  if (!canRead) return <Alert severity="warning">{localizeCopy('common:exercise_viewing_permission_is_required')}</Alert>
   return (
     <>
       {(error || current?.error) && <Alert severity="error">{error || current.error}</Alert>}
-      <AdminTable title="Exercises" columns={columns} rows={current?.data?.items ?? []}
+      <AdminTable title={localizeCopy('admin:exercises')} columns={columns} rows={current?.data?.items ?? []}
         total={list?.data?.total ?? 0} loading={!current || opening} page={page} pageSize={pageSize}
         onPageChange={setPage} onPageSizeChange={(size) => { setPage(0); setPageSize(size) }}
         onSearchChange={onSearch} onFilterChange={(values) => { setPage(0); setSelection(values) }}
         filters={[
-          { key: 'category', label: 'Category', options: options(categoryOptions) },
-          { key: 'status', label: 'Status', options: options(statuses) },
+          { key: 'category', label: localizeCopy('common:category'), options: options(categoryOptions) },
+          { key: 'status', label: localizeCopy('common:status'), options: options(statuses) },
           { key: 'tamil', label: 'Tamil', options: options({ missing: 'Tamil missing', complete: 'Tamil complete' }) },
         ]}
         onRefresh={() => setRevision((value) => value + 1)}
         onCreate={() => setDetail({ mode: 'edit' })}
         onView={(row) => open(row, 'view')} onEdit={(row) => open(row, 'edit')}
         canCreate={permissions.includes('content.create')} canEdit={permissions.includes('content.edit')}
-        canEditRow={editableDraft} createLabel="New exercise draft"
+        canEditRow={editableDraft} createLabel={localizeCopy('common:new_exercise_draft')}
       />
       {detail && <ExerciseDialog detail={detail} token={token} permissions={permissions}
         onClose={() => setDetail(null)}

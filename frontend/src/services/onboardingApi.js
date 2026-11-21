@@ -31,15 +31,21 @@ async function request(endpoint, token, options = {}) {
           ? detail.map((item) => item.msg).join(', ')
           : 'Something went wrong. Please try again.'
 
-    throw new Error(message)
+    const error = new Error(message)
+    error.status = response.status
+    throw error
   }
 
   return data
 }
 
 // Retrieve saved onboarding answers
-export function getMotherProfile(token) {
-  return request('/profile', token)
+export function getMotherIdentity(token, signal) {
+  return request('/auth/me', token, { signal })
+}
+
+export function getMotherProfile(token, signal) {
+  return request('/profile', token, { signal })
 }
 
 // Save one onboarding step

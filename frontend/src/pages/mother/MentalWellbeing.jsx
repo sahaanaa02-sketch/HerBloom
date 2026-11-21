@@ -1,3 +1,5 @@
+import { useMotherLanguage } from '../../hooks/useMotherLanguage'
+import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -8,7 +10,6 @@ import {
 } from 'lucide-react'
 
 import MotherLayout from '../../components/mother/MotherLayout'
-import { wellbeingTranslations } from '../../locales/wellbeing'
 
 import {
   getWellbeingStatus,
@@ -273,7 +274,7 @@ function MoodTrend({ history, t, language }) {
           {t.emptyTrend}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl bg-[#FFF9F7] p-3">
+        <div className="min-w-0 overflow-hidden rounded-2xl bg-[#FFF9F7] p-2 sm:p-3">
           <svg
             viewBox="0 0 650 205"
             className="w-full"
@@ -340,6 +341,7 @@ function ActivityPlayer({
   onBack,
   onComplete,
 }) {
+  const { t: auditText } = useTranslation()
   const total = activity.duration * 60
   const [remaining, setRemaining] = useState(total)
   const [running, setRunning] = useState(false)
@@ -428,12 +430,18 @@ function ActivityPlayer({
       </button>
 
       <h2 className="text-center font-['Playfair_Display'] text-3xl font-semibold text-[#3A1224]">
-        {breathing ? t.breathing : t.meditation}
+        {activity.title || (breathing ? t.breathing : t.meditation)}
       </h2>
 
       <p className="mt-2 text-center text-sm text-[#977685]">
         {activity.duration} min
       </p>
+
+      {Array.isArray(activity.steps) && activity.steps.length > 0 && (
+        <ol className="mx-auto mt-4 max-w-lg list-decimal space-y-1 pl-5 text-sm text-[#795C69]">
+          {activity.steps.map((step, index) => <li key={index}>{step}</li>)}
+        </ol>
+      )}
 
       <div className="flex min-h-[310px] items-center justify-center">
         <div
@@ -492,7 +500,7 @@ function ActivityPlayer({
         <button
           type="button"
           onClick={() => setMuted((value) => !value)}
-          aria-label={muted ? 'Unmute' : 'Mute'}
+          aria-label={muted ? auditText('common:unmute') : auditText('common:mute')}
           className="rounded-full border border-[#E9CBD5] p-3 text-[#7B2346]"
         >
           {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
@@ -523,6 +531,7 @@ function ActivityPlayer({
 }
 
 function JournalSection({ token, t }) {
+  const { t: uiText } = useTranslation('common')
   const [entries, setEntries] = useState([])
   const [content, setContent] = useState('')
   const [gratitude, setGratitude] = useState('')
@@ -677,7 +686,7 @@ function JournalSection({ token, t }) {
                   <button
                     type="button"
                     onClick={() => remove(entry.id)}
-                    aria-label="Delete entry"
+                    aria-label={uiText('delete_entry')}
                     className="text-[#7B2346]"
                   >
                     <Trash2 size={18} />
@@ -706,37 +715,39 @@ export default function MentalWellbeing({
   user,
   onLogout,
   onNavigate,
+  onProfileSaved,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   const token = user?.access_token
-
-  const [language, setLanguage] = useState('en')
+  const { t: uiText } = useTranslation('mother')
+  const { language, chooseLanguage, savingLanguage, languageError } = useMotherLanguage(token, onProfileSaved)
   const [status, setStatus] = useState(null)
   const [history, setHistory] = useState([])
   const [suggestions, setSuggestions] = useState([])
   const [activities, setActivities] = useState([])
   const [tab, setTab] = useState('overview')
-  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [selectedActivityId, setSelectedActivityId] = useState(null)
+  const selectedActivity = activities.find((item) => item.id === selectedActivityId)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [urgentSupport, setUrgentSupport] = useState(false)
   const [reminderDismissed, setReminderDismissed] = useState(false)
 
-  const t = wellbeingTranslations[language]
+  const t = uiText('mother:wellbeing', { returnObjects: true })
 
   const load = useCallback(async () => {
     try {
-      const [s, h, r, a] = await Promise.all([
+      const [s, h, r] = await Promise.all([
         getWellbeingStatus(token),
         getWellbeingHistory(token),
         getWellbeingSuggestions(token),
-        getWellbeingActivities(token),
       ])
 
       setStatus(s)
       setHistory(h)
       setSuggestions(r)
-      setActivities(a)
       setError('')
     } catch (err) {
       setError(err.message)
@@ -748,6 +759,17 @@ export default function MentalWellbeing({
   useEffect(() => {
     if (token) load()
   }, [token, load])
+
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
+    getWellbeingActivities(token, language, controller.signal).then((items) => {
+      if (!controller.signal.aborted) setActivities(items)
+    }).catch((err) => {
+      if (!controller.signal.aborted) setError(err.message)
+    })
+    return () => controller.abort()
+  }, [token, language])
 
   async function submit(payload) {
     setSaving(true)
@@ -780,11 +802,11 @@ export default function MentalWellbeing({
     )
 
     if (!activity) {
-      setError('Activity is not available yet.')
+      setError(auditText('common:activity_is_not_available_yet'))
       return
     }
 
-    setSelectedActivity(activity)
+    setSelectedActivityId(activity.id)
     setTab('activity')
   }
 
@@ -813,7 +835,7 @@ export default function MentalWellbeing({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#D9A25B]">
-              HerBloom / Mother Portal
+              {localizeCopy('common:herbloom_mother_portal')}
             </p>
 
             <h1 className="font-['Playfair_Display'] text-3xl font-bold text-[#7B2346] md:text-4xl">
@@ -825,12 +847,14 @@ export default function MentalWellbeing({
             </p>
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-[#EED9E1] bg-white p-1">
+          <div className="flex items-center flex-wrap gap-1 rounded-2xl border border-[#EED9E1] bg-white p-1 sm:rounded-full">
             {['en', 'ta'].map((code) => (
               <button
                 key={code}
                 type="button"
-                onClick={() => setLanguage(code)}
+                aria-pressed={language === code}
+                disabled={savingLanguage}
+                onClick={() => chooseLanguage(code)}
                 className={`rounded-full px-4 py-2 text-xs font-semibold ${
                   language === code
                     ? 'bg-[#7B2346] text-white'
@@ -843,6 +867,7 @@ export default function MentalWellbeing({
           </div>
         </div>
 
+        {languageError && <p role="alert">{uiText('mother:save_language_failed')}</p>}
         <div className="flex flex-wrap gap-2">
           {tabs.map(([id, label]) => (
             <button
@@ -942,7 +967,7 @@ export default function MentalWellbeing({
                           key={`${item.type}-${index}`}
                           type="button"
                           onClick={() => openSuggestion(item.type)}
-                          className="flex w-full items-center justify-between rounded-2xl bg-[#FFF6F1] p-4 text-left"
+                          className="flex w-full items-center justify-between gap-3 rounded-2xl bg-[#FFF6F1] p-4 text-left hover:bg-[#FBE8ED]"
                         >
                           <div>
                             <p className="font-semibold text-[#7B2346]">

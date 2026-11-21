@@ -73,9 +73,14 @@ def run_enabled_suite():
                     AdminPermission.key.in_(("users.view", "users.manage", "data_requests.confirm")))).all()
                 if not any(p.key == "data_requests.confirm" for p in permissions):
                     permissions.append(AdminPermission(key="data_requests.confirm"))
+                supervisor_role = s.scalar(select(AdminRole).where(AdminRole.name == "super_admin"))
+                if supervisor_role is None:
+                    supervisor_role = AdminRole(name="super_admin", permissions=permissions)
+                else:
+                    supervisor_role.permissions.extend(p for p in permissions if p not in supervisor_role.permissions)
                 supervisor = AdminUser(name="Synthetic A7 supervisor",email="a7-supervisor.e2e@example.com",
                                        password_hash="Synthetic token-only account",active=True,totp_enabled=True,
-                                       roles=[AdminRole(name="super_admin",permissions=permissions)])
+                                       roles=[supervisor_role])
                 s.add(supervisor)
                 support=s.scalar(select(AdminUser).where(AdminUser.email==ADMIN_EMAIL))
                 first=User(username="a7_first",email="a7-first.e2e@example.com",full_name="Synthetic A7 First",
@@ -123,7 +128,7 @@ def run_enabled_suite():
             provider = {"ACCOUNT_SMTP_HOST":"smtp.e2e.invalid", "ACCOUNT_SMTP_FROM":"test@example.com",
                         "ACCOUNT_EMAIL_FRONTEND_ORIGIN":"https://e2e.invalid"}
             def capture(message):
-                link = message.get_content().strip().splitlines()[-1]
+                link = next(line for line in message.get_content().splitlines() if line.startswith("https://e2e.invalid/"))
                 purpose = "password_reset" if "/reset-password#" in link else "verify_email"
                 delivered.append((str(message["To"]),purpose,link.split("#",1)[1]))
             def synthetic_provider(key, default=None):

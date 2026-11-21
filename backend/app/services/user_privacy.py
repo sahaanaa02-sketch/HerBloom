@@ -78,7 +78,7 @@ def review_storage_present(db):
 
 def scoped_tables(db):
     schema = inspect(db.connection())
-    optional = ("ai_feedback_reviews", "free_ai_usage_events", "entitlement_periods", "weekly_insights", "mother_engagement", "support_tickets", "ticket_replies", *FINANCIAL)
+    optional = ("food_log_saves", "ai_feedback_reviews", "free_ai_usage_events", "entitlement_periods", "weekly_insights", "mother_engagement", "support_tickets", "ticket_replies", *FINANCIAL)
     return SCOPED + tuple(table for table in optional if schema.has_table(table))
 
 
@@ -107,6 +107,8 @@ def ownership_verified(db):
             if fk["referred_table"] in parents:
                 graph.add((table, tuple(fk["constrained_columns"]), fk["referred_table"]))
     expected = {(t, ("user_id",), "users") for t in OWNED + ("data_requests", "mother_account_tokens")}
+    if schema.has_table("food_log_saves"):
+        expected.add(("food_log_saves", ("user_id",), "users"))
     if schema.has_table("free_ai_usage_events"):
         expected.add(("free_ai_usage_events", ("user_id",), "users"))
     if schema.has_table("entitlement_periods"):
@@ -245,7 +247,8 @@ def execute_test_deletion(db, user):
     quota = ("free_ai_usage_events",) if inspect(db.connection()).has_table("free_ai_usage_events") else ()
     billing = ("weekly_insights", "entitlement_periods") if inspect(db.connection()).has_table("weekly_insights") else ()
     support = ("ticket_replies", "support_tickets", "mother_engagement") if inspect(db.connection()).has_table("faqs") else ()
-    for table in order + quota + billing + support + ("mother_account_tokens",):
+    receipts = ("food_log_saves",) if inspect(db.connection()).has_table("food_log_saves") else ()
+    for table in order + quota + billing + support + receipts + ("mother_account_tokens",):
         sql(db, f"DELETE FROM `{table}` WHERE {criterion(table)}", (uid,))
     if inspect(db.connection()).has_table("ai_daily_quota"):
         from app.services.ai_monitor import account_key
@@ -255,4 +258,6 @@ def execute_test_deletion(db, user):
     sql(db, "UPDATE users SET username=%s,full_name='Anonymized account',email=%s,hashed_password=%s,"
             "is_active=0,anonymized_at=%s,email_verified_at=NULL,last_active_at=NULL,session_version=session_version+1 WHERE id=%s",
         (f"anonymized-{uid}",f"anonymized-{uid}@invalid.example",hash_password(secrets.token_hex(32)),now(),uid))
+    if any(field["name"] == "google_subject" for field in inspect(db.connection()).get_columns("users")):
+        sql(db, "UPDATE users SET google_subject=NULL WHERE id=%s", (uid,))
     return files

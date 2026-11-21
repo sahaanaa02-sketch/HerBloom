@@ -1,3 +1,5 @@
+import { useMotherLanguage } from '../../hooks/useMotherLanguage'
+import { useTranslation } from 'react-i18next'
 import { useEffect, useMemo, useState } from 'react'
 
 import {
@@ -156,12 +158,13 @@ function MedicalDisclaimer({
   language,
   compact = false,
 }) {
+  const { t: uiText } = useTranslation('common')
   const isTamil = language === 'ta'
 
   return (
     <section
       role="note"
-      aria-label="Medical disclaimer"
+      aria-label={uiText('medical_disclaimer')}
       className={`
         rounded-2xl
         border border-[#E9C9D5]
@@ -606,12 +609,16 @@ export default function LearnCare({
   onLogout,
   onNavigate,
   onAskArticle,
+  onProfileSaved,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
   const token = user?.access_token
 
   const [category, setCategory] = useState('all')
   const [search, setSearch] = useState('')
-  const [language, setLanguage] = useState('en')
+  const { t: articleUi } = useTranslation(['mother', 'common'])
+  const { language, chooseLanguage, savingLanguage, languageError } = useMotherLanguage(token, onProfileSaved)
 
   const [articles, setArticles] = useState([])
   const [weekly, setWeekly] = useState([])
@@ -652,7 +659,7 @@ export default function LearnCare({
         if (active) {
           setError(
             err.message ||
-            'Failed to load articles.'
+            "common:failed_to_load_articles"
           )
           setArticles([])
           setWeekly([])
@@ -699,7 +706,7 @@ export default function LearnCare({
       onAskArticle(id)
     } else {
       setError(
-        'Ask HerBloom page is not connected yet.'
+        "common:ask_herbloom_page_is_not_connected_yet"
       )
     }
   }
@@ -735,7 +742,7 @@ export default function LearnCare({
             {/* Page heading */}
             <div
               className="
-                mb-7 flex flex-col
+                mb-6 flex flex-col sm:mb-8
                 justify-between gap-5
                 lg:flex-row lg:items-center
               "
@@ -748,7 +755,7 @@ export default function LearnCare({
                     text-[#D9A25B]
                   "
                 >
-                  HERBLOOM LIBRARY
+                  {localizeCopy('common:herbloom_library')}
                 </p>
 
                 <h1
@@ -758,13 +765,13 @@ export default function LearnCare({
                     text-[#7B2346]
                   "
                 >
-                  Learn & Care
+                  {localizeCopy('mother:learn_care')}
                 </h1>
 
                 <p
                   className="
-                    mt-2 text-sm
-                    text-[#9A7787]
+                    mt-2 text-sm leading-relaxed
+                    text-[#795C69]
                   "
                 >
                   {language === 'ta'
@@ -782,7 +789,7 @@ export default function LearnCare({
               >
                 <div
                   className="
-                    relative min-w-[220px]
+                    relative min-w-0 basis-48
                     flex-1
                   "
                 >
@@ -832,13 +839,9 @@ export default function LearnCare({
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setLanguage(
-                      v => v === 'en'
-                        ? 'ta'
-                        : 'en'
-                    )
-                  }
+                  aria-label={articleUi('common:language')}
+                  disabled={savingLanguage}
+                  onClick={() => chooseLanguage(language === 'en' ? 'ta' : 'en')}
                   className="
                     flex items-center gap-2
                     rounded-full
@@ -855,6 +858,7 @@ export default function LearnCare({
               </div>
             </div>
 
+            {languageError && <p role="alert">{articleUi('save_language_failed')}</p>}
             {/* Common medical disclaimer */}
             <MedicalDisclaimer language={language} />
 
@@ -956,7 +960,7 @@ export default function LearnCare({
                     text-sm text-red-700
                   "
                 >
-                  {error}
+                  {error.startsWith('common:') ? auditText(error) : error}
                 </div>
               )}
 
@@ -1122,7 +1126,7 @@ export default function LearnCare({
               text-sm text-red-700
             "
           >
-            {error}
+            {error.startsWith('common:') ? auditText(error) : error}
           </div>
         )}
       </div>

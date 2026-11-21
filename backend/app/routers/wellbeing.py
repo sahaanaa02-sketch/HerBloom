@@ -1,5 +1,6 @@
 
 from datetime import date, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from sqlalchemy import select
 from app.database import SessionLocal
 from app.routers.auth import get_current_user
 from app.models.user import User
+from app.models.mother_profile import MotherProfile
 
 from app.models.wellbeing import (
     WellbeingSchedule,
@@ -443,9 +445,15 @@ def visible_activities(db: Session):
 def activities(
     db: Session = Depends(get_db),
     user: User = Depends(mother_only),
+    language: Literal["en", "ta"] | None = None,
 ):
+    if language is None:
+        language = db.scalar(select(MotherProfile.language).where(MotherProfile.user_id == user.id))
+    query = visible_activities(db)
+    if language == "ta" and {"title_ta", "steps_ta"} <= wellbeing_activity_columns(db):
+        query = query.add_columns(WellbeingActivity.title_ta, WellbeingActivity.steps_ta)
     records = db.execute(
-        visible_activities(db).order_by(
+        query.order_by(
             WellbeingActivity.activity_type,
             WellbeingActivity.duration_minutes,
         )
@@ -454,11 +462,11 @@ def activities(
     return [
         {
             "id": item.id,
-            "title": item.title,
+            "title": getattr(item, "title_ta", None) or item.title,
             "type": item.activity_type,
             "duration": item.duration_minutes,
             "audio_url": item.audio_url,
-            "steps": item.steps,
+            "steps": getattr(item, "steps_ta", None) or item.steps,
         }
         for item in records
     ]

@@ -51,11 +51,12 @@ class PlanItemUpdate(BaseModel):
 
 
 class ScanItem(BaseModel):
-    name: str
-    estimated_grams: float = Field(gt=0, le=3000)
-    confidence: Literal["low", "medium", "high"] = "low"
+    model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
+    name: str = Field(min_length=1, max_length=150)
+    estimated_grams: float = Field(gt=0, le=3000, allow_inf_nan=False)
+    confidence: Literal["low", "medium", "high"]
 
 
 class ScanResponse(BaseModel):
-    items: list[ScanItem]
+    items: list[ScanItem] = Field(max_length=10)
     message: str

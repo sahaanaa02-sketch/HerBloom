@@ -47,7 +47,10 @@ def send_account_email(email, purpose, token):
     message["From"] = sender
     message["To"] = email
     message["Subject"] = "HerBloom password reset" if purpose == "password_reset" else "Verify your HerBloom email"
-    message.set_content("Open the one-time link below to complete your HerBloom account request." + chr(10)*2 + delivery_link(purpose, token))
+    content = "Open the one-time link below to complete your HerBloom account request." + chr(10)*2 + delivery_link(purpose, token)
+    if purpose == "password_reset":
+        content += chr(10)*2 + "Or enter this one-time verification code on the HerBloom recovery screen: " + token
+    message.set_content(content)
     deliver_smtp(host, message)
 
 
@@ -91,7 +94,7 @@ def forgot_password(email):
         log.info("Public reset delivery could not be completed.")
 
 
-def use_token(db, token, purpose, password=None):
+def valid_token(db, token, purpose):
     hashed = secret_hash(token)
     key = sql(db, "SELECT user_id FROM mother_account_tokens WHERE token_hash=%s AND purpose=%s", (hashed,purpose)).scalar_one_or_none()
     error = HTTPException(400, "This link is invalid or has expired.")
@@ -104,6 +107,11 @@ def use_token(db, token, purpose, password=None):
     stamp = now()
     if not item or item["used_at"] or item["expires_at"] <= stamp or item["email_at_issue"] != account["email"] or not account["is_active"] or account["anonymized_at"]:
         raise error
+    return key, item, stamp
+
+
+def use_token(db, token, purpose, password=None):
+    key, item, stamp = valid_token(db, token, purpose)
     if purpose == "password_reset":
         sql(db, "UPDATE users SET hashed_password=%s,session_version=session_version+1 WHERE id=%s", (hash_password(password),key))
     else:

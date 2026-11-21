@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useState } from 'react'
 import { Droplets, Plus } from 'lucide-react'
 import { nutritionApi } from '../../services/nutritionApi'
@@ -7,6 +8,8 @@ export default function HydrationCard({
   glasses = 0,
   onRefresh,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -33,11 +36,11 @@ export default function HydrationCard({
 
         <div>
           <h3 className="font-['Playfair_Display'] text-xl text-[#7B2346]">
-            Hydration
+            {uiText('hydration')}
           </h3>
 
           <p className="text-xs text-[#977A86]">
-            Synced with your Dashboard
+            {auditText('common:synced_with_your_dashboard')}
           </p>
         </div>
       </div>
@@ -45,7 +48,7 @@ export default function HydrationCard({
       <p className="mt-6 text-3xl font-bold text-[#7B2346]">
         {glasses}
         <span className="ml-2 text-sm font-normal text-[#977A86]">
-          glasses recorded today
+          {auditText('common:glasses_recorded_today')}
         </span>
       </p>
 
@@ -56,7 +59,7 @@ export default function HydrationCard({
         className="mt-5 flex items-center gap-2 rounded-full bg-[#7B2346] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
       >
         <Plus size={17} />
-        Add One Glass
+        {uiText('add_one_glass')}
       </button>
 
       {error && (

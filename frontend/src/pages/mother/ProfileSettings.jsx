@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { MyPlan } from '../../components/mother/EntitlementPanels'
 
 import { useEffect, useState } from 'react'
@@ -56,10 +57,11 @@ function Field({ label, hint, children }) {
 }
 
 function Select({ label, value, change, options }) {
+  const { t: uiText } = useTranslation('common')
   return (
     <Field label={label}>
       <select value={value ?? ''} onChange={e => change(e.target.value)} className={INPUT}>
-        <option value="">Select an option</option>
+        <option value="">{uiText('select_an_option')}</option>
         {options.map(([v, text]) => (
           <option key={v} value={v}>{text}</option>
         ))}
@@ -140,6 +142,9 @@ function buildForm(profile = {}, user = {}) {
 }
 
 function SettingsForm({ section, form, change, email }) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
+  const { t } = useTranslation('mother')
   const get = key => form[key]
   const set = key => value => change(key, value)
   const select = (key, label, options) => (
@@ -155,7 +160,7 @@ function SettingsForm({ section, form, change, email }) {
       <div className="space-y-5">
         {input('full_name', 'Full Name', 'text', { required: true, maxLength: 150 })}
         {input('display_name', 'Preferred Name', 'text', { maxLength: 150 })}
-        <Field label="Email Address" hint="Changing your email requires separate verification.">
+        <Field label={uiText('email_address')} hint="Changing your email requires separate verification.">
           <input className={`${INPUT} bg-[#F9F3F5]`} value={email || ''} readOnly />
         </Field>
       </div>
@@ -228,7 +233,7 @@ function SettingsForm({ section, form, change, email }) {
         ])}
 
         <div className="md:col-span-2">
-          <TextArea label="Other Health Notes" value={get('other_health_note')} change={set('other_health_note')} />
+          <TextArea label={uiText('other_health_notes')} value={get('other_health_note')} change={set('other_health_note')} />
         </div>
       </div>
     )
@@ -274,7 +279,7 @@ function SettingsForm({ section, form, change, email }) {
         {select('activity_limits', 'Activity Restrictions', YNU)}
         {get('activity_limits') === 'yes' && (
           <div className="md:col-span-2">
-            <TextArea label="Activity Restriction Notes" value={get('activity_limits_note')} change={set('activity_limits_note')} />
+            <TextArea label={uiText('activity_restriction_notes')} value={get('activity_limits_note')} change={set('activity_limits_note')} />
           </div>
         )}
         <p className="md:col-span-2 rounded-xl bg-[#FFF6F1] p-4 text-xs leading-6 text-[#8D697A]">
@@ -290,7 +295,7 @@ function SettingsForm({ section, form, change, email }) {
       <div className="space-y-7">
         <div>
           <h3 className="mb-4 text-sm font-semibold text-[#7B2346]">
-            Choose Your Reminders
+            {uiText('choose_your_reminders')}
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {REMINDERS.map(([value, label]) => (
@@ -318,8 +323,7 @@ function SettingsForm({ section, form, change, email }) {
           {input('care_contact_phone', 'Care Contact Phone', 'tel', { maxLength: 30 })}
         </div>
         <p className="rounded-xl bg-[#FFF6F1] p-4 text-xs leading-6 text-[#8D697A]">
-          Reminder preferences will be saved to your profile.
-          Automatic notifications require a separate notification service.
+          {auditText('common:reminder_preferences_will_be_saved_to_your_profile_automatic_notifications_require_a_separate_notification_service')}
         </p>
       </div>
     )
@@ -354,8 +358,7 @@ function SettingsForm({ section, form, change, email }) {
           </label>
         ))}
         <p className="text-xs leading-6 text-[#987887]">
-          Your language preference will be saved.
-          Full application translation will be connected separately.
+          {t('your_language_preference_will_be_saved')}
         </p>
       </div>
     )
@@ -365,8 +368,8 @@ function SettingsForm({ section, form, change, email }) {
     return (
       <div className="space-y-6">
         <div className="rounded-2xl border border-[#F0DEE4] p-5">
-          <h3 className="font-semibold text-[#7B2346]">Account Information</h3>
-          <p className="mt-3 text-xs text-[#987887]">Registered Email</p>
+          <h3 className="font-semibold text-[#7B2346]">{uiText('account_information')}</h3>
+          <p className="mt-3 text-xs text-[#987887]">{uiText('registered_email')}</p>
           <p className="mt-1 break-all text-sm font-medium">{email}</p>
         </div>
 
@@ -379,23 +382,20 @@ function SettingsForm({ section, form, change, email }) {
           />
           <div>
             <p className="text-sm font-semibold text-[#7B2346]">
-              Allow AI Profile Personalization
+              {auditText('common:allow_ai_profile_personalization')}
             </p>
             <p className="mt-2 text-xs leading-6 text-[#987887]">
-              Store your preference for whether relevant profile information
-              may be used to personalize AI support. Saving this setting
-              does not send data to an AI service.
+              {auditText('common:store_your_preference_for_whether_relevant_profile_information_may_be_used_to_personalize_ai_support_saving_this_setting_does_not_send_data_to_an_ai_service')}
             </p>
           </div>
         </label>
 
         <div className="rounded-2xl bg-[#FFF6F1] p-5">
           <h3 className="text-sm font-semibold text-[#7B2346]">
-            Account Security
+            {uiText('account_security')}
           </h3>
           <p className="mt-2 text-xs leading-6 text-[#987887]">
-            Password change, data export and account deletion will be
-            available after secure backend endpoints are implemented.
+            {auditText('common:password_change_data_export_and_account_deletion_will_be_available_after_secure_backend_endpoints_are_implemented')}
           </p>
         </div>
       </div>
@@ -492,10 +492,14 @@ function createPayload(section, form) {
   }
 }
 
-export default function ProfileSettings({ user, onLogout, onNavigate }) {
+export default function ProfileSettings({ user, onLogout, onNavigate, initialSection, onProfileSaved }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
+  const { t } = useTranslation('mother')
   const [profile, setProfile] = useState(null)
   const [form, setForm] = useState({})
-  const [section, setSection] = useState(null)
+  const [section, setSection] = useState(initialSection === 'language' ? 'language' : null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -522,7 +526,13 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
 
     load()
     return () => { active = false }
-  }, [user.access_token])
+  }, [user])
+
+  useEffect(() => {
+    if (!loading && initialSection === 'plan') {
+      document.getElementById('mother-plan')?.scrollIntoView({ block: 'start' })
+    }
+  }, [loading, initialSection])
 
   function change(key, value) {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -554,9 +564,10 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
       setProfile(updated)
       setDisplayName(name)
       setForm(buildForm(updated, { ...user, name }))
-      setSuccess('Your changes have been saved successfully.')
+      onProfileSaved?.(updated)
+      setSuccess('your_changes_have_been_saved_successfully')
     } catch (err) {
-      setError(err.message || 'Unable to save changes.')
+      setError(err.message || auditText('common:unable_to_save_changes'))
     } finally {
       setSaving(false)
     }
@@ -581,19 +592,19 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
     >
       <div className="mb-8">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#D09A66]">
-          MY HERBLOOM
+          {localizeCopy('common:my_herbloom')}
         </p>
         <h1 className="font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346] md:text-4xl">
-          Profile & Settings
+          {uiText('profile_settings')}
         </h1>
         <p className="mt-2 text-sm text-[#967384]">
-          Manage your profile, health details and app preferences.
+          {auditText('common:manage_your_profile_health_details_and_app_preferences')}
         </p>
       </div>
 
       {loading ? (
         <div className="rounded-3xl bg-white p-12 text-center text-[#7B2346]">
-          Loading your profile...
+          {auditText('common:loading_your_profile')}
         </div>
       ) : (
         <>
@@ -606,13 +617,13 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
           {success && (
             <div role="status" className="mb-5 flex gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
               <CheckCircle2 size={18} className="shrink-0" />
-              {success}
+              {t(success)}
             </div>
           )}
 
           {!section ? (
             <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
-              <div className="h-fit rounded-3xl border border-[#F0DEE4] bg-white p-7 text-center shadow-sm">
+              <div className="h-fit min-w-0 rounded-3xl border border-[#F0DEE4] bg-white p-5 sm:p-7 text-center shadow-sm">
                 <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-[#F6D3DB] text-4xl font-semibold text-[#7B2346]">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
@@ -620,7 +631,7 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
                   {profile?.display_name || displayName}
                 </h2>
                 <p className="mt-2 text-sm text-[#987887]">
-                  Mother{week !== null ? ` • Week ${week}` : ''}
+                  {uiText('mother')}{week !== null ? ` • Week ${week}` : ''}
                 </p>
                 <button
                   type="button"
@@ -628,26 +639,26 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
                   className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#7B2346] px-6 py-3 text-sm font-medium text-white hover:bg-[#68203C]"
                 >
                   <Pencil size={15} />
-                  Edit Profile
+                  {auditText('common:edit_profile')}
                 </button>
                 <div className="mt-7 border-t border-[#F2E5E9] pt-5 text-left">
-                  <p className="text-xs text-[#A1808D]">Your recovery journey</p>
+                  <p className="text-xs text-[#A1808D]">{auditText('common:your_recovery_journey')}</p>
                   <p className="mt-2 text-sm font-medium text-[#7B2346]">
                     {profile?.delivery_type === 'csection'
-                      ? 'C-section Recovery'
+                      ? auditText('common:c_section_recovery_2')
                       : profile?.delivery_type === 'vaginal'
-                        ? 'Vaginal Birth Recovery'
-                        : 'Recovery details not provided'}
+                        ? auditText('common:vaginal_birth_recovery_2')
+                        : auditText('common:recovery_details_not_provided')}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-[#F0DEE4] bg-white p-5 shadow-sm md:p-7">
                 <h2 className="mb-5 font-['Playfair_Display'] text-2xl font-semibold text-[#7B2346]">
-                  Your Settings
+                  {auditText('common:your_settings')}
                 </h2>
                 <div className="space-y-3">
-                  <MyPlan token={user?.access_token} language={profile?.language} />
+                  <div id="mother-plan" className="scroll-mt-24"><MyPlan token={user?.access_token} /></div>
                   {SECTIONS.map(item => {
                     const Icon = item.icon
                     return (
@@ -655,17 +666,17 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
                         key={item.id}
                         type="button"
                         onClick={() => openSection(item.id)}
-                        className="group flex w-full items-center gap-4 rounded-2xl border border-[#F3E6EA] bg-[#FFFBFC] p-4 text-left transition hover:border-[#E8BDCB] hover:bg-[#FFF6F1]"
+                        className="group flex w-full items-center gap-3 sm:gap-4 rounded-2xl border border-[#F3E6EA] bg-[#FFFBFC] p-4 text-left transition hover:border-[#E8BDCB] hover:bg-[#FFF6F1]"
                       >
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FBE8EE] text-[#7B2346]">
                           <Icon size={21} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="text-sm font-semibold text-[#7B2346]">
-                            {item.title}
+                            {item.id === 'language' ? t('language') : item.title}
                           </h3>
                           <p className="mt-1 text-xs leading-5 text-[#A0808D]">
-                            {item.description}
+                            {item.id === 'language' ? t('english_and_tamil_preferences') : item.description}
                           </p>
                         </div>
                         <ChevronRight size={19} className="shrink-0 text-[#B68E9D]" />
@@ -683,19 +694,19 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
                 className="mb-5 flex items-center gap-2 text-sm font-medium text-[#7B2346]"
               >
                 <ArrowLeft size={17} />
-                Back to Settings
+                {auditText('common:back_to_settings')}
               </button>
-              <div className="rounded-3xl border border-[#F0DEE4] bg-white p-6 shadow-sm md:p-9">
-                <div className="mb-8 flex items-center gap-4 border-b border-[#F2E5E9] pb-6">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FBE8EE] text-[#7B2346]">
+              <div className="rounded-3xl border border-[#F0DEE4] bg-white p-4 shadow-sm sm:p-6 md:p-9">
+                <div className="mb-8 flex items-start gap-3 border-b border-[#F2E5E9] pb-5 sm:items-center sm:gap-4 sm:pb-6">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#FBE8EE] text-[#7B2346]">
                     {ActiveIcon && <ActiveIcon size={26} />}
                   </div>
                   <div>
                     <h2 className="font-['Playfair_Display'] text-2xl font-semibold text-[#7B2346]">
-                      {activeSection?.title}
+                      {section === 'language' ? t('language') : activeSection?.title}
                     </h2>
                     <p className="mt-1 text-sm text-[#9B7A89]">
-                      {activeSection?.description}
+                      {section === 'language' ? t('english_and_tamil_preferences') : activeSection?.description}
                     </p>
                   </div>
                 </div>
@@ -714,7 +725,7 @@ export default function ProfileSettings({ user, onLogout, onNavigate }) {
                       className="inline-flex items-center gap-2 rounded-full bg-[#7B2346] px-7 py-3 text-sm font-semibold text-white hover:bg-[#68203C] disabled:opacity-60"
                     >
                       <Save size={17} />
-                      {saving ? 'Saving...' : 'Save Changes'}
+                      {saving ? localizeCopy('common:saving_dots') : auditText('common:save_changes_2')}
                     </button>
                   </div>
                 </form>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import {
@@ -17,6 +18,8 @@ const COLORS = {
 }
 
 export default function MyRecovery(props) {
+  const { t: auditText } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [showDisclaimer, setShowDisclaimer] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
 
@@ -38,10 +41,10 @@ export default function MyRecovery(props) {
       {/* Exercise safety notice */}
       {showDisclaimer && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#3A1224]/50 p-5 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto overscroll-contain bg-[#3A1224]/50 p-3 sm:p-5 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
-          aria-label="Exercise safety information"
+          aria-label={uiText('exercise_safety_information')}
         >
           <ExerciseDisclaimer
             onAccept={handleAccept}
@@ -55,10 +58,10 @@ export default function MyRecovery(props) {
         <button
           type="button"
           onClick={() => setShowDisclaimer(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-full border border-[#F6D3DB] bg-white px-5 py-3 text-sm font-semibold text-[#7B2346] shadow-lg transition hover:bg-[#FFF6F1]"
+          className="fixed bottom-4 right-4 z-40 flex min-h-11 max-w-[calc(100vw-2rem)] items-center gap-2 sm:bottom-6 sm:right-6 sm:gap-3 rounded-full border border-[#F6D3DB] bg-white px-5 py-3 text-sm font-semibold text-[#7B2346] shadow-lg transition hover:bg-[#FFF6F1]"
         >
           <ShieldCheck size={20} />
-          Exercise Safety Information
+          {auditText('common:exercise_safety_information_2')}
         </button>
       )}
 
@@ -67,7 +70,7 @@ export default function MyRecovery(props) {
           className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full border border-[#F6D3DB] bg-white px-4 py-2 text-xs text-[#7B2346] shadow-md"
         >
           <Heart size={16} />
-          Safety notice acknowledged
+          {auditText('common:safety_notice_acknowledged_2')}
         </div>
       )}
 

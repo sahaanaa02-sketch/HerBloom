@@ -1,8 +1,12 @@
+import { i18n, normalizeLanguage } from '../../locales/i18n'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
   LogOut,
   ShieldCheck,
 } from 'lucide-react'
@@ -34,36 +38,26 @@ import {
   saveOnboardingStep,
 } from '../../services/onboardingApi'
 
-// Same dimensions as Login.jsx
-const CARD_HEIGHT = 'min(90vh, 810px)'
-const CARD_RATIO = 1.55
-
-// Each image is used ONLY as the left section background
 const STEP_INFO = [
   {
     title: 'About Your Baby',
     image: image1,
-    position: 'center center',
   },
   {
     title: 'About Your Birth',
     image: image2,
-    position: 'center center',
   },
   {
     title: 'Feeding and Food',
     image: image3,
-    position: 'center center',
   },
   {
     title: 'Your Health',
     image: image4,
-    position: 'center center',
   },
   {
     title: 'Your Preferences',
     image: image5,
-    position: 'center center',
   },
 ]
 
@@ -201,6 +195,14 @@ function buildPayload(step, answers) {
     }
   })
 
+  if (step === 3 && (
+    answers.allergy_status === null ||
+    answers.allergy_status === 'not_sure' ||
+    (answers.allergy_status === 'yes' && answers.allergies.length === 0)
+  )) {
+    payload.allergies = null
+  }
+
   return payload
 }
 
@@ -236,6 +238,7 @@ export default function Onboarding({
   onLogout,
   onComplete,
 }) {
+  const t = useOnboardingCopy()
   const [step, setStep] = useState(initialProfile.onboarding_step)
   const [progressState, setProgressState] = useState({
     onboarding_step: initialProfile.onboarding_step,
@@ -280,6 +283,7 @@ export default function Onboarding({
   const progress = finished ? 100 : (progressState.onboarding_step - 1) * 20
 
   const updateAnswer = (field, value) => {
+    if (field === 'language') i18n.changeLanguage(normalizeLanguage(value))
     setAnswers((previous) => ({
       ...previous,
       [field]: value,
@@ -289,7 +293,7 @@ export default function Onboarding({
 
   const goToTop = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0
+      scrollRef.current.scrollIntoView({ block: 'start' })
     }
   }
 
@@ -395,78 +399,43 @@ export default function Onboarding({
     }
   }
 
-  if (finished) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FFF6F1] p-4 font-['Poppins']">
-        <div className="w-full max-w-2xl rounded-3xl border border-[#F1D9DF] bg-white p-6 shadow-xl sm:p-10">
-          <OnboardingSuccess
-            userName={
-              answers.display_name ||
-              user?.name ||
-              ''
-            }
-            reminders={answers.reminders}
-            onGoToDashboard={onComplete}
-          />
-        </div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!finished) return
+
+    const timer = window.setTimeout(() => onComplete(answers), 6000)
+    return () => window.clearTimeout(timer)
+  }, [answers, finished, onComplete])
+
+  const completedSteps = progress / 20
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-5">
-
-      <style>{`
-        .hb-onboarding-card {
-          width: 100%;
-          max-width: 480px;
-          min-height: 600px;
-        }
-
-        @media (min-width: 768px) {
-          .hb-onboarding-card {
-            height: ${CARD_HEIGHT};
-            min-height: 0;
-            max-width: none;
-            width: min(
-              96vw,
-              calc(${CARD_HEIGHT} * ${CARD_RATIO})
-            );
-          }
-        }
-      `}</style>
-
-      {/* MAIN CARD */}
-      <div className="hb-onboarding-card flex flex-col overflow-hidden rounded-[28px] border border-[#F1D9DF] bg-white shadow-xl md:flex-row">
-
-        {/* LEFT 40% SECTION - BACKGROUND IMAGE ONLY */}
-        <aside
-          className="relative hidden h-full w-[40%] shrink-0 overflow-hidden bg-[#F6D3DB] md:block"
-          style={{
-            backgroundImage: `url("${currentInfo.image}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: currentInfo.position,
-            backgroundRepeat: 'no-repeat',
-          }}
-          role="img"
-          aria-label={currentInfo.title}
-        />
+    <div className="flex min-h-screen items-center justify-center bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-6">
+      <div className="hb-mother-onboarding grid w-full max-w-[1200px] rounded-[28px] border border-[#F1D9DF] bg-[#FFFCFB] shadow-xl md:grid-cols-[2fr_3fr]">
+        <aside className="flex min-w-0 items-center justify-center self-start rounded-t-[28px] bg-[#F6D3DB] p-3 md:sticky md:top-6 md:rounded-l-[28px] md:rounded-tr-none">
+          <img
+            src={currentInfo.image}
+            alt={t('HerBloom onboarding illustration for {{title}}', { title: t(currentInfo.title) })}
+            className="block max-h-[42svh] w-full object-contain md:max-h-[calc(100svh-5rem)]"
+          />
+        </aside>
 
         {/* RIGHT 60% SECTION - QUESTIONS */}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#FFFCFB]">
 
           {/* HEADER */}
-          <header className="shrink-0 border-b border-[#F1D9DF] bg-white px-5 pb-4 pt-5 sm:px-7">
-            <div className="flex items-start justify-between gap-3">
+          <header className="shrink-0 rounded-tr-[28px] border-b border-[#F1D9DF] bg-white px-5 pb-4 pt-5 sm:px-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
 
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7B2346]">
-                  HerBloom Onboarding
+                  {t('HerBloom Onboarding')}
                 </p>
                 <p className="mt-1 text-xs text-[#765363]">
-                  Personalize your experience
+                  {t('Personalize your experience')}
                 </p>
               </div>
+
+              <LanguageSwitcher />
 
               <button
                 type="button"
@@ -474,7 +443,7 @@ export default function Onboarding({
                 className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#E8C3CC] px-4 text-sm text-[#7B2346] transition hover:bg-[#FFF6F1]"
               >
                 <LogOut size={16} />
-                Log out
+                {t('Log out')}
               </button>
 
             </div>
@@ -482,47 +451,66 @@ export default function Onboarding({
             {/* PROGRESS */}
             <div className="mt-5 flex items-center justify-between gap-3 text-xs">
               <span className="font-semibold text-[#7B2346]">
-                Step {step} of 5
+                {t('Step {{step}} of 5', { step })}
               </span>
-              <span className="text-[#765363]">
-                {progress}% complete
+              <span aria-live="polite" className="text-[#765363]">
+                {t('{{progress}}% complete', { progress })}
               </span>
             </div>
 
-            <div
-              role="progressbar"
-              aria-label="Onboarding progress"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress}
-              className="mt-2 h-2 overflow-hidden rounded-full bg-[#F6D3DB]"
-            >
-              <div
-                className="h-full rounded-full bg-[#7B2346] transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <ol aria-label={t('Onboarding steps')} className="mt-3 flex items-center">
+              {STEP_INFO.map(({ title }, index) => {
+                const complete = index < completedSteps
+                const current = !finished && index === step - 1
+                return (
+                  <li key={title} aria-current={current ? 'step' : undefined}
+                    className="flex flex-1 items-center last:flex-none"
+                  >
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                      current ? 'border-[#7B2346] bg-white text-[#7B2346] ring-2 ring-[#7B2346] ring-offset-2'
+                        : complete ? 'border-[#7B2346] bg-[#7B2346] text-white'
+                          : 'border-[#E8C3CC] bg-[#FFF6F1] text-[#765363]'
+                    }`}>
+                      <span className="sr-only">{complete ? t('{{title}}, completed', { title: t(title) }) : t(title)}</span>
+                      {complete && !current ? <Check size={15} aria-hidden="true" /> : <span aria-hidden="true">{index + 1}</span>}
+                    </span>
+                    {index < STEP_INFO.length - 1 && (
+                      <span aria-hidden="true" className={`mx-2 h-0.5 flex-1 ${complete ? 'bg-[#7B2346]' : 'bg-[#F6D3DB]'}`} />
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
           </header>
 
           {/* SCROLLABLE QUESTIONS */}
           <main
             ref={scrollRef}
-            className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6"
           >
             {error && (
               <div
                 role="alert"
                 className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
               >
-                {error}
+                {t(error)}
               </div>
             )}
 
-            {renderStep()}
+            {finished ? (
+              <OnboardingSuccess
+                userName={answers.display_name || user?.name}
+                onGoToDashboard={() => onComplete(answers)}
+              />
+            ) : (
+              <fieldset disabled={saving} className="min-w-0">
+                {renderStep()}
+              </fieldset>
+            )}
           </main>
 
           {/* FOOTER */}
-          <footer className="shrink-0 border-t border-[#F1D9DF] bg-white px-5 py-4 sm:px-7">
+          {!finished && <footer className="shrink-0 border-t border-[#F1D9DF] bg-white px-4 py-3 sm:px-7 sm:py-4">
             <div className="flex items-center justify-between gap-3">
 
               <button
@@ -532,7 +520,7 @@ export default function Onboarding({
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#E8C3CC] px-5 text-sm text-[#7B2346] transition hover:bg-[#FFF6F1] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowLeft size={17} />
-                Back
+                {t('Back')}
               </button>
 
               <button
@@ -542,10 +530,10 @@ export default function Onboarding({
                 className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#7B2346] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#651C39] disabled:opacity-60"
               >
                 {saving
-                  ? 'Saving...'
+                  ? t('Saving...')
                   : step === 5
-                    ? 'Finish'
-                    : 'Continue'}
+                    ? t('Finish')
+                    : t('Continue')}
 
                 {!saving && <ArrowRight size={17} />}
               </button>
@@ -554,9 +542,9 @@ export default function Onboarding({
 
             <p className="mt-3 flex items-center justify-center gap-2 text-center text-[11px] text-[#8B6B77]">
               <ShieldCheck size={14} />
-              Your information is handled with care.
+              {t('Your information is handled with care.')}
             </p>
-          </footer>
+          </footer>}
 
         </div>
       </div>

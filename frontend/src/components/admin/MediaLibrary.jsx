@@ -1,3 +1,5 @@
+import { mediaErrorKey } from '../../locales/mediaErrors'
+import { useTranslation } from 'react-i18next'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -28,6 +30,9 @@ export default function MediaLibrary({
   permissions = [],
   isSuperAdmin = false,
 }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const fileInputRef = useRef(null)
 
   const [rows, setRows] = useState([])
@@ -81,7 +86,7 @@ export default function MediaLibrary({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err.message || 'Failed to load media.')
+          setError(mediaErrorKey(err.message, 'failed_to_load_media'))
         }
       } finally {
         if (!cancelled) {
@@ -124,7 +129,7 @@ export default function MediaLibrary({
       !imageTypes.includes(extension) &&
       !audioTypes.includes(extension)
     ) {
-      setError('Unsupported file format.')
+      setError('unsupported_file_format')
       event.target.value = ''
       return
     }
@@ -134,7 +139,7 @@ export default function MediaLibrary({
       : 10 * 1024 * 1024
 
     if (file.size > maxSize) {
-      setError('Selected file exceeds the allowed size.')
+      setError('selected_file_exceeds_the_allowed_size')
       event.target.value = ''
       return
     }
@@ -144,11 +149,11 @@ export default function MediaLibrary({
     try {
       await uploadAdminMedia(token, file)
 
-      setSuccess('Media uploaded successfully.')
+      setSuccess(auditText('common:media_uploaded_successfully'))
       setPage(0)
       setRefreshKey((value) => value + 1)
     } catch (err) {
-      setError(err.message || 'Upload failed.')
+      setError(mediaErrorKey(err.message, 'upload_failed'))
     } finally {
       setUploading(false)
       event.target.value = ''
@@ -168,11 +173,11 @@ export default function MediaLibrary({
         archiveTarget.id
       )
 
-      setSuccess('Media archived successfully.')
+      setSuccess(auditText('common:media_archived_successfully'))
       setArchiveTarget(null)
       setRefreshKey((value) => value + 1)
     } catch (err) {
-      setError(err.message || 'Archive failed.')
+      setError(mediaErrorKey(err.message, 'archive_failed'))
     } finally {
       setArchiving(false)
     }
@@ -227,7 +232,7 @@ export default function MediaLibrary({
     <Box>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          {uiText(error)}
         </Alert>
       )}
 
@@ -246,8 +251,8 @@ export default function MediaLibrary({
       />
 
       <AdminTable
-        title="Media Library"
-        description="Manage uploaded images and audio files."
+        title={uiText('media_library')}
+        description={auditText('common:manage_uploaded_images_and_audio_files')}
         rows={rows}
         columns={columns}
         total={total}
@@ -280,8 +285,8 @@ export default function MediaLibrary({
             key: 'status',
             label: 'Statuses',
             options: [
-              { label: 'Active', value: 'active' },
-              { label: 'Archived', value: 'archived' },
+              { label: localizeCopy('common:active'), value: 'active' },
+              { label: localizeCopy('common:archived'), value: 'archived' },
             ],
           },
         ]}
@@ -294,7 +299,7 @@ export default function MediaLibrary({
             : undefined
         }
         createLabel={
-          uploading ? 'Uploading...' : 'Upload Media'
+          uploading ? auditText('common:uploading') : auditText('common:upload_media')
         }
         canCreate={canUpload && !uploading}
         canEdit={false}
@@ -303,7 +308,7 @@ export default function MediaLibrary({
           canArchive
             ? (row) => {
                 if (row.status === 'archived') {
-                  setError('This file is already archived.')
+                  setError('this_file_is_already_archived')
                   return
                 }
                 setArchiveTarget(row)
@@ -323,7 +328,7 @@ export default function MediaLibrary({
         >
           <CircularProgress size={18} />
           <Typography variant="body2">
-            Uploading media...
+            {uiText('uploading_media')}
           </Typography>
         </Box>
       )}
@@ -336,11 +341,11 @@ export default function MediaLibrary({
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Archive Media?</DialogTitle>
+        <DialogTitle>{uiText('archive_media')}</DialogTitle>
 
         <DialogContent>
           <Typography>
-            Archive{' '}
+            {uiText('archive')}{' '}
             <strong>
               {archiveTarget?.original_filename}
             </strong>
@@ -351,8 +356,7 @@ export default function MediaLibrary({
             variant="body2"
             sx={{ mt: 1, color: 'text.secondary' }}
           >
-            This file will no longer be available
-            through the active media endpoint.
+            {auditText('common:this_file_will_no_longer_be_available_through_the_active_media_endpoint')}
           </Typography>
         </DialogContent>
 
@@ -361,7 +365,7 @@ export default function MediaLibrary({
             disabled={archiving}
             onClick={() => setArchiveTarget(null)}
           >
-            Cancel
+            {uiText('cancel')}
           </Button>
 
           <Button
@@ -370,7 +374,7 @@ export default function MediaLibrary({
             disabled={archiving}
             onClick={handleArchive}
           >
-            {archiving ? 'Archiving...' : 'Archive'}
+            {archiving ? auditText('common:archiving') : localizeCopy('common:archive')}
           </Button>
         </DialogActions>
       </Dialog>

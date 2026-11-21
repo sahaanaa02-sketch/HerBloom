@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
 
 import {
   HeartPulse,
@@ -31,6 +33,8 @@ export default function Step4Health({
   answers = {},
   updateAnswer,
 }) {
+  const { t: auditText } = useTranslation()
+  const t = useOnboardingCopy()
   const update = (field, value) => {
     updateAnswer(field, value)
 
@@ -68,7 +72,7 @@ export default function Step4Health({
           selected={answers[field] === value}
           onClick={() => update(field, value)}
         >
-          {label}
+          {t(label)}
         </ChoiceButton>
       ))}
     </div>
@@ -108,7 +112,7 @@ export default function Step4Health({
               className="rounded-xl border border-[#F1D9DF] bg-[#FFFBF8] p-3"
             >
               <p className="mb-2 text-sm font-medium text-[#3A1224]">
-                {label}
+                {t(label)}
               </p>
               {choices(key, yesNoOptions)}
             </div>
@@ -125,7 +129,7 @@ export default function Step4Health({
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-xs text-[#765363]">
-                Latest haemoglobin (Hb) value in g/dL
+                {auditText('common:latest_haemoglobin_hb_value_in_g_dl')}
               </label>
               <TextField
                 type="number"
@@ -141,7 +145,7 @@ export default function Step4Health({
 
             <div>
               <label className="mb-1.5 block text-xs text-[#765363]">
-                Month of your Hb test
+                {auditText('common:month_of_your_hb_test')}
               </label>
               <TextField
                 type="month"
@@ -152,7 +156,7 @@ export default function Step4Health({
 
             <div>
               <p className="mb-2 text-sm font-medium text-[#3A1224]">
-                Were you prescribed iron supplements?
+                {auditText('common:were_you_prescribed_iron_supplements')}
               </p>
               {choices('iron_prescribed', yesNoOptions)}
             </div>
@@ -169,7 +173,7 @@ export default function Step4Health({
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-sm font-medium text-[#3A1224]">
-                Have you completed your postpartum glucose test?
+                {auditText('common:have_you_completed_your_postpartum_glucose_test')}
               </p>
               {choices('gdm_test_status', [
                 ['yes', 'Yes'],
@@ -183,7 +187,7 @@ export default function Step4Health({
               <>
                 <div>
                   <p className="mb-2 text-sm font-medium text-[#3A1224]">
-                    What was your test result?
+                    {auditText('common:what_was_your_test_result')}
                   </p>
                   {choices('gdm_result', [
                     ['normal', 'Normal'],
@@ -195,7 +199,7 @@ export default function Step4Health({
 
                 <div>
                   <label className="mb-1.5 block text-xs text-[#765363]">
-                    Month of glucose test
+                    {auditText('common:month_of_glucose_test')}
                   </label>
                   <TextField
                     type="month"
@@ -218,7 +222,7 @@ export default function Step4Health({
           helper="This helps us understand whether medication reminders may be relevant."
         >
           <p className="mb-2 text-sm font-medium text-[#3A1224]">
-            Are you currently taking blood pressure medicine?
+            {auditText('common:are_you_currently_taking_blood_pressure_medicine')}
           </p>
           {choices('bp_medicine', yesNoOptions)}
         </QuestionCard>
@@ -248,7 +252,7 @@ export default function Step4Health({
           onChange={(event) =>
             update('other_health_note', event.target.value)
           }
-          placeholder="Share any additional information..."
+          placeholder={t('Share any additional information...')}
           className="w-full resize-none rounded-xl border border-[#E8C3CC] bg-white px-4 py-3 text-sm text-[#3A1224] outline-none focus:border-[#7B2346]"
         />
       </QuestionCard>

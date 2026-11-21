@@ -1,5 +1,5 @@
 ﻿"""A11 integration tests. All synthetic mutations roll back."""
-from datetime import timedelta
+from datetime import UTC, timedelta
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -13,7 +13,7 @@ from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.mother_profile import MotherProfile
 from app.models.user import User
 from app.routers.admin_2fa import create_admin_access_token
-from app.services import clinical_review
+from app.services import clinical_review, entitlements, free_quota
 from app.services.auth_service import create_access_token
 from app.services.recovery_rules import local_today
 
@@ -129,6 +129,35 @@ def run():
             api("POST", path + "/publication?action=unpublish")
             api("DELETE", path)
             api("GET", path, 404)
+
+            plan_audience = {**audience, "week_max": 7, "delivery_type": "vaginal", "language": "en"}
+            for offset, code in enumerate(("free", "trial", "premium")):
+                plan_draft = {**draft, **plan_audience, "plan": code, "start_at": utc(-1)}
+                plan_item = api("POST", "/announcements", 201, json=plan_draft)
+                api("POST", f"/announcements/{plan_item['id']}/publication?action=publish")
+                with isolated() as db:
+                    moment = stamp.replace(tzinfo=UTC) + timedelta(minutes=offset)
+                    db.connection().exec_driver_sql(
+                        "UPDATE users SET activated_at_utc=%s WHERE id=%s",
+                        (entitlements.utc_naive(moment - timedelta(days=1)), ids[3]))
+                    if code != "free":
+                        db.connection().exec_driver_sql(
+                            "UPDATE entitlement_periods SET ends_at_utc=%s "
+                            "WHERE user_id=%s AND starts_at_utc < %s AND ends_at_utc > %s",
+                            (entitlements.utc_naive(moment), ids[3], entitlements.utc_naive(moment),
+                             entitlements.utc_naive(moment)))
+                        entitlements.insert_period(db, ids[3], code, "a11-target-" + code,
+                                                   entitlements.utc_naive(moment + timedelta(seconds=1)))
+                    db.commit()
+                instant = moment + timedelta(seconds=2)
+                with isolated() as db:
+                    assert entitlements.current(db, ids[3], instant).code == code, code
+                with patch.object(free_quota, "utc_now", return_value=instant):
+                    assert api("POST", "/announcements/audience-preview",
+                               json={**plan_audience, "plan": code}) == {"count": 1}
+                    assert [row["id"] for row in mother_get("/announcements/active", "other")] == [plan_item["id"]]
+                    assert mother_get("/announcements/active") == []
+            print("PASS Free, Trial and Premium announcement audience and aggregate preview")
 
             tip_payload = {"week": 6, "text_en": "Synthetic tip", "text_ta": "சோதனை குறிப்பு"}
             tip = api("POST", "/daily_tips", 201, json=tip_payload)

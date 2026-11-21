@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { Activity, ArrowRight, ClipboardCheck, HeartPulse, ShieldCheck, UserPlus, Users } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -15,9 +16,10 @@ function formatDate(value) {
 }
 
 function SafetyChart({ weeks }) {
+  const { t: uiText } = useTranslation('common')
   const empty = weeks.every((week) => !week.urgent && !week.crisis)
   return <>
-    {empty && <p>No safety events in this period.</p>}
+    {empty && <p>{uiText('no_safety_events_in_this_period')}</p>}
     <div className="ha-safety-chart">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={weeks} accessibilityLayer>
@@ -35,6 +37,9 @@ function SafetyChart({ weeks }) {
 }
 
 export default function OverviewDashboard({ token, refreshKey, name, quickLinks, navigate, onReview }) {
+  const { t: auditText } = useTranslation()
+  const { t: localizeCopy } = useTranslation()
+  const { t: uiText } = useTranslation('common')
   const [safetyDate, setSafetyDate] = useState('')
   const [revision, retry] = useState(0)
   const [result, setResult] = useState(null)
@@ -56,39 +61,39 @@ export default function OverviewDashboard({ token, refreshKey, name, quickLinks,
   return <div aria-busy={loading}>
     <div className="ha-welcome">
       <div>
-        <span>YOUR MANAGEMENT SPACE</span>
-        <h2>Welcome back, {name}</h2>
-        <p>Manage HerBloom with care, clarity and confidence.</p>
+        <span>{localizeCopy('common:your_management_space')}</span>
+        <h2>{auditText('common:welcome_back_2')} {name}</h2>
+        <p>{auditText('common:manage_herbloom_with_care_clarity_and_confidence')}</p>
       </div>
       <ShieldCheck size={55} strokeWidth={1.2} />
     </div>
-    {loading && <div className="ha-message" role="status">Loading dashboard data…</div>}
+    {loading && <div className="ha-message" role="status">{uiText('loading_dashboard_data')}</div>}
     {current?.error && <div className="ha-error" role="alert">
-      <strong>Could not load dashboard</strong><p>{current.error}</p>
-      <button type="button" onClick={() => retry((value) => value + 1)}>Try again</button>
+      <strong>{auditText('common:could_not_load_dashboard')}</strong><p>{current.error}</p>
+      <button type="button" onClick={() => retry((value) => value + 1)}>{uiText('try_again')}</button>
     </div>}
     {overview && <>
       <div className="ha-stats ha-overview-stats">
-        <StatCard icon={Users} title="Total Mothers" value={overview.total_mothers} description={overview.active_mothers + ' enabled accounts'} />
-        <StatCard icon={UserPlus} title="New This Week" value={overview.new_this_week} description="New mother accounts" />
-        <StatCard icon={Activity} title="Active This Week" value={overview.active_this_week} description="Mother accounts with a recorded sign-in" />
-        <StatCard icon={HeartPulse} title="Check-ins This Week" value={overview.checkins_this_week} description="Submitted wellbeing check-ins" />
+        <StatCard icon={Users} title={auditText('common:total_mothers')} value={overview.total_mothers} description={overview.active_mothers + ' enabled accounts'} />
+        <StatCard icon={UserPlus} title={auditText('common:new_this_week')} value={overview.new_this_week} description={auditText('common:new_mother_accounts')} />
+        <StatCard icon={Activity} title={auditText('common:active_this_week')} value={overview.active_this_week} description={auditText('common:mother_accounts_with_a_recorded_sign_in')} />
+        <StatCard icon={HeartPulse} title={auditText('common:check_ins_this_week')} value={overview.checkins_this_week} description={auditText('common:submitted_wellbeing_check_ins')} />
       </div>
       {overview.stage2_enabled && <div className="ha-stats">
-        <StatCard icon={Users} title="Premium Subscribers" value={overview.premium_subscribers ?? 'Unavailable'} description="Recorded subscriptions" />
-        <StatCard icon={Activity} title="Revenue This Month" value={overview.revenue_this_month ?? 'Unavailable'} description="Recorded revenue" />
-        <StatCard icon={Activity} title="AI Cost This Month" value={overview.ai_cost_this_month ?? 'Unavailable'} description="Recorded provider cost" />
+        <StatCard icon={Users} title={auditText('common:premium_subscribers')} value={overview.premium_subscribers ?? 'Unavailable'} description={auditText('common:recorded_subscriptions')} />
+        <StatCard icon={Activity} title={auditText('common:revenue_this_month')} value={overview.revenue_this_month ?? 'Unavailable'} description={auditText('common:recorded_revenue')} />
+        <StatCard icon={Activity} title={auditText('common:ai_cost_this_month')} value={overview.ai_cost_this_month ?? 'Unavailable'} description={auditText('common:recorded_provider_cost')} />
       </div>}
       <div className="ha-panels ha-overview-row">
         <section className="ha-panel">
-          <h3>Safety events</h3>
-          <p>Weekly totals for the four weeks through the selected date.</p>
+          <h3>{auditText('common:safety_events')}</h3>
+          <p>{auditText('common:weekly_totals_for_the_four_weeks_through_the_selected_date')}</p>
           <div className="ha-overview-filter">
-            <label>Through date <input type="date" min="2000-01-01" max={overview.as_of}
+            <label>{auditText('common:through_date')} <input type="date" min="2000-01-01" max={overview.as_of}
               value={safetyDate || overview.as_of || ''} onChange={(event) => changeDate(event.target.value)} /></label>
-            {safetyDate && <button type="button" className="ha-refresh" onClick={() => changeDate('')}>Reset date</button>}
+            {safetyDate && <button type="button" className="ha-refresh" onClick={() => changeDate('')}>{auditText('common:reset_date')}</button>}
           </div>
-          {overview.safety_counts_by_week ? <SafetyChart weeks={overview.safety_counts_by_week} /> : <p>Weekly data is unavailable.</p>}
+          {overview.safety_counts_by_week ? <SafetyChart weeks={overview.safety_counts_by_week} /> : <p>{auditText('common:weekly_data_is_unavailable')}</p>}
         </section>
         <div className="ha-review-alerts">
           {[['queue', 'Pending clinical reviews', overview.reviews_pending], ['due', 'Overdue re-reviews', overview.reviews_overdue]].map(([tab, title, count]) =>
@@ -96,23 +101,23 @@ export default function OverviewDashboard({ token, refreshKey, name, quickLinks,
               <h3><ClipboardCheck size={18} /> {title}</h3>
               <strong className="ha-overview-count">{count ?? '—'}</strong>
               {onReview && count != null && <button type="button" className="ha-refresh" onClick={() => onReview(tab)}>
-                {tab === 'queue' ? 'Open review queue' : 'Open re-review list'}<ArrowRight size={15} />
+                {tab === 'queue' ? auditText('common:open_review_queue') : auditText('common:open_re_review_list')}<ArrowRight size={15} />
               </button>}
             </section>)}
         </div>
       </div>
       <div className="ha-panels">
         <section className="ha-panel">
-          <h3>Recent administrative activity</h3>
+          <h3>{auditText('common:recent_administrative_activity')}</h3>
           {overview.last_10_audit_entries?.length ? <ul className="ha-overview-activity">
             {overview.last_10_audit_entries.map((item) => <li key={item.id}>
               <div><strong>{item.action}</strong><span>{item.entity}</span></div>
               <time dateTime={item.created_at}>{formatDate(item.created_at)}</time>
             </li>)}
-          </ul> : <p>{overview.last_10_audit_entries ? 'No administrative activity recorded.' : 'Recent activity is unavailable.'}</p>}
+          </ul> : <p>{overview.last_10_audit_entries ? auditText('common:no_administrative_activity_recorded') : auditText('common:recent_activity_is_unavailable')}</p>}
         </section>
         <section className="ha-panel">
-          <h3>Quick Access</h3>
+          <h3>{auditText('common:quick_access')}</h3>
           <div className="ha-quick-links">
             {quickLinks.map(({ id, icon: Icon, label }) => <button type="button" key={id} onClick={() => navigate(id)}>
               <Icon size={18} />{label}<ArrowRight size={15} />

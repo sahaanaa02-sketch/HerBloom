@@ -1,7 +1,7 @@
 
 import re
-
-from datetime import UTC, datetime
+import secrets
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -20,13 +20,14 @@ from fastapi.security import (
 )
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.config import E2E_MODE, external_setting, settings
 from app.database import get_db
 from app.models.user import User
+from app.models.admin import AdminUser
 from app.services import analytics, free_quota, mother_account, rate_limits, user_privacy
 
 from app.schemas.auth import (
@@ -371,6 +372,14 @@ def verify_account_link(db, request, token, purpose, password=None):
     return {"message":"Account action completed."}
 
 
+@router.post("/password-reset/verify")
+def verify_password_reset(body: AccountLink, request: Request, db: Session = Depends(get_db)):
+    user_privacy.readiness(db)
+    rate_limits.enforce(db, "password-reset-verify:" + rate_limits.source_ip(request), 10, 15)
+    mother_account.valid_token(db, body.token, "password_reset")
+    return {"message": "Verification successful."}
+
+
 @router.post("/reset-password")
 def reset_password(body: ResetPassword, request: Request, db: Session = Depends(get_db)):
     return verify_account_link(db,request,body.token,"password_reset",body.password)
@@ -379,3 +388,128 @@ def reset_password(body: ResetPassword, request: Request, db: Session = Depends(
 @router.post("/verify-email")
 def verify_email(body: AccountLink, request: Request, db: Session = Depends(get_db)):
     return verify_account_link(db,request,body.token,"verify_email")
+
+
+class GoogleCredential(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    challenge: str = Field(min_length=40, max_length=1500)
+    credential: str = Field(min_length=40, max_length=8000)
+
+
+def google_client(request, db):
+    if E2E_MODE:
+        client_id = settings.E2E_GOOGLE_CLIENT_ID if settings.E2E_GOOGLE_ENABLED else None
+        origin = settings.E2E_FRONTEND_ORIGIN
+    else:
+        client_id = external_setting("MOTHER_GOOGLE_CLIENT_ID")
+        origin = settings.A14_MOTHER_ORIGIN if settings.A14_HOSTED else external_setting("MOTHER_GOOGLE_ORIGIN")
+    if not client_id or not origin:
+        raise HTTPException(503, "Google sign-in is currently unavailable.")
+    if request.headers.get("origin") != origin:
+        raise HTTPException(403, "Google sign-in is unavailable from this origin.")
+    if not user_privacy.active(db) or "google_subject" not in {
+        field["name"] for field in inspect(db.connection()).get_columns("users")
+    }:
+        raise HTTPException(503, "Google sign-in is awaiting configuration.")
+    return client_id
+
+
+def verify_google_credential(credential, client_id):
+    if E2E_MODE and (
+        not settings.E2E_GOOGLE_ENABLED or client_id != settings.E2E_GOOGLE_CLIENT_ID
+    ):
+        raise HTTPException(503, "External Google requests are disabled in E2E.")
+
+    from google.auth.exceptions import GoogleAuthError, TransportError
+    from google.auth.transport.requests import Request as GoogleRequest
+    from google.oauth2.id_token import verify_oauth2_token
+
+    try:
+        transport = GoogleRequest()
+        return verify_oauth2_token(
+            credential, lambda url, **kwargs: transport(url, timeout=5, **kwargs), client_id
+        )
+    except TransportError:
+        raise HTTPException(503, "Google sign-in is temporarily unavailable.") from None
+    except GoogleAuthError:
+        raise ValueError("Invalid Google credential.") from None
+
+
+@router.post("/google/challenge")
+def google_challenge(request: Request, db: Session = Depends(get_db)):
+    client_id = google_client(request, db)
+    rate_limits.enforce(db, "google:challenge:" + rate_limits.source_ip(request), 12)
+    nonce = secrets.token_urlsafe(32)
+    challenge = jwt.encode({"purpose": "mother_google", "nonce": nonce,
+                            "exp": datetime.now(UTC) + timedelta(minutes=5)},
+                           settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return {"client_id": client_id, "nonce": nonce, "challenge": challenge}
+
+
+@router.post("/google", response_model=TokenResponse)
+def google_login(body: GoogleCredential, request: Request, db: Session = Depends(get_db)):
+    client_id = google_client(request, db)
+    rate_limits.enforce(db, "google:verify:" + rate_limits.source_ip(request), 12)
+    invalid = HTTPException(401, "Google sign-in could not be verified. Try again.")
+    try:
+        challenge = jwt.decode(body.challenge, settings.SECRET_KEY, algorithms=[settings.ALGORITHM],
+                               options={"require": ["exp", "purpose", "nonce"]})
+        if challenge["purpose"] != "mother_google" or not isinstance(challenge["nonce"], str):
+            raise invalid
+        claims = verify_google_credential(body.credential, client_id)
+    except (jwt.InvalidTokenError, ValueError):
+        raise invalid from None
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, "Google sign-in is temporarily unavailable.") from None
+
+    subject = claims.get("sub")
+    if not isinstance(subject, str) or not re.fullmatch(r"[0-9A-Za-z_-]{1,255}", subject):
+        raise invalid
+    if claims.get("nonce") != challenge["nonce"]:
+        raise invalid
+    if not user_privacy.consume_limit(db, "google:nonce:" + challenge["nonce"], 1, 10):
+        raise invalid
+
+    row = user_privacy.sql(db, "SELECT id, is_active, anonymized_at, session_version FROM users "
+                               "WHERE google_subject=%s AND role='MOTHER' FOR UPDATE", (subject,)).first()
+    version = 0
+    if row:
+        if not row.is_active or row.anonymized_at:
+            raise invalid
+        user = db.get(User, row.id)
+        version = row.session_version
+    else:
+        email = claims.get("email")
+        if claims.get("email_verified") is not True or not isinstance(email, str):
+            raise invalid
+        try:
+            signup = RegisterRequest(name=str(claims.get("name") or "HerBloom Mother")[:150],
+                                     email=email, password=secrets.token_urlsafe(32))
+        except ValueError:
+            raise invalid from None
+        email = str(signup.email).lower()
+        domain = email.rsplit("@", 1)[1]
+        if domain != "gmail.com" and claims.get("hd") != domain:
+            raise invalid
+        conflict = HTTPException(409, "Google sign-in cannot create this account. Use your existing sign-in method.")
+        if db.scalar(select(User.id).where(User.email == email)) or db.scalar(select(AdminUser.id).where(AdminUser.email == email)):
+            raise conflict
+        user = User(username=generate_username(email, db), full_name=signup.name.strip(), email=email,
+                    hashed_password=hash_password(signup.password), role="MOTHER", is_active=True)
+        db.add(user)
+        try:
+            db.flush()
+            user_privacy.sql(db, "UPDATE users SET google_subject=%s,email_verified_at=%s WHERE id=%s",
+                             (subject, user_privacy.now(), user.id))
+            free_quota.record_signup(db, user.id, datetime.now(UTC))
+        except IntegrityError:
+            db.rollback()
+            raise conflict from None
+
+    user_privacy.sql(db, "UPDATE users SET last_active_at=%s WHERE id=%s", (user_privacy.now(), user.id))
+    analytics.record(db, user.id, "login")
+    db.commit()
+    return {"user": user, "access_token": create_access_token(user.id, "MOTHER", session_version=version),
+            "token_type": "bearer"}
