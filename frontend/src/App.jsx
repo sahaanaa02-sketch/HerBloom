@@ -108,7 +108,7 @@ export default function App() {
   )
 
   const [motherPage, setMotherPage] = useState('dashboard')
-  const [openMealScanner, setOpenMealScanner] = useState(false)
+  const [motherQuickSection, setMotherQuickSection] = useState(null)
 
   const [loading, setLoading] = useState(Boolean(savedToken || savedAdminToken))
 
@@ -330,7 +330,7 @@ export default function App() {
     const motherToken = user?.role === 'MOTHER' ? user.access_token : null
     motherSession(null)
     setLoginMode('login')
-    setOpenMealScanner(false)
+    setMotherQuickSection(null)
     setProfileSection(null)
 
     setUser(null)
@@ -391,7 +391,7 @@ export default function App() {
   // MOTHER PORTAL NAVIGATION
   // ============================================
 
-  const handleMotherNavigate = (page, { openScanner = false } = {}) => {
+  const handleMotherNavigate = (page, { openScanner = false, openBreathing = false } = {}) => {
     setProfileSection(page === 'settings-language' ? 'language' : page === 'settings-plan' ? 'plan' : null)
 
     const pageAliases = {
@@ -456,7 +456,10 @@ export default function App() {
         setSelectedArticleId(null)
       }
 
-      setOpenMealScanner(resolvedPage === 'nutrition' && openScanner)
+      setMotherQuickSection(
+        resolvedPage === 'nutrition' && openScanner ? 'scanner'
+          : resolvedPage === 'wellbeing' && openBreathing ? 'breathing' : null
+      )
       setMotherPage(resolvedPage)
 
       return
@@ -700,7 +703,7 @@ export default function App() {
 
     if (motherPage === 'wellbeing') {
 
-      return <MentalWellbeing {...commonProps} onProfileSaved={refreshMotherDisplayPreferences} />
+      return <MentalWellbeing {...commonProps} initialBreathingOpen={motherQuickSection === 'breathing'} onProfileSaved={refreshMotherDisplayPreferences} />
 
     }
 
@@ -722,7 +725,7 @@ export default function App() {
 
     if (motherPage === 'nutrition') {
 
-      return <Nutrition {...commonProps} initialScannerOpen={openMealScanner} />
+      return <Nutrition {...commonProps} initialScannerOpen={motherQuickSection === 'scanner'} />
 
     }
 

@@ -16,6 +16,7 @@ import TodayOverview from '../../components/dashboard/TodayOverview'
 import DashboardTodo from '../../components/dashboard/DashboardTodo'
 import UpcomingReminders from '../../components/dashboard/UpcomingReminders'
 import DashboardQuickActions from '../../components/dashboard/DashboardQuickActions'
+import { runDashboardQuickAction } from '../../components/dashboard/dashboardQuickNavigation'
 import WeeklySnapshot from '../../components/dashboard/WeeklySnapshot'
 
 import {
@@ -409,28 +410,7 @@ export default function MotherDashboard({
   // QUICK ACTIONS
   // ---------------------------------------
 
-  const quickAction = (type) => {
-    switch (type) {
-      case 'water':
-        quickLog('water')
-        break
-
-      case 'breathing':
-        navigate('wellbeing')
-        break
-
-      case 'scan':
-        onNavigate?.('nutrition', { openScanner: true })
-        break
-
-      case 'ask':
-        navigate('ask')
-        break
-
-      default:
-        notify('This feature is coming soon.')
-    }
-  }
+  const quickAction = (type) => runDashboardQuickAction(type, onNavigate, quickLog)
 
 
   // ---------------------------------------

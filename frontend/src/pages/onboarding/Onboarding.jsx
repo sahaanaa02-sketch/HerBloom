@@ -475,7 +475,7 @@ export default function Onboarding({
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-6">
-      <div className="hb-mother-onboarding grid w-full max-w-[1200px] rounded-[28px] border border-[#F1D9DF] bg-[#FFFCFB] shadow-xl md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="hb-mother-onboarding grid w-full max-w-[1200px] rounded-[28px] border border-[#F1D9DF] bg-[#FFFCFB] shadow-xl md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <aside className="hb-onboarding-illustration" data-step={step}>
           <div className="hb-onboarding-artwork">
             <img
@@ -487,7 +487,7 @@ export default function Onboarding({
           </div>
         </aside>
 
-        {/* RIGHT 60% SECTION - QUESTIONS */}
+        {/* QUESTIONS */}
         <div className="flex min-w-0 flex-col">
 
           {/* HEADER */}

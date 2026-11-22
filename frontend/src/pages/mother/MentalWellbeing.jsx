@@ -716,6 +716,7 @@ export default function MentalWellbeing({
   onLogout,
   onNavigate,
   onProfileSaved,
+  initialBreathingOpen = false,
 }) {
   const { t: auditText } = useTranslation()
   const { t: localizeCopy } = useTranslation()
@@ -726,9 +727,12 @@ export default function MentalWellbeing({
   const [history, setHistory] = useState([])
   const [suggestions, setSuggestions] = useState([])
   const [activities, setActivities] = useState([])
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState(initialBreathingOpen ? 'activity' : 'overview')
   const [selectedActivityId, setSelectedActivityId] = useState(null)
-  const selectedActivity = activities.find((item) => item.id === selectedActivityId)
+  const [activitiesReady, setActivitiesReady] = useState(false)
+  const selectedActivity = selectedActivityId === null && initialBreathingOpen
+    ? activities.find((item) => item.type === 'breathing' && item.duration === 2)
+    : activities.find((item) => item.id === selectedActivityId)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -764,7 +768,10 @@ export default function MentalWellbeing({
     if (!token) return
     const controller = new AbortController()
     getWellbeingActivities(token, language, controller.signal).then((items) => {
-      if (!controller.signal.aborted) setActivities(items)
+      if (!controller.signal.aborted) {
+        setActivities(items)
+        setActivitiesReady(true)
+      }
     }).catch((err) => {
       if (!controller.signal.aborted) setError(err.message)
     })
@@ -1084,6 +1091,12 @@ export default function MentalWellbeing({
 
             {tab === 'support' && (
               <SupportCard t={t} />
+            )}
+
+            {tab === 'activity' && !selectedActivity && !error && (
+              <div className={CARD} role="status">
+                {activitiesReady ? auditText('common:activity_is_not_available_yet') : t.loading}
+              </div>
             )}
 
             {tab === 'activity' && selectedActivity && (
