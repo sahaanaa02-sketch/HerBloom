@@ -25,7 +25,8 @@ def run():
     preflight()
     from app.main import app
 
-    with engine.connect() as conn:
+    # Invitation enrollment exercises the TOTP path even in password-only E2E profiles.
+    with patch.object(settings, "E2E_ADMIN_PASSWORD_ONLY", False), engine.connect() as conn:
         tx = conn.begin()
         active_session = None
 
@@ -74,6 +75,7 @@ def run():
             assert page["total"]>=2 and all(set(r)=={"id","name","email","active","totp_enabled","last_login_at","roles"} for r in page["items"])
             body={"name":"Synthetic invited A9 editor","email":"a9-editor.e2e@example.com","role_ids":[role_id]}
             with patch.object(settings,"A9_ADMIN_INVITES_ENABLED",False), patch.object(admin_invitation.smtplib,"SMTP") as disabled:
+                assert not admin("GET","/admins")["invitation_delivery_enabled"]
                 admin("POST","/admins/invite",503,json=body)
                 disabled.assert_not_called()
                 assert conn.exec_driver_sql("SELECT COUNT(*) FROM admin_invites").scalar_one()==0

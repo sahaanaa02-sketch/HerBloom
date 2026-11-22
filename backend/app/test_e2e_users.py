@@ -118,6 +118,22 @@ def run_enabled_suite():
             assert set(page["items"][0])==safe
             assert set(admin("GET",f"users/{aid}"))==safe|{"history"}
             admin("GET","users",401,"mother")
+            from app.services import entitlements
+            plans = conn.begin_nested()
+            try:
+                stamp = privacy.now()
+                conn.exec_driver_sql("UPDATE users SET activated_at_utc=%s WHERE id IN (%s,%s)",
+                                     (stamp - timedelta(days=40), aid, bid))
+                assert admin("GET", f"users/{aid}")["plan_name"] == "free"
+                with Session(bind=conn,join_transaction_mode="rollback_only") as plan_session:
+                    entitlements.insert_period(plan_session, aid, "trial", "a7-test-trial", stamp - timedelta(days=1))
+                    entitlements.insert_period(plan_session, bid, "premium", "a7-test-premium", stamp - timedelta(days=1))
+                assert {item["plan_name"] for item in admin("GET","users",params={"q":"a7-"})["items"]} == {"trial","premium"}
+                assert admin("GET", f"users/{bid}")["plan_name"] == "premium"
+            finally:
+                if plans.is_active:
+                    plans.rollback()
+            print("PASS authoritative Free, Trial and Premium plan projection")
             admin("POST",f"users/{aid}/deactivate")
             assert admin("GET","users",params={"q":"a7-","status":"inactive"})["total"]==1
             call("GET","/auth/me",401,"mother")
@@ -191,7 +207,8 @@ def run_enabled_suite():
                 admin("POST",f"data-requests/{export}/confirm",503,"super")
                 admin("POST",f"data-requests/{export}/download-ticket",503,"super")
                 admin("POST",f"data-requests/{export}/download",503,"super",json={"token":"a"*43})
-                assert not admin("GET",f"data-requests/{export}",200,"super")["can_download"]
+                gated = admin("GET",f"data-requests/{export}",200,"super")
+                assert not gated["can_download"] and not gated["export_confirmation_enabled"]
                 assert_disabled(lambda: privacy.create_export(None,aid))
                 assert conn.exec_driver_sql("SELECT * FROM data_requests WHERE id=%s",(export,)).one()==before
                 assert conn.exec_driver_sql("SELECT COUNT(*) FROM audit_log").scalar_one()==before_audit

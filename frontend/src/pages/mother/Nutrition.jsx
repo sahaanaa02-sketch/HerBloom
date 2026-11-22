@@ -35,6 +35,7 @@ export default function Nutrition({
   user,
   onLogout,
   onNavigate,
+  initialScannerOpen = false,
 }) {
   const { t: auditText } = useTranslation()
   const { t: localizeCopy } = useTranslation()
@@ -42,7 +43,7 @@ export default function Nutrition({
   const token = user?.access_token
 
   const [tab, setTab] = useState('today')
-  const [scannerOpen, setScannerOpen] = useState(false)
+  const [scannerOpen, setScannerOpen] = useState(initialScannerOpen)
 
   const [todayData, setTodayData] = useState(null)
   const [plan, setPlan] = useState(null)

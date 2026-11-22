@@ -39,9 +39,15 @@ const avoidOptions = [
   'Other',
 ]
 
+const choiceLabels = {
+  feeding_method: "How are you feeding your baby?",
+  diet_type: "Which best describes your diet?",
+}
+
 export default function Step3Feeding({
   answers = {},
   updateAnswer,
+  version,
 }) {
   const { t: auditText } = useTranslation()
   const t = useOnboardingCopy()
@@ -93,7 +99,7 @@ export default function Step3Feeding({
   const choices = (field, options) => (
     <div
       role="radiogroup"
-      aria-label={field.replaceAll('_', ' ')}
+      aria-label={t(choiceLabels[field])}
       className="flex flex-wrap gap-2"
     >
       {options.map(([value, label]) => (
@@ -111,7 +117,7 @@ export default function Step3Feeding({
   return (
     <div className="space-y-4">
       <StepHeading
-        title="Feeding and Food"
+        title={version === 2 ? "Health and Feeding" : "Feeding and Food"}
         subtitle="Share your feeding and food preferences for more relevant nutrition information."
       />
 

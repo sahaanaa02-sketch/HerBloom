@@ -74,7 +74,7 @@ def run():
             Image.new("RGB",(1,1)).save(image,"PNG")
             def scan(status=200,key=None):
                 return call("POST","/nutrition/scan",status,key=key or uuid4(),
-                            files={"file":("test.png",image.getvalue(),"image/png")})
+                            data={"consent":"true"}, files={"file":("test.png",image.getvalue(),"image/png")})
 
             def chat(status=200,key=None):
                 return call("POST","/chat/message",status,key=key or uuid4(),
@@ -85,13 +85,13 @@ def run():
             stamp=lambda value: datetime.fromisoformat(value).astimezone(UTC)
             with patch.object(free_quota,"utc_now",return_value=start) as clock, \
                  patch("app.routers.nutrition.scan_food",return_value={"items":[]}) as scanner, \
-                 patch("app.routers.chat.search_articles",return_value=[{"article_id":1,"title":"Synthetic reviewed","content":"Synthetic"}]), \
+                 patch("app.routers.chat.search_articles",return_value=[{"article_id":1,"title":"Synthetic reviewed","content":"Synthetic answer"}]), \
                  patch("app.routers.chat.generate_answer",return_value="Synthetic answer") as provider:
                 call("GET","/api/plans",401,actor=None)
                 assert {x["code"]:x["price_lkr"] for x in call("GET","/api/plans")["plans"]} == {"free":0,"trial":0,"premium":790}
                 original_anchor=conn.exec_driver_sql("SELECT activated_at_utc FROM users WHERE id=%s",(mother,)).scalar_one()
                 original_reset=balance()["quota_resets_at"]
-                scan()
+                assert scan()["recognized"] is False
                 call("POST","/api/billing/trial/start",422,json={"confirm":False})
                 assert balance()["remaining"]=={"scan":2,"chat":10}
                 exercise=call("POST","/api/admin/exercises",201,"admin",json={
@@ -118,6 +118,17 @@ def run():
                 assert trial["remaining"]=={"scan":7,"chat":25} and not trial["trial_eligible"]
                 call("POST","/api/billing/trial/start",409,json={"confirm":True})
                 assert not guided()["locked"] and guided()["steps"]==["Synthetic"]
+                with patch("app.routers.recovery.entitlements.ready", return_value=False), \
+                     patch("app.routers.recovery.entitlements.guided_access") as resolve_access:
+                    locked = guided()
+                    assert locked["locked"] and locked["steps"] == []
+                    assert all(locked[field] is None for field in ("equipment", "image_url", "video_url"))
+                    assert locked["safety_notes"] == "Synthetic safety"
+                    assert locked["contraindications"] == "Synthetic"
+                    assert call("GET", "/recovery/exercises/today") == []
+                    call("POST", "/recovery/exercise-sessions", 409,
+                         json={"exercise_id": exercise_id, "feeling": "ok"})
+                    resolve_access.assert_not_called()
                 conn.exec_driver_sql("UPDATE mother_profiles SET delivery_type='csection' WHERE user_id=%s",(mother,))
                 assert guided()["locked"] and guided()["steps"]==[]
                 conn.exec_driver_sql("UPDATE mother_profiles SET delivery_type='vaginal' WHERE user_id=%s",(mother,))
@@ -183,6 +194,7 @@ def run():
                     assert call("GET",insight_path,actor="other")["items"]==[]
                 clock.return_value=start+7*day
                 assert balance()["plan"]=="premium" and balance()["remaining"]=={"scan":30,"chat":150}
+                assert not guided()["locked"] and guided()["steps"] == ["Synthetic"]
                 scan(409,key)
                 scan()
                 addon=purchase("synthetic-extension")

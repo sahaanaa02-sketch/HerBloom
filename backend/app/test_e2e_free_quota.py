@@ -85,13 +85,13 @@ def run():
 
             def scan(status=200, key=None):
                 return call("/nutrition/scan", status, token=token, key=key,
-                            files={"file":("synthetic.png",stock.getvalue(),"image/png")})
+                            data={"consent":"true"}, files={"file":("synthetic.png",stock.getvalue(),"image/png")})
 
             def chat(status=200, key=None):
                 return call("/chat/message", status, token=token, key=key,
                             json={"text":"Synthetic question","lang":"en"})
 
-            passages = [{"article_id":1,"title":"Synthetic source","content":"Synthetic source"}]
+            passages = [{"article_id":1,"title":"Synthetic source","content":"Synthetic answer"}]
             start = ANCHOR + timedelta(days=60)
             chat_key, scan_key = uuid4(), uuid4()
             with patch.object(free_quota, "utc_now", return_value=start + timedelta(days=5)) as clock, \

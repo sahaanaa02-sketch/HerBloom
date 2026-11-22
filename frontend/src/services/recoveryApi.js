@@ -17,11 +17,11 @@ async function request(token, path, method = 'GET', body, base = BASE) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(
+    throw Object.assign(new Error(
       typeof error.detail === 'string'
         ? error.detail
         : `Request failed (${response.status})`
-    )
+    ), { status: response.status })
   }
 
   return response.json()

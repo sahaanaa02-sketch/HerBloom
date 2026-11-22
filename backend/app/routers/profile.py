@@ -59,6 +59,8 @@ def update_profile(
         )
 
     changes = data.model_dump(exclude_unset=True)
+    if not profile.onboarding_done and {"reminders", "consent_ai_profile"} & changes.keys():
+        raise HTTPException(409, "Save onboarding preferences through onboarding first.")
 
     # Update User table
     if "full_name" in changes:

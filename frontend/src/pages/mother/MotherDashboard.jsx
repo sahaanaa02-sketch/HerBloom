@@ -420,9 +420,7 @@ export default function MotherDashboard({
         break
 
       case 'scan':
-        notify(
-          'Meal scanning will be available with Nutrition.'
-        )
+        onNavigate?.('nutrition', { openScanner: true })
         break
 
       case 'ask':

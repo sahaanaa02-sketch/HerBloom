@@ -12,7 +12,7 @@ from app.models.nutrition import Food, FoodLog, MealPlanItem
 from app.services.recovery_rules import local_today
 
 
-def test_mother_nutrition_and_summary():
+def test_mother_nutrition_and_summary(monkeypatch):
     authorize_e2e_launcher()
     preflight()
     from app.main import app
@@ -107,6 +107,22 @@ def test_mother_nutrition_and_summary():
             call("GET", endpoint, 401)
             call("GET", endpoint, 422, owner, params={"week_start": "invalid"})
             report = call("GET", endpoint, 200, owner, params={"week_start": monday.isoformat()})["data"]
+            from app.routers import reports
+            from app.services import ai_gateway
+
+            def unexpected_provider(*args, **kwargs):
+                raise AssertionError("Legacy report must never invoke Gemini")
+
+            with monkeypatch.context() as mock:
+                mock.setattr(reports.entitlements, "ready", lambda db: False)
+                mock.setattr(ai_gateway, "generate_weekly_summary", unexpected_provider)
+                # Keep catching a regression that reimports the function by name.
+                if hasattr(reports, "generate_weekly_summary"):
+                    mock.setattr(reports, "generate_weekly_summary", unexpected_provider)
+                local_report = call("GET", endpoint, 200, owner, params={"week_start": monday.isoformat()})
+                assert local_report["ai_summary"]["status"] == "unavailable"
+                assert local_report["data"] == report
+
             assert report["walking"]["total_minutes"] == 25
             assert report["walking"]["days_walked"] == 1
             assert report["hydration"]["average_glasses"] == 4

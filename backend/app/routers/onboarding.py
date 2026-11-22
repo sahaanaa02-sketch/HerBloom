@@ -1,15 +1,19 @@
+import json
 
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.mother_profile import MotherProfile
 from app.models.user import User
-from app.routers.auth import get_current_user
+from app.routers.auth import require_mother
+from app.services.user_privacy import now
 from app.schemas.onboarding import (
     OnboardingStep1,
     OnboardingStep2,
@@ -18,6 +22,10 @@ from app.schemas.onboarding import (
     OnboardingStep5,
     OnboardingProgressResponse,
     OnboardingCompleteResponse,
+    OnboardingBirthV2,
+    OnboardingHealthV2,
+    OnboardingPreferencesV2,
+    OnboardingConsentV2,
 )
 
 
@@ -27,7 +35,7 @@ router = APIRouter(
 )
 
 DbSession = Annotated[Session, Depends(get_db)]
-CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUser = Annotated[User, Depends(require_mother)]
 
 
 STEP_FIELDS = {
@@ -39,27 +47,62 @@ STEP_FIELDS = {
 }
 
 
+V2_SCHEMAS = {
+    1: OnboardingStep1,
+    2: OnboardingBirthV2,
+    3: OnboardingHealthV2,
+    4: OnboardingPreferencesV2,
+    5: OnboardingConsentV2,
+}
+V2_ANSWERS = {
+    "previous_csection", "postpartum_complications", "recovery_concerns",
+    "feature_interests", "daily_reminder_time",
+}
+
+
+def v2_available(db):
+    return bool(db.connection().exec_driver_sql(
+        "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() "
+        "AND TABLE_NAME='mother_profiles' AND COLUMN_NAME='onboarding_v2'"
+    ).scalar())
+
+
+def v2_state(db, profile, *, locked=False):
+    # Legacy steps 3?5 used different sections. Preserve answers and earned
+    # progress, but revisit the combined Health and Feeding step.
+    baseline = {"resume_step": min(profile.onboarding_step or 1, 3)}
+    if profile.id is None:
+        return baseline
+    suffix = " FOR UPDATE" if locked else ""
+    raw = db.connection().exec_driver_sql(
+        "SELECT onboarding_v2 FROM mother_profiles WHERE id=%s" + suffix, (profile.id,)
+    ).scalar()
+    return json.loads(raw) if raw is not None else baseline
+
+
 class ProfileResponse(BaseModel):
     profile: dict
     onboarding_step: int
     onboarding_done: bool
+    onboarding_resume_step: int | None = None
+    onboarding_version: int | None = None
 
 
 def get_or_create_profile(
     db: Session,
     user: User,
+    *,
+    for_write: bool = False,
 ) -> MotherProfile:
-    if user.role != "MOTHER":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only mothers can access onboarding.",
-        )
+    query = select(MotherProfile).where(MotherProfile.user_id == user.id)
+    if not for_write:
+        profile = db.scalar(query)
+        if profile is not None:
+            return profile
 
-    profile = (
-        db.query(MotherProfile)
-        .filter(MotherProfile.user_id == user.id)
-        .first()
-    )
+    # Serialize creation and updates for this mother, including first-time saves.
+    db.execute(select(User.id).where(User.id == user.id).with_for_update()).scalar_one()
+    profile = db.scalar(query.with_for_update())
 
     if profile is None:
         profile = MotherProfile(
@@ -69,8 +112,9 @@ def get_or_create_profile(
             onboarding_done=False,
         )
         db.add(profile)
-        db.commit()
-        db.refresh(profile)
+        if not for_write:
+            db.commit()
+            db.refresh(profile)
 
     return profile
 
@@ -92,6 +136,7 @@ def profile_to_dict(profile: MotherProfile) -> dict:
 @router.get(
     "",
     response_model=ProfileResponse,
+    response_model_exclude_none=True,
 )
 def get_profile(
     db: DbSession,
@@ -99,11 +144,18 @@ def get_profile(
 ):
     profile = get_or_create_profile(db, current_user)
 
-    return {
+    result = {
         "profile": profile_to_dict(profile),
         "onboarding_step": profile.onboarding_step,
         "onboarding_done": profile.onboarding_done,
     }
+    if v2_available(db):
+        state = v2_state(db, profile)
+        result["onboarding_version"] = 2
+        result["onboarding_resume_step"] = 5 if profile.onboarding_done else state["resume_step"]
+        result["profile"].update({key: state[key] for key in V2_ANSWERS if key in state})
+        result["profile"]["onboarding_consent"] = bool(state.get("consented_at"))
+    return result
 
 
 def save_step_data(
@@ -112,13 +164,18 @@ def save_step_data(
     db: Session,
     current_user: User,
 ):
-    profile = get_or_create_profile(db, current_user)
+    if v2_available(db):
+        raise HTTPException(409, "Refresh onboarding to use the current questionnaire.")
+    profile = get_or_create_profile(db, current_user, for_write=True)
 
     if profile.onboarding_done:
         raise HTTPException(
             status_code=409,
             detail="Onboarding is already complete.",
         )
+
+    if step > profile.onboarding_step:
+        raise HTTPException(409, "Complete the earlier onboarding steps first.")
 
     values = data.model_dump()
 
@@ -211,6 +268,50 @@ def save_step_5(
     return save_step_data(5, data, db, current_user)
 
 
+@router.patch("/onboarding/v2/{step}", response_model=OnboardingProgressResponse)
+def save_step_v2(step: int, db: DbSession, current_user: CurrentUser, payload: dict = Body()):
+    if step not in V2_SCHEMAS:
+        raise HTTPException(404, "Onboarding step not found.")
+    if not v2_available(db):
+        raise HTTPException(503, "This onboarding version is unavailable.")
+    profile = get_or_create_profile(db, current_user, for_write=True)
+    if profile.onboarding_done:
+        raise HTTPException(409, "Onboarding is already complete.")
+    state = v2_state(db, profile, locked=True)
+    if step > state["resume_step"]:
+        raise HTTPException(409, "Complete the earlier onboarding steps first.")
+
+    try:
+        values = V2_SCHEMAS[step].model_validate(payload).model_dump()
+    except ValidationError as error:
+        raise RequestValidationError([
+            {**issue, "loc": ("body", *issue["loc"])}
+            for issue in error.errors(include_context=False, include_input=False, include_url=False)
+        ]) from None
+
+    if step < 5:
+        state.pop("consented_at", None)
+    else:
+        values.pop("onboarding_consent")
+        state.setdefault("consented_at", now().isoformat(timespec="seconds") + "Z")
+
+    for key, value in values.items():
+        if key in V2_ANSWERS:
+            state[key] = list(dict.fromkeys(value)) if isinstance(value, list) else value
+        else:
+            setattr(profile, key, value)
+    if profile.first_baby is True:
+        state["previous_csection"] = None
+    state["resume_step"] = max(state["resume_step"], min(step + 1, 5))
+    profile.onboarding_step = max(profile.onboarding_step or 1, state["resume_step"])
+    db.flush()
+    db.connection().exec_driver_sql(
+        "UPDATE mother_profiles SET onboarding_v2=%s WHERE id=%s", (json.dumps(state), profile.id)
+    )
+    db.commit()
+    return {"onboarding_step": profile.onboarding_step, "onboarding_done": False}
+
+
 @router.post(
     "/onboarding/complete",
     response_model=OnboardingCompleteResponse,
@@ -219,7 +320,17 @@ def complete_onboarding(
     db: DbSession,
     current_user: CurrentUser,
 ):
-    profile = get_or_create_profile(db, current_user)
+    profile = get_or_create_profile(db, current_user, for_write=True)
+
+    result = {"message": "Onboarding completed successfully.", "onboarding_done": True}
+    if profile.onboarding_done:
+        return result
+    if v2_available(db):
+        state = v2_state(db, profile, locked=True)
+        if state["resume_step"] != 5 or not state.get("consented_at"):
+            raise HTTPException(409, "Save all onboarding steps and confirm consent before finishing.")
+    elif profile.onboarding_step != 5 or profile.reminders is None:
+        raise HTTPException(409, "Save all onboarding steps before finishing.")
 
     if profile.baby_birth_date is None:
         raise HTTPException(
@@ -244,7 +355,4 @@ def complete_onboarding(
 
     db.commit()
 
-    return {
-        "message": "Onboarding completed successfully.",
-        "onboarding_done": True,
-    }
+    return result

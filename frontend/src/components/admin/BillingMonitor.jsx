@@ -6,12 +6,23 @@ const states = ['pending', 'paid', 'failed', 'cancelled', 'refund_pending', 'ref
 const format = (value) => value ? new Intl.DateTimeFormat('en-LK', {
   dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Colombo',
 }).format(new Date(value)) : '—'
-const statusLabel = (value) => value.replaceAll('_', ' ')
+
 
 export default function BillingMonitor({ token, permissions }) {
   const { t: auditText } = useTranslation()
   const { t: localizeCopy } = useTranslation()
   const { t: uiText } = useTranslation('common')
+  const paymentLabels = {
+    pending: uiText('admin_payment_pending'), paid: uiText('admin_payment_paid'),
+    failed: uiText('admin_payment_failed'), cancelled: uiText('admin_payment_cancelled'),
+    refund_pending: uiText('admin_payment_refund_pending'), refunded: uiText('admin_payment_refunded'),
+    chargeback: uiText('admin_payment_chargeback'),
+  }
+  const statusLabel = (value) => paymentLabels[value] ?? value.replaceAll('_', ' ')
+  const planLabels = {
+    free: auditText('mother:scanner_free'), trial: auditText('mother:scanner_trial'), premium: auditText('mother:scanner_premium'),
+  }
+  const planLabel = (value) => planLabels[value] ?? value
   const [items, setItems] = useState([])
   const [usage, setUsage] = useState([])
   const [filter, setFilter] = useState('')
@@ -126,7 +137,7 @@ export default function BillingMonitor({ token, permissions }) {
       <section>
         <h3 className="font-semibold">{uiText('successful_ai_usage_by_plan')}</h3>
         {!usage.length ? <p>{localizeCopy('common:no_recorded_usage')}</p> : <ul>{usage.map((item) => <li key={item.entitlement_code + item.feature}>
-          {item.entitlement_code} · {item.feature} · {item.total}
+          {planLabel(item.entitlement_code)} · {item.feature} · {item.total}
         </li>)}</ul>}
       </section>
     </section>

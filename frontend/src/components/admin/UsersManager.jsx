@@ -30,10 +30,13 @@ const columns = (labels) => Object.entries(labels).map(([field, headerName]) => 
 const accountColumns = columns(accountFields)
 const requestColumns = columns(requestFields)
 
-function Fields({ labels, record }) {
+const planKeys = { free: 'mother:scanner_free', trial: 'mother:scanner_trial', premium: 'mother:scanner_premium' }
+const planLabel = (t, value) => planKeys[value] ? t(planKeys[value]) : '—'
+
+function Fields({ labels, record, t }) {
   return <dl className="grid gap-3 sm:grid-cols-2">
     {Object.entries(labels).map(([field, label]) => <div key={field}>
-      <dt className="font-semibold">{label}</dt><dd className="break-words">{record[field] ?? '—'}</dd>
+      <dt className="font-semibold">{label}</dt><dd className="break-words">{field === 'plan_name' ? planLabel(t, record[field]) : (record[field] ?? '—')}</dd>
     </div>)}
   </dl>
 }
@@ -57,6 +60,9 @@ export default function UsersManager({ token, permissions }) {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const localizedAccountColumns = accountColumns.map((column) => column.field === 'plan_name'
+    ? { ...column, renderCell: ({ value }) => planLabel(auditText, value) }
+    : column)
   const send = useCallback((path, method, body, format) => usersAdminRequest(token, path, method, body, format), [token])
   const query = useMemo(() => {
     const values = new URLSearchParams({ page: page + 1, page_size: pageSize })
@@ -136,7 +142,7 @@ export default function UsersManager({ token, permissions }) {
     </nav>
     {current?.error && <Alert severity="error">{current.error}</Alert>}
     {!detail && error && <Alert severity="error">{error}</Alert>}
-    <AdminTable key={tab} title={isUsers ? auditText('common:mother_accounts') : localizeCopy('common:data_requests')} columns={isUsers ? accountColumns : requestColumns}
+    <AdminTable key={tab} title={isUsers ? auditText('common:mother_accounts') : localizeCopy('common:data_requests')} columns={isUsers ? localizedAccountColumns : requestColumns}
       rows={data.items} total={data.total} loading={!current} page={page} pageSize={pageSize}
       filters={isUsers ? usersFilters : requestFilters} onFilterChange={(values) => { setFilters(values); setPage(0) }}
       onSearchChange={isUsers ? onSearch : undefined} onPageChange={setPage}
@@ -147,26 +153,30 @@ export default function UsersManager({ token, permissions }) {
       <DialogContent dividers className="space-y-4">
         {error && <Alert severity="error">{error}</Alert>}
         {message && <Alert severity="success">{message}</Alert>}
-        <Fields labels={isUsers ? accountFields : requestFields} record={detail} />
+        <Fields labels={isUsers ? accountFields : requestFields} record={detail} t={auditText} />
         {isUsers ? <>
+          {canManage && !data.account_email_enabled && <Alert severity="info">{uiText('admin_account_email_disabled')}</Alert>}
           {canManage && detail.status !== 'anonymized' && <div className="flex flex-wrap gap-2">
             <Button disabled={busy} onClick={() => accountAction(detail.status === 'active' ? 'deactivate' : 'reactivate', detail.status === 'active' ? 'Deactivate account' : 'Reactivate account')}>
               {detail.status === 'active' ? auditText('common:deactivate') : auditText('common:reactivate')}
             </Button>
-            <Button disabled={busy || detail.status !== 'active'} onClick={() => accountAction('send-reset', 'Send password reset email')}>{uiText('send_password_reset')}</Button>
-            <Button disabled={busy || detail.status !== 'active'} onClick={() => accountAction('resend-verification', 'Resend verification email')}>{uiText('resend_verification')}</Button>
+            <Button disabled={busy || detail.status !== 'active' || data.account_email_enabled !== true} onClick={() => accountAction('send-reset', 'Send password reset email')}>{uiText('send_password_reset')}</Button>
+            <Button disabled={busy || detail.status !== 'active' || data.account_email_enabled !== true} onClick={() => accountAction('resend-verification', 'Resend verification email')}>{uiText('resend_verification')}</Button>
             <Button disabled={busy} onClick={() => requestData('export')}>{auditText('common:request_export')}</Button>
             <Button disabled={busy} onClick={() => requestData('delete')}>{auditText('common:request_deletion')}</Button>
           </div>}
           <h3 className="font-semibold">{auditText('common:administrative_history')}</h3>
           {detail.history.length ? <ul>{detail.history.map((item) => <li key={item.id}>{item.action} · {item.admin_name ?? auditText('common:former_admin')} · {item.created_at}</li>)}</ul> : <p>{auditText('common:no_administrative_actions_recorded')}</p>}
         </> : <>
+          {detail.can_confirm && detail.type === 'export' && detail.status === 'requested' && !detail.export_confirmation_enabled &&
+            <Alert severity="info">{uiText('admin_export_confirmation_disabled')}</Alert>}
           {detail.type === 'delete' && <Alert severity="warning">{auditText('common:production_deletion_execution_requires_separate_authorization')}</Alert>}
           <div className="flex flex-wrap gap-2">
             {detail.can_confirm && detail.type === 'delete' && <Button disabled={busy} onClick={() => operate(async () => {
               setImpact(await send('/data-requests/' + detail.id + '/impact'))
             })}>{auditText('common:review_deletion_impact')}</Button>}
-            {detail.can_confirm && detail.status === 'requested' && <Button disabled={busy || (detail.type === 'delete' && !impact)} onClick={() => decide('confirm')}>{auditText('common:confirm')}</Button>}
+            {detail.can_confirm && detail.status === 'requested' && <Button disabled={busy || (detail.type === 'delete' && !impact) ||
+              (detail.type === 'export' && detail.export_confirmation_enabled !== true)} onClick={() => decide('confirm')}>{auditText('common:confirm')}</Button>}
             {detail.can_confirm && ['requested','confirmed'].includes(detail.status) && <Button disabled={busy} onClick={() => decide('reject')}>{auditText('common:reject')}</Button>}
             {detail.can_download && <Button disabled={busy} onClick={download}>{auditText('common:download_export')}</Button>}
           </div>

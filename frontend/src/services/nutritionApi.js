@@ -132,9 +132,10 @@ export const nutritionApi = {
       body: JSON.stringify({ glasses }),
     }),
 
-  scan: (token, file, requestKey = crypto.randomUUID()) => {
+  scan: (token, file, requestKey = crypto.randomUUID(), consent = false) => {
     const form = new FormData()
     form.append('file', file)
+    if (consent === true) form.append('consent', 'true')
 
     return request('/nutrition/scan', token, {
       method: 'POST',

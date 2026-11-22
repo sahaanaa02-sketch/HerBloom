@@ -116,9 +116,13 @@ def test_authenticated_scanner_workflow(monkeypatch):
 
             scan_key = uuid4()
             files = {"file": ("synthetic.png", image.getvalue(), "image/png")}
-            scan = call("POST", "/nutrition/scan", 200, owner, scan_key, files=files)
+            call("POST", "/nutrition/scan", 422, owner, scan_key, files=files)
+            call("POST", "/nutrition/scan", 422, owner, scan_key, data={"consent": "false"}, files=files)
+            provider.assert_not_awaited()
+            scan = call("POST", "/nutrition/scan", 200, owner, scan_key, data={"consent": "true"}, files=files)
+            assert scan["recognized"] is True
             assert scan["items"][0]["estimated_grams"] == 100
-            call("POST", "/nutrition/scan", 409, owner, scan_key, files=files)
+            call("POST", "/nutrition/scan", 409, owner, scan_key, data={"consent": "true"}, files=files)
             assert provider.await_count == 1
             meals, logs = "/nutrition/meals", "/nutrition/logs"
             payload = {"food_id": food_id, "grams": 125, "meal_type": "lunch"}

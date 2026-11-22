@@ -1,7 +1,7 @@
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
 
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Component, lazy, Suspense, useEffect, useState } from 'react'
 import {
   LayoutDashboard,
   BookOpen,
@@ -32,6 +32,26 @@ import './AdminPortal.css'
 
 // Match these prefixes to the permission keys seeded in your backend.
 // Super Admin has access to all modules; other roles are filtered by permissions.
+class AdminModuleErrorBoundary extends Component {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children
+    return (
+      <div className="ha-message" role="alert">
+        <p>{this.props.message}</p>
+        <button type="button" className="underline" onClick={() => window.location.reload()}>
+          {this.props.reloadLabel}
+        </button>
+      </div>
+    )
+  }
+}
+
 const ArticleManager = lazy(() => import('../../components/admin/ArticleManager'))
 const ExerciseManager = lazy(() => import('../../components/admin/ExerciseManager'))
 const WellbeingManager = lazy(() => import('../../components/admin/WellbeingManager'))
@@ -265,6 +285,8 @@ export default function AdminPortal({ user, onLogout }) {
             </div>
           )}
 
+          <AdminModuleErrorBoundary key={currentPage.id}
+            message={uiText('admin_module_load_failed')} reloadLabel={uiText('admin_content_reload_page')}>
           {currentPage.id === 'overview' ? (
             <Suspense fallback={<div className="ha-message">{localizeCopy('common:loading_dashboard')}</div>}>
               <OverviewDashboard token={token} refreshKey={overviewRefresh}
@@ -282,12 +304,18 @@ export default function AdminPortal({ user, onLogout }) {
                     onClick={() => setContentSection(id)}>{t(label)}</button>
                 ))}
               </nav>
-              <Suspense fallback={<div className="ha-message">{auditText('common:loading_content')}</div>}>
-                {contentSection === 'articles' && <ArticleManager token={token} permissions={permissions} />}
-                {contentSection === 'exercises' && <ExerciseManager token={token} permissions={permissions} />}
-                {contentSection === 'wellbeing' && <WellbeingManager token={token} permissions={permissions} />}
-                {contentSection === 'meals' && <MealIdeasManager token={token} permissions={permissions} />}
-              </Suspense>
+              <AdminModuleErrorBoundary
+                key={contentSection}
+                message={auditText('common:admin_content_load_failed')}
+                reloadLabel={auditText('common:admin_content_reload_page')}
+              >
+                <Suspense fallback={<div className="ha-message">{auditText('common:loading_content')}</div>}>
+                  {contentSection === 'articles' && <ArticleManager token={token} permissions={permissions} />}
+                  {contentSection === 'exercises' && <ExerciseManager token={token} permissions={permissions} />}
+                  {contentSection === 'wellbeing' && <WellbeingManager token={token} permissions={permissions} />}
+                  {contentSection === 'meals' && <MealIdeasManager token={token} permissions={permissions} />}
+                </Suspense>
+              </AdminModuleErrorBoundary>
             </>
           ) : currentPage.id === 'analytics' ? (
             <Suspense fallback={<div className="ha-message">{auditText('common:loading_analytics_2')}</div>}>
@@ -343,6 +371,7 @@ export default function AdminPortal({ user, onLogout }) {
               </span>
             </section>
           )}
+          </AdminModuleErrorBoundary>
         </main>
       </div>
     </div>

@@ -11,6 +11,8 @@ function enforceLocalE2E({ host, port, strictPort }) {
 
 export default defineConfig(({ mode }) => {
   const plugins = [react(), tailwindcss()]
+  // Data Grid is shared by lazy Admin pages. Discover it before navigation.
+  const optimizeDeps = { include: ['@mui/x-data-grid'] }
   if (mode !== 'e2e') {
     if (process.env.VERCEL === '1') {
       const backend = new URL(process.env.VITE_API_URL || 'about:blank')
@@ -20,7 +22,7 @@ export default defineConfig(({ mode }) => {
         throw new Error('Vercel requires a public HTTPS VITE_API_URL and VITE_PORTAL_MODE=admin or mother')
       }
     }
-    return { plugins }
+    return { plugins, optimizeDeps }
   }
 
   const apiBase = resolveApiBase(mode, process.env.VITE_API_URL)
@@ -31,6 +33,8 @@ export default defineConfig(({ mode }) => {
       configureServer(server) { enforceLocalE2E(server.config.server) },
       configurePreviewServer(server) { enforceLocalE2E(server.config.preview) },
     }],
+    optimizeDeps,
+    cacheDir: "node_modules/.vite-e2e",
     envDir: false,
     define: { 'import.meta.env.VITE_API_URL': JSON.stringify(apiBase) },
     server: localE2E,

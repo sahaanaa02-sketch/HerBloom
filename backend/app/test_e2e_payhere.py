@@ -120,6 +120,13 @@ def run():
                 assert first["checkout"]["sandbox"] is True and first["checkout"]["currency"]=="LKR"
                 assert first["checkout"]["hash"]==digest(MERCHANT+ref+"790.00LKR"+digest(SECRET))
                 assert SECRET not in str(first)
+                # Reloading My Plan after dismissal recovers the same pending order.
+                for _ in range(2):
+                    pending = call("GET", BASE+"/me")["order_history"]["items"]
+                    assert [item["order_ref"] for item in pending] == [ref]
+                    assert pending[0]["status"] == "pending" and "checkout" not in pending[0]
+                    assert state(ref)["status"] == "pending"
+                assert call("GET", BASE+"/me", who="other")["order_history"]["items"] == []
                 assert checkout(key)["order_ref"]==ref
                 call("POST",BASE+"/checkout",409,key=uuid4(),json={"plan":"premium"})
                 call("GET",BASE+"/orders/"+ref,404,who="other")
@@ -145,6 +152,8 @@ def run():
                 assert provider(ref)=={"accepted":True}
                 assert provider(ref)=={"accepted":False}
                 assert state(ref)["status"]=="paid"
+                refreshed = call("GET", BASE+"/me")["order_history"]["items"]
+                assert [(item["order_ref"], item["status"]) for item in refreshed] == [(ref, "paid")]
                 assert call("GET",BASE+"/receipts/"+ref)["sandbox"]
                 assert call("GET",BASE+"/orders",who="other")["items"]==[]
                 summaries=call("GET",ADMIN+"/orders",who="manager")["items"]

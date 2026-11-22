@@ -19,16 +19,21 @@ def generate_text(feature, core, prompt, db=None, user_id=None, *, entitlement_q
     meter = monitor.Attempt(config)
     success = False
     try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=config.model_name,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=monitor.instructions(core, config),
-                temperature=float(config.temperature),
-                max_output_tokens=config.max_output_tokens,
+        with genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                timeout=20_000, retry_options=types.HttpRetryOptions(attempts=1)
             ),
-        )
+        ) as client:
+            response = client.models.generate_content(
+                model=config.model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=monitor.instructions(core, config),
+                    temperature=float(config.temperature),
+                    max_output_tokens=config.max_output_tokens,
+                ),
+            )
         meter.capture(response.usage_metadata)
         result = (response.text or "").strip()
         if not result:
@@ -81,7 +86,9 @@ Optional recovery context:
 Reviewed passages:
 {context}
 
-Answer the question using only these passages.
+If one complete reviewed passage answers the question and follows the rules,
+return that passage verbatim, without its heading or any added text.
+Otherwise say that you do not have enough reviewed information.
 """
 
     return generate_text("chat", instructions, prompt, db, user_id, entitlement_quota=entitlement_quota)

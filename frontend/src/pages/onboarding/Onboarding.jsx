@@ -1,3 +1,4 @@
+import './OnboardingIllustration.css'
 import { i18n, normalizeLanguage } from '../../locales/i18n'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import { useOnboardingCopy } from '../../locales/useOnboardingCopy'
@@ -61,7 +62,15 @@ const STEP_INFO = [
   },
 ]
 
+const V2_TITLES = ['About You and Baby', 'Delivery and Recovery', 'Health and Feeding', 'Preferences and Concerns', 'Review and Consent']
+
 const INITIAL_ANSWERS = {
+  previous_csection: null,
+  postpartum_complications: [],
+  recovery_concerns: [],
+  feature_interests: [],
+  daily_reminder_time: null,
+  onboarding_consent: false,
   display_name: '',
   baby_birth_date: '',
   babies_count: null,
@@ -157,6 +166,14 @@ const STEP_FIELDS = [
   ],
 ]
 
+const V2_STEP_FIELDS = [
+  STEP_FIELDS[0],
+  [...STEP_FIELDS[1], 'previous_csection'],
+  [...STEP_FIELDS[2], ...STEP_FIELDS[3], 'postpartum_complications'],
+  [...STEP_FIELDS[4].filter((field) => field !== 'consent_ai_profile'), 'recovery_concerns', 'feature_interests', 'daily_reminder_time'],
+  ['onboarding_consent', 'consent_ai_profile'],
+]
+
 // The feeding UI uses labels, while the API stores stable option values.
 const FOOD_OPTION_VALUES = {
   allergies: {
@@ -177,10 +194,11 @@ const FOOD_OPTION_VALUES = {
   },
 }
 
-function buildPayload(step, answers) {
+function buildPayload(step, answers, version) {
   const payload = {}
 
-  STEP_FIELDS[step - 1].forEach((field) => {
+  const fields = version === 2 ? V2_STEP_FIELDS : STEP_FIELDS
+  fields[step - 1].forEach((field) => {
     const value = answers[field]
 
     if (
@@ -195,6 +213,10 @@ function buildPayload(step, answers) {
     }
   })
 
+  if (version === 2 && step === 2 && answers.first_baby === true) payload.previous_csection = null
+  if (version === 2 && step === 4 && answers.iron_prescribed !== 'yes' && answers.bp_medicine !== 'yes') {
+    payload.reminders = payload.reminders.filter((reminder) => reminder !== 'medicine')
+  }
   if (step === 3 && (
     answers.allergy_status === null ||
     answers.allergy_status === 'not_sure' ||
@@ -206,7 +228,7 @@ function buildPayload(step, answers) {
   return payload
 }
 
-function validateStep(step, answers) {
+function validateStep(step, answers, version) {
   if (step === 1) {
     if (!answers.baby_birth_date) {
       return "Please select your baby's birth date."
@@ -229,6 +251,14 @@ function validateStep(step, answers) {
     return 'Please select your delivery type.'
   }
 
+  if (step === 5 && version === 2 && answers.onboarding_consent !== true) {
+    return 'Please confirm your onboarding consent.'
+  }
+
+  if (step === 5 && typeof answers.consent_ai_profile !== 'boolean') {
+    return 'Please choose whether to share your profile with the AI assistant.'
+  }
+
   return ''
 }
 
@@ -239,7 +269,8 @@ export default function Onboarding({
   onComplete,
 }) {
   const t = useOnboardingCopy()
-  const [step, setStep] = useState(initialProfile.onboarding_step)
+  const version = initialProfile.onboarding_version === 2 ? 2 : 1
+  const [step, setStep] = useState(initialProfile.onboarding_resume_step ?? initialProfile.onboarding_step)
   const [progressState, setProgressState] = useState({
     onboarding_step: initialProfile.onboarding_step,
     onboarding_done: initialProfile.onboarding_done,
@@ -251,6 +282,10 @@ export default function Onboarding({
     for (const field of Object.keys(INITIAL_ANSWERS)) {
       const value = initialProfile.profile[field]
       if (value != null) savedAnswers[field] = value
+    }
+
+    if (version === 2 ? !savedAnswers.onboarding_consent : initialProfile.profile.reminders == null) {
+      savedAnswers.consent_ai_profile = null
     }
 
     for (const [field, options] of Object.entries(FOOD_OPTION_VALUES)) {
@@ -275,10 +310,13 @@ export default function Onboarding({
   const [error, setError] = useState('')
   const submissionInFlight = useRef(false)
   const savedPreferencesPayload = useRef(null)
-  const scrollRef = useRef(null)
+  const questionsRef = useRef(null)
+  const focusNextHeading = useRef(false)
+  const returnToReview = useRef(false)
 
   const token = user?.access_token
-  const currentInfo = STEP_INFO[step - 1]
+  const steps = version === 2 ? STEP_INFO.map((info, index) => ({ ...info, title: V2_TITLES[index] })) : STEP_INFO
+  const currentInfo = steps[step - 1]
   const finished = progressState.onboarding_done
   const progress = finished ? 100 : (progressState.onboarding_step - 1) * 20
 
@@ -287,32 +325,43 @@ export default function Onboarding({
     setAnswers((previous) => ({
       ...previous,
       [field]: value,
+      ...(field === 'first_baby' && value === true ? { previous_csection: null } : {}),
     }))
     setError('')
   }
 
-  const goToTop = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ block: 'start' })
-    }
-  }
+  useEffect(() => {
+    if (!focusNextHeading.current) return
+    focusNextHeading.current = false
+    const heading = questionsRef.current?.querySelector('h1')
+    heading?.focus({ preventScroll: true })
+    heading?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }, [step, finished])
+
+  useEffect(() => {
+    if (!error) return
+    questionsRef.current?.querySelector('[role="alert"]')?.scrollIntoView({
+      block: 'nearest',
+      behavior: 'instant',
+    })
+  }, [error])
 
   const handleBack = () => {
     if (submissionInFlight.current || step === 1) return
 
+    returnToReview.current = false
+    focusNextHeading.current = true
     setStep((previous) => previous - 1)
     setError('')
-    goToTop()
   }
 
   const handleContinue = async () => {
     if (submissionInFlight.current || finished) return
 
-    const validationError = validateStep(step, answers)
+    const validationError = validateStep(step, answers, version)
 
     if (validationError) {
       setError(validationError)
-      goToTop()
       return
     }
 
@@ -326,18 +375,21 @@ export default function Onboarding({
     setError('')
 
     try {
-      const payload = buildPayload(step, answers)
+      const payload = buildPayload(step, answers, version)
 
       if (step < 5) {
-        const savedProgress = await saveOnboardingStep(step, payload, token)
+        const savedProgress = await saveOnboardingStep(step, payload, token, version)
         setProgressState(savedProgress)
-        setStep(step + 1)
-        goToTop()
+        savedPreferencesPayload.current = null
+        if (version === 2) setAnswers((previous) => ({ ...previous, onboarding_consent: false }))
+        focusNextHeading.current = true
+        setStep(returnToReview.current ? 5 : step + 1)
+        returnToReview.current = false
       } else {
         const payloadKey = JSON.stringify(payload)
 
         if (savedPreferencesPayload.current !== payloadKey) {
-          const savedProgress = await saveOnboardingStep(step, payload, token)
+          const savedProgress = await saveOnboardingStep(step, payload, token, version)
           setProgressState(savedProgress)
           savedPreferencesPayload.current = payloadKey
         }
@@ -348,6 +400,7 @@ export default function Onboarding({
           throw new Error('Onboarding completion was not confirmed. Please try again.')
         }
 
+        focusNextHeading.current = true
         setProgressState((previous) => ({
           ...previous,
           onboarding_done: completion.onboarding_done,
@@ -358,7 +411,6 @@ export default function Onboarding({
         err.message ||
         'Could not save your answers. Please try again.'
       )
-      goToTop()
     } finally {
       submissionInFlight.current = false
       setSaving(false)
@@ -366,7 +418,7 @@ export default function Onboarding({
   }
 
   const renderStep = () => {
-    const props = { answers, updateAnswer }
+    const props = { answers, updateAnswer, version }
 
     switch (step) {
       case 1:
@@ -381,16 +433,29 @@ export default function Onboarding({
         return <Step2Birth {...props} />
 
       case 3:
-        return <Step3Feeding {...props} />
+        return version === 2 ? (
+          <div className="space-y-4">
+            <Step3Feeding {...props} />
+            <Step4Health {...props} />
+          </div>
+        ) : <Step3Feeding {...props} />
 
       case 4:
-        return <Step4Health {...props} />
+        return version === 2
+          ? <Step5Preferences {...props} healthAnswers={answers} preferencesOnly />
+          : <Step4Health {...props} />
 
       case 5:
         return (
           <Step5Preferences
             {...props}
             healthAnswers={answers}
+            onEditStep={(target) => {
+              returnToReview.current = true
+              focusNextHeading.current = true
+              setError('')
+              setStep(target)
+            }}
           />
         )
 
@@ -409,21 +474,24 @@ export default function Onboarding({
   const completedSteps = progress / 20
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-6">
-      <div className="hb-mother-onboarding grid w-full max-w-[1200px] rounded-[28px] border border-[#F1D9DF] bg-[#FFFCFB] shadow-xl md:grid-cols-[2fr_3fr]">
-        <aside className="flex min-w-0 items-center justify-center self-start rounded-t-[28px] bg-[#F6D3DB] p-3 md:sticky md:top-6 md:rounded-l-[28px] md:rounded-tr-none">
-          <img
-            src={currentInfo.image}
-            alt={t('HerBloom onboarding illustration for {{title}}', { title: t(currentInfo.title) })}
-            className="block max-h-[42svh] w-full object-contain md:max-h-[calc(100svh-5rem)]"
-          />
+    <div className="flex min-h-screen items-start justify-center bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-6">
+      <div className="hb-mother-onboarding grid w-full max-w-[1200px] rounded-[28px] border border-[#F1D9DF] bg-[#FFFCFB] shadow-xl md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <aside className="hb-onboarding-illustration" data-step={step}>
+          <div className="hb-onboarding-artwork">
+            <img
+              src={currentInfo.image}
+              width={step === 1 ? 1276 : 1264}
+              height={step === 1 ? 816 : 843}
+              alt={t('HerBloom onboarding illustration for {{title}}', { title: t(currentInfo.title) })}
+            />
+          </div>
         </aside>
 
         {/* RIGHT 60% SECTION - QUESTIONS */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#FFFCFB]">
+        <div className="flex min-w-0 flex-col">
 
           {/* HEADER */}
-          <header className="shrink-0 rounded-tr-[28px] border-b border-[#F1D9DF] bg-white px-5 pb-4 pt-5 sm:px-7">
+          <header className="shrink-0 rounded-t-[27px] border-b md:rounded-tl-none border-[#F1D9DF] bg-white px-5 pb-4 pt-5 sm:px-7">
             <div className="flex flex-wrap items-start justify-between gap-3">
 
               <div>
@@ -440,7 +508,7 @@ export default function Onboarding({
               <button
                 type="button"
                 onClick={onLogout}
-                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#E8C3CC] px-4 text-sm text-[#7B2346] transition hover:bg-[#FFF6F1]"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#E8C3CC] px-4 text-sm text-[#7B2346] transition hover:bg-[#FFF6F1]"
               >
                 <LogOut size={16} />
                 {t('Log out')}
@@ -459,7 +527,7 @@ export default function Onboarding({
             </div>
 
             <ol aria-label={t('Onboarding steps')} className="mt-3 flex items-center">
-              {STEP_INFO.map(({ title }, index) => {
+              {steps.map(({ title }, index) => {
                 const complete = index < completedSteps
                 const current = !finished && index === step - 1
                 return (
@@ -474,7 +542,7 @@ export default function Onboarding({
                       <span className="sr-only">{complete ? t('{{title}}, completed', { title: t(title) }) : t(title)}</span>
                       {complete && !current ? <Check size={15} aria-hidden="true" /> : <span aria-hidden="true">{index + 1}</span>}
                     </span>
-                    {index < STEP_INFO.length - 1 && (
+                    {index < steps.length - 1 && (
                       <span aria-hidden="true" className={`mx-2 h-0.5 flex-1 ${complete ? 'bg-[#7B2346]' : 'bg-[#F6D3DB]'}`} />
                     )}
                   </li>
@@ -483,10 +551,9 @@ export default function Onboarding({
             </ol>
           </header>
 
-          {/* SCROLLABLE QUESTIONS */}
           <main
-            ref={scrollRef}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-6"
+            ref={questionsRef}
+            className="flex-1 px-4 py-5 sm:px-7 sm:py-6"
           >
             {error && (
               <div
@@ -510,8 +577,8 @@ export default function Onboarding({
           </main>
 
           {/* FOOTER */}
-          {!finished && <footer className="shrink-0 border-t border-[#F1D9DF] bg-white px-4 py-3 sm:px-7 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
+          {!finished && <footer className="shrink-0 rounded-b-[27px] border-t border-[#F1D9DF] bg-white md:rounded-bl-none px-4 py-3 sm:px-7 sm:py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
 
               <button
                 type="button"

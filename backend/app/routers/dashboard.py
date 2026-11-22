@@ -105,6 +105,17 @@ def find_today_hydration(
     )
 
 
+def find_hydration_for_update(db: Session, user_id: int, today: date):
+    # Lock the parent even when no hydration row exists yet. The locking read
+    # also sees the latest committed row under MySQL REPEATABLE READ.
+    db.execute(select(User.id).where(User.id == user_id).with_for_update()).scalar_one()
+    return db.scalar(
+        select(HydrationLog)
+        .where(HydrationLog.user_id == user_id, HydrationLog.date == today)
+        .with_for_update()
+    )
+
+
 # ----------------------------------------
 # GET TODAY HYDRATION
 # ----------------------------------------
@@ -138,10 +149,7 @@ def add_hydration(
 ):
     today = local_today()
 
-    row = find_today_hydration(
-        db,
-        user.id,
-    )
+    row = find_hydration_for_update(db, user.id, today)
 
     if row is None:
         row = HydrationLog(
@@ -188,15 +196,13 @@ def set_hydration(
     db: Session = Depends(get_db),
     user: User = Depends(require_mother),
 ):
-    row = find_today_hydration(
-        db,
-        user.id,
-    )
+    today = local_today()
+    row = find_hydration_for_update(db, user.id, today)
 
     if row is None:
         row = HydrationLog(
             user_id=user.id,
-            date=local_today(),
+            date=today,
             glasses=payload.glasses,
         )
 

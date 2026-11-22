@@ -116,6 +116,7 @@ export default function MealScanner({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [recognized, setRecognized] = useState(false)
 
   useEffect(() => {
     dialog.current?.showModal()
@@ -160,7 +161,7 @@ export default function MealScanner({
 
     try {
       const request = scanRequest.current
-      const result = request.result ?? await nutritionApi.scan(token, file, request.key)
+      const result = request.result ?? await nutritionApi.scan(token, file, request.key, consent)
       request.result = result
       const catalog = await nutritionApi.foods(token)
 
@@ -178,6 +179,7 @@ export default function MealScanner({
       }))
       setFoods([...indexed.values()])
       setMessage(matchedItems.length ? 'AI estimates may be inaccurate. Review every food and portion before saving.' : 'No food was identified. Add an item from the catalog or choose another photo.')
+      setRecognized(result.recognized ?? matchedItems.length > 0)
       setItems(matchedItems)
       setAnalyzed(true)
       requestEntitlement(token, '/api/features/entitlements').then(setPlan).catch(() => {})
@@ -348,7 +350,7 @@ export default function MealScanner({
         {analyzed && (
           <div className="mt-6 space-y-4">
             <h3 className="font-semibold text-[#7B2346]">
-              {translate('Review AI Results')}
+              {recognized ? translate('Review AI Results') : translate('Add food')}
             </h3>
 
             <select

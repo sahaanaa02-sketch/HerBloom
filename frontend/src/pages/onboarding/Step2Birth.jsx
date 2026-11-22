@@ -14,6 +14,7 @@ import {
 import {
   QuestionCard,
   ChoiceButton,
+  OnboardingChoices,
   StepHeading,
   TextField,
 } from './OnboardingUI'
@@ -22,9 +23,20 @@ import step2Image from '../../assets/onb2.jpg'
 
 export const onboardingImage = step2Image
 
+const choiceLabels = {
+  delivery_type: "How did you give birth?",
+  perineal_tear: "Did you have stitches or a tear?",
+  assisted_birth: "Was your birth assisted?",
+  csection_type: "Was your C-section planned or unplanned?",
+  exercise_cleared: "Has a doctor or midwife cleared you to start postpartum exercises?",
+  activity_limits: "Did your doctor give you any activity restrictions?",
+  body_feeling: "How is your body feeling today?",
+}
+
 export default function Step2Birth({
   answers = {},
   updateAnswer,
+  version,
 }) {
   const { t: auditText } = useTranslation()
   const t = useOnboardingCopy()
@@ -52,7 +64,7 @@ export default function Step2Birth({
   const choices = (field, options) => (
     <div
       role="radiogroup"
-      aria-label={field.replaceAll('_', ' ')}
+      aria-label={t(choiceLabels[field])}
       className="flex flex-wrap gap-2"
     >
       {options.map(([value, label]) => (
@@ -70,7 +82,7 @@ export default function Step2Birth({
   return (
     <div className="space-y-4">
       <StepHeading
-        title="About Your Birth"
+        title={version === 2 ? "Delivery and Recovery" : "About Your Birth"}
         subtitle="Every birth experience is unique. Let's understand yours."
       />
 
@@ -92,6 +104,14 @@ export default function Step2Birth({
           ['csection', 'C-section'],
         ])}
       </QuestionCard>
+
+      {version === 2 && answers.first_baby !== true && (
+        <QuestionCard icon={Baby} title="Have you had a C-section before this birth?">
+          <OnboardingChoices field="previous_csection" title="Have you had a C-section before this birth?"
+            options={[['yes', 'Yes'], ['no', 'No'], ['not_sure', 'Not sure']]}
+            answers={answers} updateAnswer={updateAnswer} />
+        </QuestionCard>
+      )}
 
       {answers.delivery_type === 'vaginal' && (
         <>

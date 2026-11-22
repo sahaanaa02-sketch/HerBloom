@@ -83,6 +83,13 @@ class TodoUpdate(BaseModel):
 
     done: bool | None = None
 
+    @field_validator("title", "done")
+    @classmethod
+    def reject_explicit_null(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null.")
+        return value
+
     @field_validator("title")
     @classmethod
     def validate_title(
@@ -170,6 +177,13 @@ class ReminderUpdate(BaseModel):
     remind_at: datetime | None = None
 
     completed: bool | None = None
+
+    @field_validator("title", "remind_at", "completed")
+    @classmethod
+    def reject_explicit_null(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null.")
+        return value
 
     @field_validator("title")
     @classmethod

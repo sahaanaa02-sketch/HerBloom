@@ -334,3 +334,28 @@ def test_admin_challenge_rejects_wrong_and_expired_codes(environment):
                   json={"challenge_token": expired, "code": verifier.now()})
     assert denied.status_code == 401 and "access_token" not in denied.json()
     assert "expired login challenge" in denied.json()["detail"]
+
+    access = login(call, role, credentials)
+    access_claims = jwt.decode(access, options={"verify_signature": False})
+    access_claims.pop("amr")
+    invalid = jwt.encode(access_claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")
+    assert call("GET", "/api/admin/me", invalid).status_code == 401
+    assert call("POST", "/auth/logout", access).status_code == 401
+    access_claims["amr"] = ["pwd", "otp"]
+    access_claims.update(iat=now - timedelta(minutes=61), exp=now - timedelta(minutes=1))
+    expired_access = jwt.encode(access_claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")
+    assert call("GET", "/api/admin/me", expired_access).status_code == 401
+    assert call("POST", "/api/admin/auth/logout", access).status_code == 204
+    assert call("GET", "/api/admin/me", access).status_code == 401
+
+
+def test_mother_registration_throttle(environment):
+    _, call, _, _ = environment
+    signup = {"name": "Synthetic Mother", "email": "phase3-limit.e2e@example.com",
+              "password": "Isolated registration fixture!45"}
+    assert call("POST", "/auth/register", json=signup).status_code == 201
+    for _ in range(9):
+        assert call("POST", "/auth/register", json=signup).status_code == 409
+    limited = call("POST", "/auth/register", json=signup)
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"

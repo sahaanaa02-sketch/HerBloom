@@ -23,6 +23,7 @@ export const onboardingImage = step1Image
 export default function Step1AboutBaby({
   answers = {},
   updateAnswer,
+  version,
   userName = '',
 }) {
   const { t: auditText } = useTranslation()
@@ -50,7 +51,7 @@ export default function Step1AboutBaby({
   return (
     <div className="space-y-4">
       <StepHeading
-        title="Welcome to HerBloom"
+        title={version === 2 ? "About You and Baby" : "Welcome to HerBloom"}
         subtitle="Let's get to know you. This takes about 2 minutes."
       />
 

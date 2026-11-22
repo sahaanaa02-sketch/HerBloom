@@ -194,6 +194,8 @@ export default function SettingsManager({token,permissions}) {
     {current?.error&&<Alert severity="error">{current.error}</Alert>}
     {!editor&&error&&<Alert severity="error">{error}</Alert>}
     {notice&&<Alert severity="success">{notice}</Alert>}
+    {tab==='admins' && current?.data && data.invitation_delivery_enabled !== true &&
+      <Alert severity="info">{uiText('admin_invitation_delivery_disabled')}</Alert>}
     {tab==='audit'&&<AuditFilters filters={filter} apply={(value)=>{setFilter(value);setPage(0)}} busy={busy} download={download}/>}
     {tab==='site' ? current?.data ?
       <SiteForm key={revision} settings={current.data} canManage={manage} busy={busy}
@@ -204,7 +206,7 @@ export default function SettingsManager({token,permissions}) {
         onPageSizeChange={(value)=>{setPageSize(value);setPage(0)}} onRefresh={()=>refresh((value)=>value+1)}
         onView={(row)=>{if(tab==='audit')operate(async()=>show('audit',await send('/audit/'+row.id)))
           else show(tab==='admins'?'account':'legal',row)}}
-        onCreate={manage&&current?.data&&tab!=='audit'?()=>show(tab==='admins'?'invite':'legal',tab==='legal'?blankLegal:{}):undefined}
+        onCreate={manage&&current?.data&&tab!=='audit'&&(tab!=='admins'||data.invitation_delivery_enabled===true)?()=>show(tab==='admins'?'invite':'legal',tab==='legal'?blankLegal:{}):undefined}
         createLabel={tab==='admins'?auditText('common:invite_admin'):auditText('common:new_legal_version')}/>}
     {editor&&<Dialog open fullWidth maxWidth="md" onClose={()=>{if(!busy)setEditor(null)}}>
       <form onSubmit={saveEditor}>

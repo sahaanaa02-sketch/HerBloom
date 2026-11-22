@@ -13,6 +13,8 @@ async function request(endpoint, token, options = {}) {
     },
   })
 
+  if (response.status === 204) return
+
   let data
 
   try {
@@ -39,6 +41,14 @@ async function request(endpoint, token, options = {}) {
   return data
 }
 
+export async function revokeMotherSession(token) {
+  try {
+    await request('/auth/logout', token, { method: 'POST', signal: AbortSignal.timeout(5000) })
+  } catch (error) {
+    if (error.status !== 401) throw error
+  }
+}
+
 // Retrieve saved onboarding answers
 export function getMotherIdentity(token, signal) {
   return request('/auth/me', token, { signal })
@@ -49,12 +59,12 @@ export function getMotherProfile(token, signal) {
 }
 
 // Save one onboarding step
-export function saveOnboardingStep(step, answers, token) {
+export function saveOnboardingStep(step, answers, token, version = 1) {
   if (!Number.isInteger(step) || step < 1 || step > 5) {
     throw new Error('Invalid onboarding step.')
   }
 
-  return request(`/profile/onboarding/${step}`, token, {
+  return request(`/profile/onboarding/${version === 2 ? 'v2/' : ''}${step}`, token, {
     method: 'PATCH',
     body: JSON.stringify(answers),
   })

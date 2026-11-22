@@ -1,17 +1,20 @@
 import logging
 import secrets
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import E2E_MODE
 from app.database import get_db
 from app.dependencies.admin_auth import get_current_admin, get_admin_permissions, require_admin_permission
 from app.models.admin import AdminUser
+from app.models.user import User
+from app.services import entitlements
 from app.services import mother_account as mail
 from app.services import user_privacy as privacy
 from app.services.admin_audit import record_admin_audit
@@ -80,6 +83,21 @@ def safe_record(row, admin):
     return values
 
 
+def include_current_plans(db, items):
+    visible_ids = [item["id"] for item in items if item["status"] != "anonymized"]
+    if not visible_ids:
+        return
+    users_table = User.__table__
+    plan = entitlements.current_plan_expression(db, users_table, datetime.now(UTC))
+    if plan is None:
+        return
+    plans = dict(db.execute(select(users_table.c.id, plan).where(
+        users_table.c.id.in_(visible_ids), users_table.c.role == "MOTHER"
+    )).all())
+    for item in items:
+        item["plan_name"] = plans.get(item["id"])
+
+
 @router.get("/users")
 def users(admin: Viewer, db: Db, q: str = Query("", max_length=150), page: int = Query(1, ge=1),
           page_size: int = Query(10, ge=1, le=100), status: Literal["active","inactive","anonymized"] | None = None,
@@ -99,7 +117,9 @@ def users(admin: Viewer, db: Db, q: str = Query("", max_length=150), page: int =
     count = privacy.sql(db, "SELECT COUNT(*) FROM v_admin_users"+where, tuple(params)).scalar_one()
     items = privacy.rows(db, "SELECT * FROM v_admin_users"+where+" ORDER BY id DESC LIMIT %s OFFSET %s",
                          (*params,page_size,(page-1)*page_size))
-    return {"items":items,"total":count}
+    include_current_plans(db, items)
+    return {"items": items, "total": count,
+            "account_email_enabled": mail.outbound_email_enabled() and "users.manage" in get_admin_permissions(admin)}
 
 
 @router.get("/users/{id:int}")
@@ -111,6 +131,7 @@ def detail(id: int, admin: Viewer, db: Db):
     history = privacy.rows(db, "SELECT l.id,l.action,l.created_at,a.name AS admin_name FROM audit_log l "
                            "LEFT JOIN admin_users a ON a.id=l.admin_id WHERE l.entity='users' AND l.entity_id=%s "
                            "ORDER BY l.id DESC LIMIT 100",(str(id),))
+    include_current_plans(db, values)
     return {**values[0],"history":history}
 
 
@@ -172,7 +193,9 @@ def data_request(id: int, admin: Admin, db: Db):
     require_request_access(admin)
     privacy.readiness(db)
     row = request_record(db,id)
-    return {**safe_record(row,admin),"can_confirm":confirmer(admin)}
+    can_confirm = confirmer(admin)
+    return {**safe_record(row, admin), "can_confirm": can_confirm,
+            "export_confirmation_enabled": can_confirm and privacy.exports_enabled()}
 
 
 @router.post("/data-requests", status_code=201)

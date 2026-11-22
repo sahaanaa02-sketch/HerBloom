@@ -11,7 +11,7 @@ export default function OnboardingSuccess({ userName, onGoToDashboard }) {
         <span className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#F6D3DB] text-[#7B2346]">
           <Check size={38} aria-hidden="true" />
         </span>
-        <h1 className="font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346] sm:text-4xl">
+        <h1 tabIndex={-1} className="font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346] sm:text-4xl">
           {name ? t("You're all set, {{name}}!", { name }) : t("You're all set!")}
         </h1>
         <p className="mt-3 max-w-sm text-sm leading-6 text-[#765363]">

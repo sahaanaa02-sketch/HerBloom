@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI
 from app.portal_cors import PortalCORS
@@ -11,6 +12,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import E2E_MODE, settings
 from app.database import engine
+
+logger = logging.getLogger("uvicorn.error")
 
 # ==========================================
 # Authentication
@@ -230,6 +233,7 @@ async def protect_account_link_validation(request, error):
 @app.exception_handler(SQLAlchemyError)
 async def database_error(request, error):
     # Database exception messages themselves can embed data even with parameters hidden.
+    logger.error("Database request failed (%s).", type(error).__name__)
     return JSONResponse({"detail": "The request could not be completed."}, status_code=500)
 
 
@@ -265,7 +269,7 @@ if E2E_MODE:
 # ==========================================
 # Database Health
 # ==========================================
-@app.get("/health/database", tags=["Development"])
+@app.get("/health/database", tags=["Development"], responses={503: {"description": "Database unavailable"}})
 def database_health_check():
     try:
         with engine.connect() as connection:
@@ -276,8 +280,9 @@ def database_health_check():
             "database": "MySQL",
         }
 
-    except SQLAlchemyError:
-        return {
-            "status": "disconnected",
-            "database": "MySQL",
-        }
+    except SQLAlchemyError as error:
+        logger.warning("Database health check failed (%s).", type(error).__name__)
+        return JSONResponse(
+            status_code=503,
+            content={"status": "disconnected", "database": "MySQL"},
+        )

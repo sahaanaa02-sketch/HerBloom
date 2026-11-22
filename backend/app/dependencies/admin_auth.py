@@ -83,10 +83,14 @@ def get_current_admin(
     if payload.get("sv", 0) != admin_session_version(db, admin.id):
         raise HTTPException(401, "Invalid or expired Admin token")
 
-    if payload.get("amr") == ["pwd"]:
+    methods = payload.get("amr")
+    if methods == ["pwd"]:
         if password_only_admin_enabled():
             return admin
         raise HTTPException(401, "This Admin sign-in method is unavailable.")
+
+    if methods != ["pwd", "otp"]:
+        raise HTTPException(401, "Invalid or expired Admin token", headers={"WWW-Authenticate": "Bearer"})
 
     if not admin.totp_enabled:
         raise HTTPException(

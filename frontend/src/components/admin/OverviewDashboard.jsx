@@ -28,8 +28,8 @@ function SafetyChart({ weeks }) {
           <YAxis allowDecimals={false} domain={[0, 'auto']} width={30} fontSize={11} />
           <Tooltip labelFormatter={formatDate} />
           <Legend />
-          <Bar dataKey="urgent" name="Urgent" fill="#7B2346" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="crisis" name="Crisis" fill="#D9A25B" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="urgent" name={uiText("admin_safety_urgent")} fill="#7B2346" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="crisis" name={uiText("admin_safety_crisis")} fill="#D9A25B" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -74,15 +74,15 @@ export default function OverviewDashboard({ token, refreshKey, name, quickLinks,
     </div>}
     {overview && <>
       <div className="ha-stats ha-overview-stats">
-        <StatCard icon={Users} title={auditText('common:total_mothers')} value={overview.total_mothers} description={overview.active_mothers + ' enabled accounts'} />
+        <StatCard icon={Users} title={auditText('common:total_mothers')} value={overview.total_mothers} description={uiText('admin_enabled_accounts', { count: overview.active_mothers })} />
         <StatCard icon={UserPlus} title={auditText('common:new_this_week')} value={overview.new_this_week} description={auditText('common:new_mother_accounts')} />
         <StatCard icon={Activity} title={auditText('common:active_this_week')} value={overview.active_this_week} description={auditText('common:mother_accounts_with_a_recorded_sign_in')} />
         <StatCard icon={HeartPulse} title={auditText('common:check_ins_this_week')} value={overview.checkins_this_week} description={auditText('common:submitted_wellbeing_check_ins')} />
       </div>
       {overview.stage2_enabled && <div className="ha-stats">
-        <StatCard icon={Users} title={auditText('common:premium_subscribers')} value={overview.premium_subscribers ?? 'Unavailable'} description={auditText('common:recorded_subscriptions')} />
-        <StatCard icon={Activity} title={auditText('common:revenue_this_month')} value={overview.revenue_this_month ?? 'Unavailable'} description={auditText('common:recorded_revenue')} />
-        <StatCard icon={Activity} title={auditText('common:ai_cost_this_month')} value={overview.ai_cost_this_month ?? 'Unavailable'} description={auditText('common:recorded_provider_cost')} />
+        <StatCard icon={Users} title={auditText('common:premium_subscribers')} value={overview.premium_subscribers ?? uiText('admin_data_unavailable')} description={auditText('common:recorded_subscriptions')} />
+        <StatCard icon={Activity} title={auditText('common:revenue_this_month')} value={overview.revenue_this_month ?? uiText('admin_data_unavailable')} description={auditText('common:recorded_revenue')} />
+        <StatCard icon={Activity} title={auditText('common:ai_cost_this_month')} value={overview.ai_cost_this_month ?? uiText('admin_data_unavailable')} description={auditText('common:recorded_provider_cost')} />
       </div>}
       <div className="ha-panels ha-overview-row">
         <section className="ha-panel">
@@ -96,7 +96,7 @@ export default function OverviewDashboard({ token, refreshKey, name, quickLinks,
           {overview.safety_counts_by_week ? <SafetyChart weeks={overview.safety_counts_by_week} /> : <p>{auditText('common:weekly_data_is_unavailable')}</p>}
         </section>
         <div className="ha-review-alerts">
-          {[['queue', 'Pending clinical reviews', overview.reviews_pending], ['due', 'Overdue re-reviews', overview.reviews_overdue]].map(([tab, title, count]) =>
+          {[['queue', uiText('admin_pending_clinical_reviews'), overview.reviews_pending], ['due', uiText('admin_overdue_reviews'), overview.reviews_overdue]].map(([tab, title, count]) =>
             <section className="ha-panel" key={tab}>
               <h3><ClipboardCheck size={18} /> {title}</h3>
               <strong className="ha-overview-count">{count ?? '—'}</strong>

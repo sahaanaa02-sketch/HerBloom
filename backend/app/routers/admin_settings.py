@@ -122,6 +122,7 @@ def admins(admin: Manager, db: Db, page: int = Query(1, ge=1), page_size: int = 
     query = select(AdminUser).options(selectinload(AdminUser.roles)).order_by(AdminUser.id)
     data = db.scalars(query.offset((page-1)*page_size).limit(page_size)).all()
     return {"items": [account_row(a) for a in data], "total": db.scalar(select(func.count(AdminUser.id))),
+            "invitation_delivery_enabled": admin_invitation.delivery_enabled(),
             "roles": [{"id": r.id, "name": r.name} for r in db.scalars(select(AdminRole).order_by(AdminRole.name))]}
 
 

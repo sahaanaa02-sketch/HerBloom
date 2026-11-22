@@ -12,6 +12,7 @@ export default function AnaemiaCard({
   const { t: auditText } = useTranslation()
   const { t: localizeCopy } = useTranslation()
   const { t: uiText } = useTranslation('common')
+  const status = (value) => uiText(({ yes: 'yes', no: 'no', not_sure: 'nutrition_status_not_sure' })[value] ?? 'not_recorded')
   const [value, setValue] = useState('')
   const [date, setDate] = useState('')
   const [busy, setBusy] = useState(false)
@@ -77,11 +78,11 @@ export default function AnaemiaCard({
         </div>
 
         <p className="text-sm text-[#795C69]">
-          {auditText('common:anaemia_history')} {data?.anaemia_history || auditText('common:not_recorded')}
+          {auditText('common:anaemia_history')} {status(data?.anaemia_history)}
         </p>
 
         <p className="mt-2 text-sm text-[#795C69]">
-          {auditText('common:iron_treatment_recorded')} {data?.iron_prescribed || auditText('common:not_recorded')}
+          {auditText('common:iron_treatment_recorded')} {status(data?.iron_prescribed)}
         </p>
 
         <form onSubmit={save} className="mt-6 space-y-4">

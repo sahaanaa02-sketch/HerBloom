@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
+import { isActiveReminder, reminderTimestamp, REMINDER_TIME_ZONE } from '../../hooks/useReminders'
 import { useMotherNotifications } from '../../hooks/useMotherNotifications'
 import { useState } from 'react'
 import { Bell, Plus, Trash2 } from 'lucide-react'
@@ -10,7 +11,7 @@ export default function UpcomingReminders({
   onAdd,
   onDelete,
 }) {
-  const { t: auditText } = useTranslation()
+  const { t: auditText, i18n } = useTranslation()
   const { t: localizeCopy } = useTranslation()
   const { t: uiText } = useTranslation('common')
   const [showForm, setShowForm] = useState(false)
@@ -52,13 +53,12 @@ export default function UpcomingReminders({
   const upcoming = reminders
     .filter(
       (item) =>
-        !item.completed &&
-        new Date(item.remind_at).getTime() > Date.now()
+        isActiveReminder(item) &&
+        reminderTimestamp(item.remind_at) > Date.now()
     )
     .sort(
       (a, b) =>
-        new Date(a.remind_at).getTime() -
-        new Date(b.remind_at).getTime()
+        reminderTimestamp(a.remind_at) - reminderTimestamp(b.remind_at)
     )
     .slice(0, 3)
 
@@ -147,9 +147,10 @@ export default function UpcomingReminders({
                 </p>
 
                 <p className="mt-1 text-xs text-[#987B86]">
-                  {new Date(item.remind_at).toLocaleString(
-                    'en-LK',
+                  {new Date(reminderTimestamp(item.remind_at)).toLocaleString(
+                    i18n.resolvedLanguage === 'ta' ? 'ta-LK' : 'en-LK',
                     {
+                      timeZone: REMINDER_TIME_ZONE,
                       dateStyle: 'medium',
                       timeStyle: 'short',
                     }

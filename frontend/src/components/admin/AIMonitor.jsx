@@ -33,7 +33,7 @@ function Usage({ data, filter, update }) {
     {data && <>
       <div className="ha-stats ha-overview-stats">
         {[
-          ['Calls',formatCount(data.totals.calls)],
+          [uiText('admin_ai_calls'),formatCount(data.totals.calls)],
           ['Success rate',data.totals.success_rate==null?'Unavailable':data.totals.success_rate+'%'],
           ['Average latency',data.totals.average_latency_ms==null?'Unavailable':Math.round(data.totals.average_latency_ms)+' ms'],
           ['Month-to-date estimated cost',formatCost(data.month_to_date.cost_usd)],
@@ -49,9 +49,9 @@ function Usage({ data, filter, update }) {
               <XAxis dataKey="date" tickFormatter={(date)=>date.slice(5)} />
               <YAxis yAxisId="calls" allowDecimals={false} />
               <YAxis yAxisId="cost" orientation="right" tickFormatter={(cost)=>'$'+cost} />
-              <Tooltip formatter={(value,name)=>name==='Estimated USD'?formatCost(value):value}/>
-              <Legend/><Bar dataKey="calls" name="Calls" fill="#7B2346" yAxisId="calls"/>
-              <Line type="monotone" dataKey="cost_usd" name="Estimated USD" stroke="#D9A25B" yAxisId="cost" dot={false}/>
+              <Tooltip formatter={(value,name)=>name===uiText('admin_ai_estimated_usd')?formatCost(value):value}/>
+              <Legend/><Bar dataKey="calls" name={uiText("admin_ai_calls")} fill="#7B2346" yAxisId="calls"/>
+              <Line type="monotone" dataKey="cost_usd" name={uiText("admin_ai_estimated_usd")} stroke="#D9A25B" yAxisId="cost" dot={false}/>
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -59,7 +59,7 @@ function Usage({ data, filter, update }) {
       <section className="ha-panel overflow-x-auto">
         <h3>{uiText('usage_by_feature')}</h3>
         <table className="w-full text-left text-sm"><thead><tr>
-          {['Feature','Calls','Input tokens','Output tokens','Priced calls','Estimated cost'].map((label)=><th className="p-2" key={label}>{label}</th>)}
+          {['feature','admin_ai_calls','admin_ai_input_tokens','admin_ai_output_tokens','admin_ai_priced_calls','admin_ai_estimated_cost'].map((key)=><th className="p-2" key={key}>{uiText(key)}</th>)}
         </tr></thead><tbody>
           {data.by_feature.map((row)=><tr key={row.feature}>
             {[features[row.feature],formatCount(row.calls),formatCount(row.input_tokens),formatCount(row.output_tokens),

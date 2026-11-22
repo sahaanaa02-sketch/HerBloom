@@ -1,0 +1,49 @@
+.hb-onboarding-illustration {
+  min-inline-size: 0;
+  align-self: stretch;
+  border-radius: 27px 27px 0 0;
+  background: linear-gradient(155deg, #fff6f1, #fae5e6 48%, #f6d3db);
+}
+
+.hb-onboarding-artwork {
+  overflow: clip;
+  border-radius: inherit;
+}
+
+.hb-onboarding-artwork img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 1264 / 843;
+  object-fit: contain;
+}
+
+@media (width >= 768px) {
+  .hb-onboarding-illustration {
+    border-radius: 27px 0 0 27px;
+  }
+
+  .hb-onboarding-artwork {
+    position: sticky;
+    inset-block-start: 0;
+    aspect-ratio: 4 / 5;
+    max-block-size: 90svh;
+    border-end-start-radius: 0;
+  }
+
+  .hb-onboarding-artwork img {
+    position: absolute;
+    inset: 0;
+    block-size: 100%;
+    object-fit: contain;
+    object-position: center top;
+  }
+
+  /* Step 1 places its artwork in the left part of a wide blush canvas. */
+  .hb-onboarding-illustration[data-step="1"] img {
+    inline-size: auto;
+    max-inline-size: none;
+    aspect-ratio: auto;
+  }
+}
+

@@ -1,10 +1,8 @@
 
-import hashlib
-import json
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -19,10 +17,6 @@ from app.services.weekly_report_service import (
 )
 from app.services.weekly_rules import (
     evaluate_weekly_rules,
-)
-from app.services.ai_gateway import (
-    generate_weekly_summary,
-    AIUnavailable,
 )
 from app.config import get_weekly_thresholds
 from app.services import entitlements
@@ -40,102 +34,6 @@ def preferred_language(profile):
     ).lower()
 
     return "ta" if value.startswith("ta") else "en"
-
-
-def build_ai_fingerprint(data):
-    """
-    Stable fingerprint of the aggregated report.
-    No personal identifiers are included.
-    """
-    payload = json.dumps(
-        data,
-        sort_keys=True,
-        ensure_ascii=False,
-        default=str,
-    )
-
-    return hashlib.sha256(
-        payload.encode("utf-8")
-    ).hexdigest()
-
-
-def get_or_generate_summary(
-    db: Session,
-    user_id: int,
-    week_start: date,
-    language: str,
-    report_data: dict,
-):
-    """
-    Reuse an existing weekly AI summary.
-
-    MySQL advisory lock prevents simultaneous requests
-    from generating duplicate summaries for the same week.
-
-    Successful summaries are never regenerated for that week.
-    """
-
-    lock_name = f"hb_weekly_{user_id}_{week_start.isoformat()}"
-
-    # Use a dedicated connection so the lock is tied
-    # to this connection for its full lifetime.
-    with db.get_bind().connect() as connection:
-        acquired = connection.execute(
-            text("SELECT GET_LOCK(:name, 15)"),
-            {"name": lock_name},
-        ).scalar()
-
-        if acquired != 1:
-            return None, "busy"
-
-        try:
-            cached = db.scalar(
-                select(WeeklyReport).where(
-                    WeeklyReport.user_id == user_id,
-                    WeeklyReport.week_start == week_start,
-                )
-            )
-
-            if cached and cached.summary_text:
-                return cached.summary_text, "cached"
-
-            # No names, journal content or chat history
-            # are passed to generate_weekly_summary().
-            try:
-                summary = generate_weekly_summary(
-                    weekly_data=report_data,
-                    lang=language, db=db, user_id=user_id,
-                )
-            except AIUnavailable:
-                return None, "unavailable"
-
-            if cached is None:
-                cached = WeeklyReport(
-                    user_id=user_id,
-                    week_start=week_start,
-                    data_json=report_data,
-                    summary_text=summary,
-                    summary_language=language,
-                )
-                db.add(cached)
-            else:
-                cached.data_json = report_data
-                cached.summary_text = summary
-                cached.summary_language = language
-
-            try:
-                db.commit()
-            except Exception:
-                db.rollback()
-                raise
-
-            return summary, "generated"
-
-        finally:
-            connection.execute(
-                text("SELECT RELEASE_LOCK(:name)"),
-                {"name": lock_name},
-            )
 
 
 @router.get("/weekly")
@@ -193,19 +91,12 @@ def get_weekly_report(
             thresholds=get_weekly_thresholds(),
         )
 
-        if entitlements.ready(db):
-            previous = db.scalar(select(WeeklyReport).where(
-                WeeklyReport.user_id == current_user.id, WeeklyReport.week_start == week_start))
-            summary = previous.summary_text if previous else None
-            ai_status = "cached" if summary else "use_insights"
-        else:
-            summary, ai_status = get_or_generate_summary(
-                db=db,
-                user_id=current_user.id,
-                week_start=week_start,
-                language=language,
-                report_data=report_data,
-            )
+        # The report is local and read-only. New AI notes must go through the
+        # consent and entitlement checks in the explicit Insights endpoint.
+        previous = db.scalar(select(WeeklyReport).where(
+            WeeklyReport.user_id == current_user.id, WeeklyReport.week_start == week_start))
+        summary = previous.summary_text if previous else None
+        ai_status = "cached" if summary else ("use_insights" if entitlements.ready(db) else "unavailable")
 
         return {
             "week_start": report_data["week_start"],

@@ -8,8 +8,12 @@ from fastapi import HTTPException
 from app.config import external_setting, settings
 
 
+def delivery_enabled():
+    return settings.A9_ADMIN_INVITES_ENABLED is True
+
+
 def require_delivery():
-    if settings.A9_ADMIN_INVITES_ENABLED is not True:
+    if not delivery_enabled():
         raise HTTPException(503, "Admin invitation delivery is currently disabled.")
 
 

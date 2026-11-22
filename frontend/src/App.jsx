@@ -46,7 +46,7 @@ import AdminInviteSetup from './pages/admin/AdminInviteSetup'
 // ============================================
 // API SERVICES
 // ============================================
-import { getMotherIdentity, getMotherProfile } from './services/onboardingApi'
+import { getMotherIdentity, getMotherProfile, revokeMotherSession } from './services/onboardingApi'
 
 
 const adminHost = import.meta.env.VITE_PORTAL_MODE === 'admin'
@@ -108,6 +108,7 @@ export default function App() {
   )
 
   const [motherPage, setMotherPage] = useState('dashboard')
+  const [openMealScanner, setOpenMealScanner] = useState(false)
 
   const [loading, setLoading] = useState(Boolean(savedToken || savedAdminToken))
 
@@ -127,8 +128,8 @@ export default function App() {
       if (!controller.signal.aborted) {
         adminSession(null)
         setError(reason.message)
-        setView('login')
-        window.history.replaceState({}, '', '/login')
+        setView(isolatedLogin ? 'login' : 'admin-login')
+        window.history.replaceState({}, '', isolatedLogin ? '/login' : '/admin/login')
       }
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false)
@@ -326,8 +327,10 @@ export default function App() {
   const handleLogout = async () => {
     adminSession(null)
     const adminToken = user?.role === 'ADMIN' ? user.access_token : null
+    const motherToken = user?.role === 'MOTHER' ? user.access_token : null
     motherSession(null)
     setLoginMode('login')
+    setOpenMealScanner(false)
     setProfileSection(null)
 
     setUser(null)
@@ -342,11 +345,16 @@ export default function App() {
     setSelectedArticleId(null)
 
     setError('')
-    setLoading(Boolean(adminToken))
-    if (adminToken) {
+    setLoading(Boolean(adminToken || motherToken))
+    if (adminToken || motherToken) {
       try {
-        await revokeAdminSession(adminToken)
+        if (adminToken) await revokeAdminSession(adminToken)
+        else await revokeMotherSession(motherToken)
       } catch {
+        if (motherToken) {
+          setView('login')
+          window.history.replaceState({}, '', '/login')
+        }
         setError("common:signed_out_here_server_revocation_could_not_be_confirmed")
       } finally {
         setLoading(false)
@@ -383,7 +391,7 @@ export default function App() {
   // MOTHER PORTAL NAVIGATION
   // ============================================
 
-  const handleMotherNavigate = (page) => {
+  const handleMotherNavigate = (page, { openScanner = false } = {}) => {
     setProfileSection(page === 'settings-language' ? 'language' : page === 'settings-plan' ? 'plan' : null)
 
     const pageAliases = {
@@ -448,6 +456,7 @@ export default function App() {
         setSelectedArticleId(null)
       }
 
+      setOpenMealScanner(resolvedPage === 'nutrition' && openScanner)
       setMotherPage(resolvedPage)
 
       return
@@ -713,7 +722,7 @@ export default function App() {
 
     if (motherPage === 'nutrition') {
 
-      return <Nutrition {...commonProps} />
+      return <Nutrition {...commonProps} initialScannerOpen={openMealScanner} />
 
     }
 

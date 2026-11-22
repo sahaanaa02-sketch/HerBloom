@@ -1,21 +1,37 @@
 import assert from 'node:assert/strict'
+import { mkdtemp } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { createServer } from 'vite'
 import { resolveSharedLogin } from './sharedLogin.js'
 
 let server
 let api
+let motherApi
 before(async () => {
   server = await createServer({
     configFile: false,
+    cacheDir: await mkdtemp(join(tmpdir(), 'herbloom-auth-vite-')),
     envDir: false,
     mode: 'e2e',
     define: { 'import.meta.env.VITE_API_URL': JSON.stringify('http://127.0.0.1:8100') },
     server: { middlewareMode: true, ws: false },
   })
   api = await server.ssrLoadModule('/src/services/adminAuthApi.js')
+  motherApi = await server.ssrLoadModule('/src/services/onboardingApi.js')
 })
 after(async () => { await server?.close() })
+
+test('Mother logout revokes the session and handles an empty response', async (context) => {
+  context.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, 'http://127.0.0.1:8100/auth/logout')
+    assert.equal(options.method, 'POST')
+    assert.equal(options.headers.Authorization, 'Bearer synthetic')
+    return new Response(null, { status: 204 })
+  })
+  await motherApi.revokeMotherSession('synthetic')
+})
 
 test('shared Mother login does not start an Admin challenge', async () => {
   const payload = { user: { role: 'MOTHER' }, access_token: 'synthetic' }

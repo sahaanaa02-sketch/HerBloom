@@ -35,6 +35,7 @@ export default function UpgradeBilling({ token, plan, onRefresh }) {
   const [show, setShow] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [extra, setExtra] = useState(null)
   const [receipt, setReceipt] = useState(null)
   const requestKey = useRef(null)
@@ -81,6 +82,18 @@ export default function UpgradeBilling({ token, plan, onRefresh }) {
     }
   }
 
+  async function refreshPendingStatus() {
+    setRefreshing(true)
+    setError(false)
+    try {
+      await onRefresh()
+    } catch {
+      setError(true)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   function confirmation(order) {
     requestEntitlement(token, '/api/billing/receipts/' + order.order_ref)
       .then(setReceipt).catch(() => setError(true))
@@ -101,8 +114,13 @@ export default function UpgradeBilling({ token, plan, onRefresh }) {
     <div className="mt-4 space-y-3 border-t border-[#F0DEE4] pt-3">
       {error && <p role="alert">{copy.error}</p>}
       {reference && <div role="status">
-        <p>{copy.pending} · {copy.waiting}</p>
-        <button type="button" className="font-semibold text-[#7B2346]" onClick={() => onRefresh().catch(() => setError(true))}>{copy.check}</button>
+        <p className="font-semibold">{copy.pending}</p>
+        <p>{t('billing.pendingOrder', { reference, currency: pending.currency, amount: pending.amount_lkr })}</p>
+        <p>{copy.waiting}</p>
+        <button type="button" className="font-semibold text-[#7B2346]"
+          disabled={refreshing} onClick={refreshPendingStatus}>
+          {refreshing ? copy.checking : copy.check}
+        </button>
       </div>}
       {!show && plan.sandbox_checkout && !reference && <button type="button" className="font-semibold text-[#7B2346]" onClick={() => setShow(true)}>
         {['failed', 'cancelled'].includes(items[0]?.status) ? copy.retry : copy.upgrade}

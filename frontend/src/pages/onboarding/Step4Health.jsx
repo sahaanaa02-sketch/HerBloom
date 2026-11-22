@@ -14,6 +14,7 @@ import {
 import {
   QuestionCard,
   ChoiceButton,
+  OnboardingChoices,
   StepHeading,
   TextField,
 } from './OnboardingUI'
@@ -32,6 +33,7 @@ const conditions = [
 export default function Step4Health({
   answers = {},
   updateAnswer,
+  version,
 }) {
   const { t: auditText } = useTranslation()
   const t = useOnboardingCopy()
@@ -63,7 +65,15 @@ export default function Step4Health({
   const choices = (field, options) => (
     <div
       role="radiogroup"
-      aria-label={field.replaceAll('_', ' ')}
+      aria-label={conditions.some(({ key }) => key === field)
+        ? t(conditions.find(({ key }) => key === field).label)
+        : ({
+          iron_prescribed: auditText('common:were_you_prescribed_iron_supplements'),
+          gdm_test_status: auditText('common:have_you_completed_your_postpartum_glucose_test'),
+          gdm_result: auditText('common:what_was_your_test_result'),
+          bp_medicine: auditText('common:are_you_currently_taking_blood_pressure_medicine'),
+          mental_health_history: t('Would you like to share any mental health history?'),
+        })[field]}
       className="flex flex-wrap gap-2"
     >
       {options.map(([value, label]) => (
@@ -86,10 +96,10 @@ export default function Step4Health({
 
   return (
     <div className="space-y-4">
-      <StepHeading
+      {version !== 2 && <StepHeading
         title="Your Health"
         subtitle="A few optional questions help us provide more relevant recovery information."
-      />
+      />}
 
       <div className="flex items-start gap-3 rounded-2xl border border-[#F6D3DB] bg-[#FFF1F3] p-4">
         <Info size={19} className="mt-0.5 shrink-0 text-[#7B2346]" />
@@ -99,6 +109,13 @@ export default function Step4Health({
           provide a diagnosis.
         </p>
       </div>
+
+      {version === 2 && (
+      <QuestionCard icon={HeartPulse} title="Postpartum complications">
+        <OnboardingChoices field="postpartum_complications" title="Postpartum complications" options={[["bleeding", "Bleeding"], ["wound", "Wound or stitches"], ["infection", "Infection"], ["blood_pressure", "Blood pressure"], ["other", "Other"]]}
+          answers={answers} updateAnswer={updateAnswer} multiple />
+      </QuestionCard>
+      )}
 
       <QuestionCard
         icon={HeartPulse}

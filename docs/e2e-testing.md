@@ -104,3 +104,9 @@ catalog match, save, and reload the Food Diary. Check that one successful scan
 consumed one allowance and that the edited portion persists. Set the flag to
 `false`, remove the test key from the private file, and restart the E2E API after
 the live check.
+
+## Final Mother onboarding schema
+
+`backend/migrations/mother_onboarding_v2.sql` adds one nullable JSON column to `mother_profiles`. There is no backfill. Completed profiles remain completed. An unfinished legacy profile keeps its answers and earned progress, and resumes at the first section that must be revisited in the new flow. The app serves the legacy wizard while the column is absent. After migration, the profile response advertises version 2 and the frontend uses the versioned step saves. Keep both application deployments coordinated after separate migration approval.
+
+Rehearse with a verified copy of the current schema and synthetic partial and complete profiles. Compare every original profile value before and after DDL, then test the versioned flow, consent, retries and role isolation through a CRUD-only account scoped to the disposable database. The production migration and the historical Phase 2 chain replay remain separate verification tasks. Stored daily reminder time uses local wall-clock time and does not enable outbound reminder delivery.

@@ -1,8 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { Activity, CalendarCheck, ShieldCheck } from 'lucide-react'
 
+const statusLabels = {
+  yes: 'yes', no: 'no', not_sure: 'nutrition_status_not_sure',
+  not_yet: 'nutrition_status_not_yet', booked: 'nutrition_status_booked',
+  normal: 'nutrition_status_normal', prediabetes: 'nutrition_status_prediabetes',
+  diabetes: 'nutrition_status_diabetes', not_told_yet: 'nutrition_status_not_told_yet',
+}
+
 export default function GdmNutritionCard({ data }) {
   const { t: auditText } = useTranslation()
+  const status = (value) => auditText('common:' + (statusLabels[value] ?? 'not_recorded'))
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <div className="rounded-3xl border border-[#F2DFE5] bg-white p-7">
@@ -16,14 +24,14 @@ export default function GdmNutritionCard({ data }) {
 
         <div className="space-y-4">
           {[
-            ['GDM History', data?.gdm_history],
-            ['Glucose Test Status', data?.test_status],
-            ['Recorded Result', data?.result],
+            [auditText('common:nutrition_gdm_history'), status(data?.gdm_history)],
+            [auditText('common:nutrition_glucose_test_status'), status(data?.test_status)],
+            [auditText('common:nutrition_recorded_result'), status(data?.result)],
             [
-              'Postpartum Week',
+              auditText('common:nutrition_postpartum_week'),
               data?.postpartum_week == null
                 ? null
-                : `Week ${data.postpartum_week}`,
+                : auditText('common:nutrition_week_number', { week: data.postpartum_week }),
             ],
           ].map(([label, value]) => (
             <div

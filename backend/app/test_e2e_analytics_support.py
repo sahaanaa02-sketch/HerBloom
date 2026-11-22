@@ -140,9 +140,9 @@ def run():
             image=BytesIO()
             Image.new("RGB",(1,1)).save(image,"PNG")
             with patch("app.routers.nutrition.scan_food",return_value={"items":[]}), \
-                 patch("app.routers.chat.search_articles",return_value=[{"article_id":article,"title":"Synthetic","content":"Fixture"}]), \
+                 patch("app.routers.chat.search_articles",return_value=[{"article_id":article,"title":"Synthetic","content":"Synthetic AI answer"}]), \
                  patch("app.routers.chat.generate_answer",return_value="Synthetic AI answer"):
-                call("POST","/nutrition/scan",role="owner",files={"file":("synthetic.png",image.getvalue(),"image/png")})
+                call("POST","/nutrition/scan",role="owner",data={"consent":"true"},files={"file":("synthetic.png",image.getvalue(),"image/png")})
                 call("POST","/chat/message",role="owner",json={"text":"Synthetic question","lang":"en"})
             recorded = connection.exec_driver_sql(
                 "SELECT feature,hits FROM mother_engagement WHERE user_id=%s AND activity_day=%s AND feature IN ('article','chat','scan') ORDER BY feature",

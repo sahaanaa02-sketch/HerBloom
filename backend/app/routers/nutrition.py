@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter, Depends, Header, HTTPException,
-    UploadFile, File, Query
+    UploadFile, File, Form, Query
 )
 from PIL import Image, ImageOps, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
@@ -658,10 +658,14 @@ def clean_scan_image(data, mime):
 @router.post("/scan")
 async def scan_meal(
     file: UploadFile = File(...),
+    consent: str | None = Form(default=None),
     idempotency_key: str | None = Header(default=None),
     user: User = Depends(require_mother),
     db: Session = Depends(get_db),
 ):
+    if consent != 'true':
+        raise HTTPException(422, 'Select a photo and confirm consent.')
+
     if file.content_type not in SCAN_FORMATS:
         raise HTTPException(
             415, "Upload a JPG, PNG or WebP image."
@@ -686,7 +690,7 @@ async def scan_meal(
         analytics.record(db, user.id, "scan")
     if charge is not None or track:
         db.commit()
-    return matched
+    return {**matched, "recognized": bool(matched["items"])}
 
 class ScanReview(BaseModel):
     model_config = ConfigDict(extra="forbid")

@@ -76,16 +76,30 @@ export function WeeklyInsights({ token }) {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const [initialFailure, setInitialFailure] = useState(false)
+  const [revision, retry] = useState(0)
 
   useEffect(() => {
     let active = true
     requestEntitlement(token, '/insights/weekly').then((data) => {
       if (active) setResult(data)
-    }).catch(() => {})
+    }).catch(() => { if (active) setInitialFailure(true) })
     return () => { active = false }
-  }, [token])
+  }, [token, revision])
 
-  if (!result) return null
+  if (!result) return (
+    <section className="my-5 min-w-0 rounded-2xl border border-[#F0DEE4] bg-white p-4 text-sm">
+      <h2 className="mb-2 text-lg font-semibold text-[#7B2346]">{labels.insights}</h2>
+      {initialFailure ? <>
+        <p role="alert">{labels.unavailable}</p>
+        <button type="button" className="mt-2 underline"
+          onClick={() => { setInitialFailure(false); retry((value) => value + 1) }}>
+          {t('common:retry')}
+        </button>
+      </> : <p role="status">{t('common:loading_dots')}</p>}
+    </section>
+  )
+
   async function action(older) {
     setBusy(true)
     setError(false)

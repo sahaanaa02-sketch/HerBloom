@@ -2,7 +2,7 @@
 import asyncio
 from datetime import timedelta
 from types import SimpleNamespace as NS
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -79,8 +79,8 @@ def run():
             with patch.object(monitor,"external_setting",side_effect=config), patch.object(
                 monitor,"SessionLocal",side_effect=isolated
             ),patch.object(ai_gateway,"external_setting",side_effect=config),patch.object(
-                ai_gateway.genai,"Client",return_value=NS(models=NS(generate_content=generate))
-            ),patch.object(food_scanner,"external_setting",side_effect=config),patch.object(
+                ai_gateway.genai,"Client",return_value=MagicMock(__enter__=MagicMock(return_value=NS(models=NS(generate_content=generate))))
+            ) as sdk_client,patch.object(food_scanner,"external_setting",side_effect=config),patch.object(
                 food_scanner.httpx,"AsyncClient",MockHTTP
             ):
                 assert api("GET","/usage")["totals"]["calls"]==0
@@ -102,14 +102,18 @@ def run():
                 api("POST",f"/prompts/chat/{first['id']}/activate")
                 assert monitor.runtime("chat").prompt=="Synthetic style one"
                 assert sum(r["active"] for r in api("GET","/prompts/chat")["items"])==1
-                passages=[{"title":"Existing reviewed source fixture","article_id":1,"content":"Synthetic source only."}]
+                passages=[{"title":"Existing reviewed source fixture","article_id":1,"content":"Synthetic answer"}]
                 with patch("app.routers.chat.search_articles",return_value=passages):
                     message=call("POST","/chat/message",200,"mother",json={"text":"Private synthetic question","lang":"en"})
                 sent=model_args[-1]
                 assert sent["model"]=="gemini-synthetic-b" and sent["config"].max_output_tokens==100
                 assert "Synthetic style one" in sent["config"].system_instruction and "Never diagnose" in sent["config"].system_instruction
                 assert message["text"]=="Synthetic answer"
-                with patch.object(ai_gateway.genai,"Client",side_effect=RuntimeError("Synthetic provider error")):
+                call("GET", f"/chat/sessions/{message['session_id']}", 404, "other")
+                assert sdk_client.call_args.kwargs["http_options"].timeout == 20_000
+                assert sdk_client.call_args.kwargs["http_options"].retry_options.attempts == 1
+                sdk_client.return_value.__exit__.assert_called()
+                with patch.object(ai_gateway.genai,"Client",side_effect=TimeoutError("Synthetic provider timeout")):
                     try:ai_gateway.generate_answer("Private failure fixture","en",passages,user_id=mother_id)
                     except monitor.AIUnavailable:pass
                     else:raise AssertionError("Provider failure was not handled")

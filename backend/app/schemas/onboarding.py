@@ -218,7 +218,7 @@ Reminder = Literal[
 ]
 
 
-class OnboardingStep5(BaseModel):
+class OnboardingPreferences(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     language: Literal["en", "ta"] = "en"
@@ -245,12 +245,48 @@ class OnboardingStep5(BaseModel):
         default=None, max_length=30
     )
 
-    consent_ai_profile: bool = False
-
     @field_validator("reminders")
     @classmethod
     def unique_reminders(cls, value):
         return list(dict.fromkeys(value))
+
+
+class OnboardingStep5(OnboardingPreferences):
+    consent_ai_profile: Annotated[bool, Field(strict=True)]
+
+
+class OnboardingBirthV2(OnboardingStep2):
+    previous_csection: YesNoUnsure | None = None
+
+
+class OnboardingHealthV2(OnboardingStep3, OnboardingStep4):
+    postpartum_complications: list[Literal["bleeding", "wound", "infection", "blood_pressure", "other"]] = Field(
+        default_factory=list, max_length=5
+    )
+
+
+class OnboardingPreferencesV2(OnboardingPreferences):
+    recovery_concerns: list[Literal["comfort", "movement", "rest", "feeding", "wellbeing", "other"]] = Field(
+        default_factory=list, max_length=6
+    )
+    feature_interests: list[Literal["recovery", "nutrition", "wellbeing", "education", "reminders"]] = Field(
+        default_factory=list, max_length=5
+    )
+    daily_reminder_time: Annotated[str, Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")] | None = None
+
+
+class OnboardingConsentV2(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    onboarding_consent: Annotated[bool, Field(strict=True)]
+    consent_ai_profile: Annotated[bool, Field(strict=True)]
+
+    @field_validator("onboarding_consent")
+    @classmethod
+    def require_consent(cls, value):
+        if not value:
+            raise ValueError("Please confirm your onboarding consent.")
+        return value
 
 
 # -----------------------------

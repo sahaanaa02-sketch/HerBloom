@@ -1,5 +1,5 @@
 
-import re
+import unicodedata
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -80,11 +80,11 @@ def rebuild_chunks(db: Session):
 
 
 def keywords(question: str, lang: str):
-    words = re.findall(
-        r"[^\W_]+",
-        question.casefold(),
-        flags=re.UNICODE,
-    )
+    normalized = unicodedata.normalize("NFC", question.casefold())
+    words = "".join(
+        character if character.isalnum() or unicodedata.category(character).startswith("M") else " "
+        for character in normalized
+    ).split()
 
     stop = TA_STOP if lang == "ta" else EN_STOP
 
@@ -166,7 +166,7 @@ def search_articles(
             else article.title_en
         )
 
-        searchable = f"{title} {chunk.content}".casefold()
+        searchable = unicodedata.normalize("NFC", f"{title} {chunk.content}".casefold())
 
         matches = sum(
             1 for term in terms if term in searchable

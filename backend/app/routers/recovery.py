@@ -2,7 +2,7 @@
 from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -681,10 +681,17 @@ def exercise_list(
         )
     ).all()
 
-    gated = entitlements.ready(db)
+    schema = inspect(db.connection())
+    guided_ready = entitlements.ready(db) and all(
+        schema.has_table(table) and required <= {column["name"] for column in schema.get_columns(table)}
+        for table, required in (
+            ("entitlement_periods", {"id", "user_id", "plan_code", "starts_at_utc", "ends_at_utc"}),
+            ("clinical_publications", {"entity", "entity_id"}),
+        )
+    )
     approved_ids = set()
     has_plan = False
-    if gated:
+    if guided_ready:
         has_plan = entitlements.guided_access(db, user_id, free_quota.utc_now())
         approved_ids = set(db.connection().exec_driver_sql(
             "SELECT DISTINCT entity_id FROM clinical_publications WHERE entity='recovery_exercises'"
@@ -702,13 +709,14 @@ def exercise_list(
         if profile is not None and profile.language == "ta":
             for field in ("name", "steps", "safety_notes", "contraindications"):
                 fields[field] = getattr(exercise, f"{field}_ta") or fields[field]
-        if gated:
-            if allowed and (exercise.editorial_status != "published" or exercise.id not in approved_ids):
-                allowed, reason = False, "Guided routine is awaiting clinical approval."
-            if allowed and not has_plan:
-                allowed, reason = False, "Guided routines are available on Trial and Premium."
-            if not allowed:
-                fields.update(steps=[], equipment=None, image_url=None, video_url=None)
+        if allowed and not guided_ready:
+            allowed, reason = False, "Guided routines are temporarily unavailable."
+        if allowed and (exercise.editorial_status != "published" or exercise.id not in approved_ids):
+            allowed, reason = False, "Guided routine is awaiting clinical approval."
+        if allowed and not has_plan:
+            allowed, reason = False, "Guided routines are available on Trial and Premium."
+        if not allowed:
+            fields.update(steps=[], equipment=None, image_url=None, video_url=None)
         result.append({
             **fields,
             "locked": not allowed,

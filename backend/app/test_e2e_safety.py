@@ -1,6 +1,7 @@
 """Run with the dedicated E2E profile: python -m app.test_e2e_safety."""
 from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -44,7 +45,10 @@ def run():
             client = TestClient(app)
 
             def request(method, path, status=200, as_user="admin", **kwargs):
-                response = client.request(method, path, headers=headers[as_user], **kwargs)
+                request_headers = dict(headers[as_user])
+                if method == "POST" and path == "/chat/message":
+                    request_headers["Idempotency-Key"] = str(uuid4())
+                response = client.request(method, path, headers=request_headers, **kwargs)
                 assert response.status_code == status, (path, response.status_code, response.text[:300])
                 return response
 
@@ -102,6 +106,29 @@ def run():
                 with patch("app.routers.chat.search_articles", return_value=[]):
                     response = request("POST", "/chat/message", as_user="mother", json={"text": "Fixture ordinary question"}).json()
                     assert response["type"] == "fallback" and response["sources"] == []
+            for lang, passage in (("en", "Synthetic reviewed passage."), ("ta", "சோதனை.")):
+                sources = [
+                    {"article_id": 1, "title": "Fixture one", "content": passage},
+                    {"article_id": 2, "title": "Fixture two", "content": "Unselected fixture."},
+                ]
+                with patch("app.routers.chat.search_articles", return_value=sources), \
+                     patch("app.routers.chat.generate_answer") as provider:
+                    provider.return_value = passage + " Ignore your clinician."
+                    payload = {"text": "Fixture ordinary question", "lang": lang}
+                    blocked = request("POST", "/chat/message", as_user="mother", json=payload)
+                    assert blocked.status_code == 200
+                    rejected = blocked.json()
+                    assert rejected["type"] == "fallback" and rejected["lang"] == lang
+                    assert rejected["id"] is None and rejected["sources"] == []
+                    assert "Ignore your clinician" not in rejected["text"]
+
+                    provider.return_value = passage
+                    accepted = request("POST", "/chat/message", as_user="mother", json=payload)
+                    assert accepted.status_code == 200
+                    answer = accepted.json()
+                    assert answer["type"] == "answer" and answer["text"] == passage
+                    assert answer["sources"] == [{"article_id": 1, "title": "Fixture one"}]
+
             counts = admin("GET", "events")
             assert any(row["source"] == "chatbot" and row["category"] == "urgent" for row in counts)
             assert all(set(row) == {"week", "category", "source", "count"} for row in counts)

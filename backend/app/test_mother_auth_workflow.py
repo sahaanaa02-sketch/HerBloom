@@ -1,5 +1,7 @@
 """Mother account flows. Provider verification and email delivery are test doubles."""
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
+
+import jwt
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -55,7 +57,7 @@ def test_mother_authentication_flows(monkeypatch):
                 with isolated() as session:
                     response = client.request(method, path, headers=headers, **kwargs)
                 assert response.status_code == status, (method, path, response.status_code)
-                return response.json()
+                return response.json() if response.content else None
 
             spec = call("GET", "/openapi.json", 200)["paths"]
             for route in ("/auth/google/challenge", "/auth/google", "/auth/password-reset/verify"):
@@ -68,19 +70,58 @@ def test_mother_authentication_flows(monkeypatch):
             call("POST", "/auth/register", 409, json=signup)
             call("POST", "/auth/login", 401, data={"username": email, "password": "incorrect"})
             call("POST", "/auth/login", 200, data={"username": email, "password": password})
+            call("GET", "/api/admin/me", 401, original)
+            call("POST", "/auth/logout", 401)
+            claims_expired = jwt.decode(original, options={"verify_signature": False})
+            claims_expired.update(iat=datetime.now(UTC) - timedelta(minutes=61),
+                                  exp=datetime.now(UTC) - timedelta(minutes=1))
+            expired = jwt.encode(claims_expired, auth.settings.SECRET_KEY, algorithm=auth.settings.ALGORITHM)
+            call("GET", "/auth/me", 401, expired)
+            call("POST", "/auth/logout", 204, original)
+            call("GET", "/auth/me", 401, original)
+            original = call("POST", "/auth/login", 200, data={"username": email, "password": password})["access_token"]
+            call("POST", "/auth/logout", 401, expired)
             assert call("GET", "/profile", 200, original)["onboarding_step"] == 1
             answers = (
                 {"baby_birth_date": (date.today() - timedelta(days=10)).isoformat()},
-                {"delivery_type": "vaginal"}, {"feeding_method": "both"}, {}, {"language": "ta"},
+                {"delivery_type": "vaginal"}, {"feeding_method": "both"}, {}, {"language": "ta", "consent_ai_profile": False},
             )
+            call("POST", "/profile/onboarding/complete", 409, original)
+            call("PATCH", "/profile/onboarding/2", 409, original, json=answers[1])
+            call("PATCH", "/profile/onboarding/1", 422, original,
+                 json={"baby_birth_date": (date.today() + timedelta(days=2)).isoformat()})
+            call("PATCH", "/profile/onboarding/1", 422, original,
+                 json={**answers[0], "user_id": 123456})
             for index, answer in enumerate(answers, 1):
+                if index == 5:
+                    call("POST", "/profile/onboarding/complete", 409, original)
+                    call("PATCH", "/profile/onboarding/5", 422, original, json={"language": "ta"})
+                    call("PUT", "/profile", 409, original, json={"reminders": []})
+                    switch = call("PATCH", "/profile/onboarding/2", 200, original,
+                                  json={"delivery_type": "csection", "csection_type": "planned"})
+                    assert switch["onboarding_step"] == 5
+                    call("PATCH", "/profile/onboarding/2", 422, original,
+                         json={"delivery_type": "vaginal", "csection_type": "planned"})
+                    call("PATCH", "/profile/onboarding/2", 200, original, json=answers[1])
+                    call("PATCH", "/profile/onboarding/3", 200, original,
+                         json={"feeding_method": "both", "allergies": ["milk", "milk"]})
+                    call("PATCH", "/profile/onboarding/4", 200, original,
+                         json={"anaemia": "yes", "hb_value": 11.2, "gdm_history": "yes"})
+                    saved = call("GET", "/profile", 200, original)["profile"]
+                    assert saved["csection_type"] is None and saved["allergies"] == ["milk"]
+                    assert round(saved["hb_value"], 1) == 11.2 and saved["gdm_history"] == "yes"
+                    call("PATCH", "/profile/onboarding/4", 200, original,
+                         json={"anaemia": "no", "hb_value": 11.2})
+                    assert call("GET", "/profile", 200, original)["profile"]["hb_value"] is None
                 result = call("PATCH", f"/profile/onboarding/{index}", 200, original, json=answer)
                 assert result["onboarding_step"] == min(index + 1, 5)
                 if index == 2:
                     fresh = call("POST", "/auth/login", 200, data={"username": email, "password": password})["access_token"]
                     profile = call("GET", "/profile", 200, fresh)
                     assert profile["onboarding_step"] == 3 and not profile["onboarding_done"]
-            call("POST", "/profile/onboarding/complete", 200, original)
+            first_completion = call("POST", "/profile/onboarding/complete", 200, original)
+            assert call("POST", "/profile/onboarding/complete", 200, original) == first_completion
+            call("PATCH", "/profile/onboarding/1", 409, original, json=answers[0])
             fresh = call("POST", "/auth/login", 200, data={"username": email, "password": password})["access_token"]
             profile = call("GET", "/profile", 200, fresh)
             assert profile["onboarding_done"] and profile["profile"]["language"] == "ta"
@@ -202,3 +243,47 @@ def test_google_token_verifier_uses_signature_issuer_audience_and_expiry(monkeyp
     ):
         with pytest.raises(ValueError):
             auth.verify_google_credential(candidate, client_id)
+
+def test_onboarding_concurrent_profile_creation():
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from sqlalchemy import delete
+
+    from app.database import SessionLocal
+    from app.models.mother_profile import MotherProfile
+    from app.services.auth_service import create_access_token
+
+    authorize_e2e_launcher()
+    preflight()
+    from app.main import app
+
+    identifier = f"onboarding-race-{uuid4().hex}"
+    with SessionLocal.begin() as db:
+        mother = User(username=identifier, full_name="Synthetic Mother",
+                      email=f"{identifier}@example.invalid", hashed_password="unusable")
+        db.add(mother)
+        db.flush()
+        user_id = mother.id
+    barrier = Barrier(2)
+    headers = {"Authorization": "Bearer " + create_access_token(user_id, "MOTHER")}
+
+    def retrieve():
+        with TestClient(app) as client:
+            barrier.wait(timeout=10)
+            response = client.get("/profile", headers=headers)
+        assert response.status_code == 200
+        return response.json()
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            requests = [pool.submit(retrieve), pool.submit(retrieve)]
+            first, second = (request.result(timeout=25) for request in requests)
+        assert first["onboarding_step"] == second["onboarding_step"] == 1
+        assert first["profile"]["id"] == second["profile"]["id"]
+        with SessionLocal() as db:
+            profile = db.scalars(select(MotherProfile).where(MotherProfile.user_id == user_id)).one()
+            assert profile.id == first["profile"]["id"]
+    finally:
+        with SessionLocal.begin() as db:
+            db.execute(delete(User).where(User.id == user_id, User.username == identifier))

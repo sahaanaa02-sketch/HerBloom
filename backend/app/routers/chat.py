@@ -359,16 +359,28 @@ def send_message(
                 profile_context, db=db, user_id=user.id, entitlement_quota=charge is not None,
             )
 
+            # Display only an intact reviewed passage, never model-authored medical text.
+            normalized = " ".join(answer.split())
+            source = next(
+                (item for item in passages
+                 if normalized and " ".join(item["content"].split()) == normalized),
+                None,
+            )
+            if source is None:
+                return {
+                    "id": None,
+                    "session_id": payload.session_id,
+                    "role": "assistant",
+                    "lang": lang,
+                    "type": "fallback",
+                    "text": safety_message(db, "no_info", lang, fallback(lang)),
+                    "sources": [],
+                }
+
             result = {
                 "type": "answer",
-                "text": answer,
-                "sources": [
-                    {
-                        "article_id": item["article_id"],
-                        "title": item["title"],
-                    }
-                    for item in passages
-                ],
+                "text": source["content"],
+                "sources": [{"article_id": source["article_id"], "title": source["title"]}],
             }
 
         except AIUnavailable:

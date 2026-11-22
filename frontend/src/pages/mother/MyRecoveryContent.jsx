@@ -969,14 +969,15 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
   const [calendar, setCalendar] = useState(null)
   const [selectedDate, setSelectedDate] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [accessDenied, setAccessDenied] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
 
   const load = useCallback(async () => {
     if (!token) return
 
-    try {
-      const [c, s, sl, wl, bl, ex] = await Promise.all([
+    const [contextResult, summaryResult, sleepResult, walkResult, bodyResult, exerciseResult] =
+      await Promise.allSettled([
         api.context(token),
         api.summary(token),
         api.sleep(token, dateBefore(6), todayISO()),
@@ -984,19 +985,21 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
         api.bodyChecks(token),
         api.exercises(token),
       ])
+    const failures = [contextResult, summaryResult, sleepResult, walkResult, bodyResult, exerciseResult]
+      .filter((result) => result.status === 'rejected')
+    const authFailure = failures.find(({ reason }) => [401, 403].includes(reason?.status))
+    const value = (result, fallback) =>
+      !authFailure && result.status === 'fulfilled' ? result.value : fallback
 
-      setContext(c)
-      setSummary(s)
-      setSleeps(sl)
-      setWalks(wl)
-      setBodies(bl)
-      setExercises(ex)
-      setError('')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    setAccessDenied(Boolean(authFailure))
+    setContext(value(contextResult, null))
+    setSummary(value(summaryResult, null))
+    setSleeps(value(sleepResult, []))
+    setWalks(value(walkResult, []))
+    setBodies(value(bodyResult, []))
+    setExercises(contextResult.status === 'fulfilled' ? value(exerciseResult, []) : [])
+    setError((authFailure ?? failures[0])?.reason?.message ?? '')
+    setLoading(false)
   }, [token])
 
   useEffect(() => {
@@ -1118,9 +1121,9 @@ export default function MyRecovery({ user, onNavigate, onLogout }) {
 
         {loading ? (
           <div className={CARD}>{auditText('common:loading_recovery_information')}</div>
-        ) : (
+        ) : !accessDenied && (
           <>
-            {!context?.configured && (
+            {context && !context.configured && (
               <Section title={auditText('common:recovery_profile')} icon={Baby}>
                 <p className="text-sm leading-7 text-[#765363]">
                   {auditText('common:your_recovery_stage_is_linked_to_your_onboarding_profile_please_complete_your_onboarding_details_before_using_personalized_recovery_guidance')}

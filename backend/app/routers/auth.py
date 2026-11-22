@@ -98,9 +98,11 @@ def generate_username(
 )
 def register(
     data: RegisterRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
 
+    rate_limits.enforce(db, "register:mother:" + rate_limits.source_ip(request), 10)
     email = str(data.email).lower()
 
     existing_user = db.scalar(
@@ -233,6 +235,7 @@ def login(
 # ----------------------------------------
 
 def get_current_user(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
@@ -273,10 +276,12 @@ def get_current_user(
 
     if user is None or user.role != "MOTHER" or payload.get("role") != user.role or payload.get("purpose"):
         raise credentials_error
-    if user.role == "MOTHER" and user_privacy.active(db):
+    request.state.mother_session_version = None
+    if user_privacy.active(db):
         version = user_privacy.sql(db, "SELECT session_version FROM users WHERE id=%s", (user.id,)).scalar_one_or_none()
         if payload.get("sv", 0) != version:
             raise credentials_error
+        request.state.mother_session_version = version
 
     if not user.is_active:
         raise HTTPException(
@@ -339,6 +344,21 @@ def get_my_profile(
     ),
 ):
     return current_user
+
+@router.post("/logout", status_code=204)
+def logout(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_mother),
+):
+    version = request.state.mother_session_version
+    if version is None:
+        raise HTTPException(503, "Mother session revocation is unavailable.")
+    # If a reset or another logout already revoked this version, leave newer sessions alone.
+    user_privacy.sql(db, "UPDATE users SET session_version=session_version+1 "
+                     "WHERE id=%s AND role='MOTHER' AND session_version=%s", (user.id, version))
+    db.commit()
+
 
 class ForgotPassword(BaseModel):
     model_config = ConfigDict(extra="forbid")
