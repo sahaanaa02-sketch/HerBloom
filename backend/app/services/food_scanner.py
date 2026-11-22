@@ -1,12 +1,11 @@
 
 import base64
-import json
 import logging
 
 import httpx
 from fastapi import HTTPException
 
-from app.schemas.nutrition import ScanResponse
+from app.schemas.nutrition import ScanRecognition
 
 # --------------------------------------------------
 # ENVIRONMENT CONFIGURATION
@@ -108,6 +107,7 @@ Rules:
         ],
         "generationConfig": {
             "responseMimeType": "application/json",
+            "responseJsonSchema": ScanRecognition.model_json_schema(),
             "temperature": float(config.temperature),
         },
     }
@@ -183,7 +183,7 @@ Rules:
         text_parts = [
             part.get("text", "")
             for part in parts
-            if isinstance(part, dict) and part.get("text")
+            if isinstance(part, dict) and not part.get("thought") and part.get("text")
         ]
 
         if not text_parts:
@@ -192,13 +192,7 @@ Rules:
                 detail="Gemini returned an empty response.",
             )
 
-        parsed = json.loads("".join(text_parts))
-        if not isinstance(parsed, dict) or set(parsed) != {"items"}:
-            raise ValueError("Unexpected Gemini food response.")
-        result = ScanResponse.model_validate({
-            **parsed,
-            "message": "AI estimates may be inaccurate. Review every food and portion before saving.",
-        })
+        result = ScanRecognition.model_validate_json("".join(text_parts))
         items = [item.model_dump() for item in result.items]
 
         logger.info(

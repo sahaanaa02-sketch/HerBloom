@@ -102,6 +102,7 @@ export default function MealScanner({
   const [plan, setPlan] = useState(null)
   const [file, setFile] = useState(null)
   const scanRequest = useRef(null)
+  const scanning = useRef(false)
   const upload = useRef(null)
   const browse = useRef(null)
   const dialog = useRef(null)
@@ -150,12 +151,13 @@ export default function MealScanner({
   }
 
   async function scan() {
-    if (busy) return
+    if (busy || scanning.current) return
     if (!file || !consent) {
       setError('Select a photo and confirm consent.')
       return
     }
 
+    scanning.current = true
     setBusy(true)
     setError('')
 
@@ -163,7 +165,10 @@ export default function MealScanner({
       const request = scanRequest.current
       const result = request.result ?? await nutritionApi.scan(token, file, request.key, consent)
       request.result = result
-      const catalog = await nutritionApi.foods(token)
+      const catalog = await nutritionApi.foods(token).catch(() => {
+        setError('The request could not be completed. Please try again.')
+        return foods
+      })
 
       const indexed = new Map(catalog.map((food) => [food.id, food]))
       const matchedItems = await Promise.all(result.items.map(async (item) => {
@@ -186,6 +191,7 @@ export default function MealScanner({
     } catch (err) {
       setError(requestError(err, false))
     } finally {
+      scanning.current = false
       setBusy(false)
     }
   }

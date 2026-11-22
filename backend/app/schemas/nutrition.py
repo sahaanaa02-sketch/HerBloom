@@ -57,6 +57,10 @@ class ScanItem(BaseModel):
     confidence: Literal["low", "medium", "high"]
 
 
-class ScanResponse(BaseModel):
+class ScanRecognition(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     items: list[ScanItem] = Field(max_length=10)
+
+
+class ScanResponse(ScanRecognition):
     message: str

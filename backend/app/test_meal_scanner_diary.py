@@ -118,12 +118,27 @@ def test_authenticated_scanner_workflow(monkeypatch):
             files = {"file": ("synthetic.png", image.getvalue(), "image/png")}
             call("POST", "/nutrition/scan", 422, owner, scan_key, files=files)
             call("POST", "/nutrition/scan", 422, owner, scan_key, data={"consent": "false"}, files=files)
+            call("POST", "/nutrition/scan", 401, key=scan_key, data={"consent": "true"}, files=files)
+            call("POST", "/nutrition/scan", 415, owner, scan_key, data={"consent": "true"},
+                 files={"file": ("synthetic.gif", b"GIF", "image/gif")})
+            call("POST", "/nutrition/scan", 413, owner, scan_key, data={"consent": "true"},
+                 files={"file": ("large.png", b"x" * (5 * 1024 * 1024 + 1), "image/png")})
             provider.assert_not_awaited()
             scan = call("POST", "/nutrition/scan", 200, owner, scan_key, data={"consent": "true"}, files=files)
             assert scan["recognized"] is True
             assert scan["items"][0]["estimated_grams"] == 100
             call("POST", "/nutrition/scan", 409, owner, scan_key, data={"consent": "true"}, files=files)
             assert provider.await_count == 1
+            retry_key = uuid4()
+            provider.side_effect = HTTPException(502, "Synthetic provider failure")
+            call("POST", "/nutrition/scan", 502, owner, retry_key, data={"consent": "true"}, files=files)
+            provider.side_effect = None
+            provider.return_value = {"items": []}
+            empty = call("POST", "/nutrition/scan", 200, owner, retry_key, data={"consent": "true"}, files=files)
+            assert empty["recognized"] is False and empty["items"] == []
+            call("POST", "/nutrition/scan", 200, owner, uuid4(), data={"consent": "true"}, files=files)
+            call("POST", "/nutrition/scan", 429, owner, uuid4(), data={"consent": "true"}, files=files)
+            assert provider.await_count == 4
             meals, logs = "/nutrition/meals", "/nutrition/logs"
             payload = {"food_id": food_id, "grams": 125, "meal_type": "lunch"}
             key = uuid4()
@@ -176,3 +191,39 @@ def test_live_gemini_key_requires_scanner_opt_in_and_isolated_request(monkeypatc
     monkeypatch.setattr(e2e_guard, "verify_database_identity", lambda connection: None)
     assert food_scanner.scanner_api_key(db, 42) == "synthetic-scanner-key"
 
+
+
+@pytest.mark.parametrize("answer, expected", [
+    ('{"items":[{"name":"dhal","estimated_grams":100,"confidence":"high"}]}', 1),
+    ('{"items":[]}', 0),
+    ('not valid JSON', None),
+])
+def test_gemini_scan_excludes_thought_parts(monkeypatch, answer, expected):
+    import asyncio
+    import json
+    import httpx
+    from app.services import food_scanner
+
+    def response(request):
+        payload = json.loads(request.content)
+        assert payload["generationConfig"]["responseJsonSchema"]["required"] == ["items"]
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [
+            {"thought": True, "text": "Internal reasoning"},
+            {"text": answer},
+        ]}}]})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(response))
+    monkeypatch.setattr(food_scanner.httpx, "AsyncClient", lambda **kwargs: client)
+    monkeypatch.setattr(food_scanner, "scanner_api_key", lambda *_: "synthetic-test-key")
+    runtime = SimpleNamespace(model_name="synthetic", temperature=0, max_output_tokens=None, prompt="")
+    monkeypatch.setattr(food_scanner.monitor, "provider_runtime", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr(food_scanner.monitor, "Attempt", lambda _: SimpleNamespace(
+        capture=lambda _: None, finish=lambda _: None,
+    ))
+    if expected is None:
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(food_scanner.scan_food(b"synthetic", "image/png"))
+        assert exc.value.status_code == 502
+    else:
+        result = asyncio.run(food_scanner.scan_food(b"synthetic", "image/png"))
+        assert len(result["items"]) == expected
