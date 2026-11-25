@@ -1,7 +1,7 @@
 
 import re
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import jwt
 
@@ -13,6 +13,8 @@ from fastapi import (
     HTTPException,
     status,
 )
+
+from fastapi.responses import JSONResponse
 
 from fastapi.security import (
     OAuth2PasswordBearer,
@@ -28,7 +30,8 @@ from app.config import E2E_MODE, external_setting, settings
 from app.database import get_db
 from app.models.user import User
 from app.models.admin import AdminUser
-from app.services import analytics, free_quota, mother_account, rate_limits, user_privacy
+from app.services import analytics, free_quota, google_identity, mother_account, rate_limits, user_privacy
+from app.services.google_identity import verify_google_credential
 
 from app.schemas.auth import (
     RegisterRequest,
@@ -365,6 +368,10 @@ class ForgotPassword(BaseModel):
     email: EmailStr
 
 
+class ResetCode(ForgotPassword):
+    code: str = Field(pattern=r"^[0-9]{6}$")
+
+
 class AccountLink(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str = Field(min_length=43, max_length=43, pattern=r"^[A-Za-z0-9_-]+$")
@@ -376,7 +383,7 @@ class ResetPassword(AccountLink):
 
 @router.post("/forgot-password", status_code=202)
 def request_password_reset(body: ForgotPassword, request: Request, tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    if mother_account.outbound_email_enabled() and user_privacy.active(db):
+    if mother_account.password_reset_email_enabled() and user_privacy.active(db):
         address = request.client.host if request.client else "unknown"
         if user_privacy.consume_limit(db, f"public-reset:{address}", 8, 60):
             tasks.add_task(mother_account.forgot_password,str(body.email).lower())
@@ -393,11 +400,11 @@ def verify_account_link(db, request, token, purpose, password=None):
 
 
 @router.post("/password-reset/verify")
-def verify_password_reset(body: AccountLink, request: Request, db: Session = Depends(get_db)):
+def verify_password_reset(body: ResetCode, request: Request, db: Session = Depends(get_db)):
     user_privacy.readiness(db)
-    rate_limits.enforce(db, "password-reset-verify:" + rate_limits.source_ip(request), 10, 15)
-    mother_account.valid_token(db, body.token, "password_reset")
-    return {"message": "Verification successful."}
+    rate_limits.enforce(db, "password-reset-verify:" + rate_limits.source_ip(request), 30, 15)
+    grant = mother_account.verify_reset_code(db, str(body.email).lower(), body.code)
+    return JSONResponse({"reset_token": grant}, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/reset-password")
@@ -434,66 +441,174 @@ def google_client(request, db):
     return client_id
 
 
-def verify_google_credential(credential, client_id):
-    if E2E_MODE and (
-        not settings.E2E_GOOGLE_ENABLED or client_id != settings.E2E_GOOGLE_CLIENT_ID
-    ):
-        raise HTTPException(503, "External Google requests are disabled in E2E.")
+class GoogleLoginLink(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ticket: str = Field(min_length=40, max_length=1500)
+    password: str = Field(min_length=1, max_length=128)
 
-    from google.auth.exceptions import GoogleAuthError, TransportError
-    from google.auth.transport.requests import Request as GoogleRequest
-    from google.oauth2.id_token import verify_oauth2_token
 
+class GoogleReauthentication(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(min_length=1, max_length=128)
+
+
+def require_google_registry(db):
+    if not google_identity.registry_ready(db):
+        raise HTTPException(503, "Google account linking is awaiting configuration.")
+
+
+def lock_google_mother(db, request, user_id):
+    account = user_privacy.sql(
+        db, "SELECT session_version, hashed_password, google_subject, is_active, anonymized_at "
+            "FROM users WHERE id=%s AND role='MOTHER' FOR UPDATE", (user_id,),
+    ).one_or_none()
+    if (not account or not account.is_active or account.anonymized_at
+            or account.session_version != request.state.mother_session_version):
+        raise HTTPException(401, "Invalid or expired authentication token.")
+    return account
+
+
+def reauthenticate_google_mother(account, password):
+    if account.google_subject:
+        raise HTTPException(409, "Google is this account's only sign-in method.")
+    if not verify_password(password, account.hashed_password):
+        raise HTTPException(401, "Current password is incorrect.")
+
+
+@router.get("/google/link")
+def google_link_status(db: Session = Depends(get_db), user: User = Depends(require_mother)):
+    if not google_identity.registry_ready(db):
+        return {"available": False, "linked": False, "google_only": False}
+    legacy_subject = user_privacy.sql(db, "SELECT google_subject FROM users WHERE id=%s", (user.id,)).scalar_one()
+    return {"available": True, "linked": bool(legacy_subject or google_identity.find_mother_identity(db, user.id)),
+            "google_only": bool(legacy_subject)}
+
+
+@router.post("/google/link/challenge")
+def google_link_challenge(body: GoogleReauthentication, request: Request, db: Session = Depends(get_db),
+                          user: User = Depends(require_mother), token: str = Depends(oauth2_scheme)):
+    client_id = google_client(request, db)
+    require_google_registry(db)
+    rate_limits.enforce(db, f"google:manage:{user.id}", 5, 15)
+    account = lock_google_mother(db, request, user.id)
+    reauthenticate_google_mother(account, body.password)
+    if google_identity.find_mother_identity(db, user.id):
+        raise HTTPException(409, "A Google account is already connected.")
+    binding = google_identity.LinkBinding.for_session("MOTHER", user.id, token)
+    return google_identity.issue_challenge(client_id, request.headers["origin"], link=binding)
+
+
+@router.post("/google/link")
+def google_link(body: GoogleCredential, request: Request, db: Session = Depends(get_db),
+                user: User = Depends(require_mother), token: str = Depends(oauth2_scheme)):
+    client_id = google_client(request, db)
+    require_google_registry(db)
+    rate_limits.enforce(db, f"google:link:{user.id}", 8, 15)
+    binding = google_identity.LinkBinding.for_session("MOTHER", user.id, token)
+    claims = google_identity.verify_exchange(
+        db, body.challenge, body.credential, client_id, request.headers["origin"],
+        link=binding, verifier=verify_google_credential,
+    )
+    account = lock_google_mother(db, request, user.id)
+    if account.google_subject:
+        raise HTTPException(409, "A Google account is already connected.")
+    subject = claims["sub"]
+    legacy_id = user_privacy.sql(db, "SELECT id FROM users WHERE google_subject=%s", (subject,)).scalar_one_or_none()
+    if legacy_id is not None:
+        raise HTTPException(409, "This Google identity cannot be connected.")
     try:
-        transport = GoogleRequest()
-        return verify_oauth2_token(
-            credential, lambda url, **kwargs: transport(url, timeout=5, **kwargs), client_id
-        )
-    except TransportError:
-        raise HTTPException(503, "Google sign-in is temporarily unavailable.") from None
-    except GoogleAuthError:
-        raise ValueError("Invalid Google credential.") from None
+        google_identity.claim_identity(db, subject, binding)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "This Google identity cannot be connected.") from None
+    return {"available": True, "linked": True, "google_only": False}
+
+
+@router.post("/google/unlink")
+def google_unlink(body: GoogleReauthentication, request: Request, db: Session = Depends(get_db),
+                  user: User = Depends(require_mother)):
+    require_google_registry(db)
+    rate_limits.enforce(db, f"google:manage:{user.id}", 5, 15)
+    account = lock_google_mother(db, request, user.id)
+    reauthenticate_google_mother(account, body.password)
+    google_identity.disconnect_mother(db, user.id, google_only=bool(account.google_subject))
+    # Revoke existing sessions so a former Google credential cannot retain a session.
+    user_privacy.sql(db, "UPDATE users SET session_version=session_version+1 WHERE id=%s", (user.id,))
+    db.commit()
+    return {"available": True, "linked": False, "google_only": False, "sign_in_required": True}
 
 
 @router.post("/google/challenge")
 def google_challenge(request: Request, db: Session = Depends(get_db)):
     client_id = google_client(request, db)
     rate_limits.enforce(db, "google:challenge:" + rate_limits.source_ip(request), 12)
-    nonce = secrets.token_urlsafe(32)
-    challenge = jwt.encode({"purpose": "mother_google", "nonce": nonce,
-                            "exp": datetime.now(UTC) + timedelta(minutes=5)},
-                           settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return {"client_id": client_id, "nonce": nonce, "challenge": challenge}
+    return google_identity.issue_challenge(client_id, request.headers["origin"])
+
+
+@router.post("/google/link-login", response_model=TokenResponse)
+def google_link_login(body: GoogleLoginLink, request: Request, db: Session = Depends(get_db)):
+    client_id = google_client(request, db)
+    require_google_registry(db)
+    rate_limits.enforce(db, "google:link-login:" + rate_limits.source_ip(request), 10, 15)
+    origin = request.headers["origin"]
+    intent = google_identity.read_login_link(body.ticket, client_id, origin)
+    rate_limits.enforce(db, f"google:manage:{intent['account_id']}", 5, 15)
+    user = db.scalar(select(User).where(User.id == intent["account_id"], User.role == "MOTHER")
+                     .with_for_update().execution_options(populate_existing=True))
+    if user is None:
+        raise google_identity.invalid_credential()
+    account = lock_google_mother_for_login(db, user, intent)
+    reauthenticate_google_mother(account, body.password)
+    subject = intent["sub"]
+    if (db.scalar(select(AdminUser.id).where(AdminUser.email == user.email)) is not None
+            or google_identity.find_mother_identity(db, user.id)
+            or google_identity.find_identity(db, subject)):
+        raise google_identity.invalid_credential()
+    if user_privacy.sql(db, "SELECT id FROM users WHERE google_subject=%s", (subject,)).first():
+        raise google_identity.invalid_credential()
+    try:
+        google_identity.register_google_mother(db, subject, user.id)
+    except IntegrityError:
+        db.rollback()
+        raise google_identity.invalid_credential() from None
+    return finish_google_login(db, user, account.session_version)
+
+
+def lock_google_mother_for_login(db, user, intent):
+    account = user_privacy.sql(db, "SELECT session_version, hashed_password, google_subject, "
+                               "is_active, anonymized_at FROM users WHERE id=%s FOR UPDATE", (user.id,)).one()
+    if (not account.is_active or account.anonymized_at or account.google_subject
+            or account.session_version != intent["version"]
+            or user_privacy.secret_hash(user.email.lower()) != intent["email_digest"]):
+        raise google_identity.invalid_credential()
+    return account
 
 
 @router.post("/google", response_model=TokenResponse)
 def google_login(body: GoogleCredential, request: Request, db: Session = Depends(get_db)):
     client_id = google_client(request, db)
     rate_limits.enforce(db, "google:verify:" + rate_limits.source_ip(request), 12)
-    invalid = HTTPException(401, "Google sign-in could not be verified. Try again.")
-    try:
-        challenge = jwt.decode(body.challenge, settings.SECRET_KEY, algorithms=[settings.ALGORITHM],
-                               options={"require": ["exp", "purpose", "nonce"]})
-        if challenge["purpose"] != "mother_google" or not isinstance(challenge["nonce"], str):
+    invalid = google_identity.invalid_credential()
+    claims = google_identity.verify_exchange(
+        db, body.challenge, body.credential, client_id, request.headers["origin"],
+        verifier=verify_google_credential,
+    )
+    subject = claims["sub"]
+
+    registry = google_identity.registry_ready(db)
+    linked = google_identity.find_identity(db, subject) if registry else None
+    if linked and linked.mother_id is None:
+        raise invalid
+    if linked:
+        row = user_privacy.sql(db, "SELECT id, is_active, anonymized_at, session_version FROM users "
+                                   "WHERE id=%s AND role='MOTHER' FOR UPDATE", (linked.mother_id,)).first()
+        current = google_identity.find_identity(db, subject, lock=True)
+        if row is None or current is None or current.mother_id != row.id:
             raise invalid
-        claims = verify_google_credential(body.credential, client_id)
-    except (jwt.InvalidTokenError, ValueError):
-        raise invalid from None
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(503, "Google sign-in is temporarily unavailable.") from None
-
-    subject = claims.get("sub")
-    if not isinstance(subject, str) or not re.fullmatch(r"[0-9A-Za-z_-]{1,255}", subject):
-        raise invalid
-    if claims.get("nonce") != challenge["nonce"]:
-        raise invalid
-    if not user_privacy.consume_limit(db, "google:nonce:" + challenge["nonce"], 1, 10):
-        raise invalid
-
-    row = user_privacy.sql(db, "SELECT id, is_active, anonymized_at, session_version FROM users "
-                               "WHERE google_subject=%s AND role='MOTHER' FOR UPDATE", (subject,)).first()
+    else:
+        row = user_privacy.sql(db, "SELECT id, is_active, anonymized_at, session_version FROM users "
+                                   "WHERE google_subject=%s AND role='MOTHER' FOR UPDATE", (subject,)).first()
     version = 0
     if row:
         if not row.is_active or row.anonymized_at:
@@ -514,7 +629,20 @@ def google_login(body: GoogleCredential, request: Request, db: Session = Depends
         if domain != "gmail.com" and claims.get("hd") != domain:
             raise invalid
         conflict = HTTPException(409, "Google sign-in cannot create this account. Use your existing sign-in method.")
-        if db.scalar(select(User.id).where(User.email == email)) or db.scalar(select(AdminUser.id).where(AdminUser.email == email)):
+        if db.scalar(select(AdminUser.id).where(AdminUser.email == email)):
+            raise conflict
+        existing = user_privacy.sql(
+            db, "SELECT id,role,is_active,anonymized_at,google_subject,session_version "
+                "FROM users WHERE email=%s", (email,),
+        ).one_or_none()
+        if existing:
+            if (registry and existing.role == "MOTHER" and existing.is_active and not existing.anonymized_at
+                    and not existing.google_subject and not google_identity.find_mother_identity(db, existing.id)):
+                ticket = google_identity.issue_login_link(
+                    client_id, request.headers["origin"], subject, existing.id, existing.session_version, email,
+                )
+                return JSONResponse(status_code=409, content={"code": "google_link_required", "ticket": ticket},
+                                    headers={"Cache-Control": "no-store"})
             raise conflict
         user = User(username=generate_username(email, db), full_name=signup.name.strip(), email=email,
                     hashed_password=hash_password(signup.password), role="MOTHER", is_active=True)
@@ -523,11 +651,17 @@ def google_login(body: GoogleCredential, request: Request, db: Session = Depends
             db.flush()
             user_privacy.sql(db, "UPDATE users SET google_subject=%s,email_verified_at=%s WHERE id=%s",
                              (subject, user_privacy.now(), user.id))
+            if registry:
+                google_identity.register_google_mother(db, subject, user.id)
             free_quota.record_signup(db, user.id, datetime.now(UTC))
         except IntegrityError:
             db.rollback()
             raise conflict from None
 
+    return finish_google_login(db, user, version)
+
+
+def finish_google_login(db, user, version):
     user_privacy.sql(db, "UPDATE users SET last_active_at=%s WHERE id=%s", (user_privacy.now(), user.id))
     analytics.record(db, user.id, "login")
     db.commit()

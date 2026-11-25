@@ -80,7 +80,7 @@ export default function Step2Birth({
   )
 
   return (
-    <div className="space-y-4">
+    <div className="hb-onboarding-step hb-onboarding-birth space-y-4">
       <StepHeading
         title={version === 2 ? "Delivery and Recovery" : "About Your Birth"}
         subtitle="Every birth experience is unique. Let's understand yours."

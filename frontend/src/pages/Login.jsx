@@ -4,8 +4,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import { startAdminSignIn } from '../services/adminAuthApi'
 import { resolveSharedLogin } from '../services/sharedLogin'
 import { apiBase as API_URL } from '../services/apiBase'
-import { useEffect, useRef, useState } from 'react'
-import AdminVerification from '../components/AdminVerification'
+import { useState } from 'react'
 import GoogleSignIn from '../components/GoogleSignIn'
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
 import logo from '../assets/logo.png'
@@ -76,55 +75,13 @@ function Field({ icon: Icon, label, right, ...props }) {
   )
 }
 
-function GoogleIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
-
-      <path
-        fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-      />
-
-      <path
-        fill="#FBBC05"
-        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-      />
-
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-      />
-    </svg>
-  )
-}
-
-export default function Login({ onSuccess, onAdminVerified, onBack, initialMode = "login", adminOnly = false, initialError = "" }) {
+export default function Login({ onSuccess, onAdminVerified, onBack, initialMode = "login", initialError = "" }) {
   const { t } = useTranslation('auth')
   const [mode, setMode] = useState(initialMode)
   const [showPw, setShowPw] = useState(false)
   const [showConfirmPw, setShowConfirmPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(initialError)
-  const [adminChallenge, setAdminChallenge] = useState(null)
-  const emailField = useRef(null)
-  const restoreFocus = useRef(false)
-
-  useEffect(() => {
-    if (!adminChallenge && restoreFocus.current) {
-      restoreFocus.current = false
-      emailField.current?.focus()
-    }
-  }, [adminChallenge])
-
-  function returnToSharedLogin() {
-    restoreFocus.current = true
-    setAdminChallenge(null)
-  }
-
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -161,10 +118,9 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
     setError('')
   }
 
-  function finishAdminSignIn({ admin, challenge }) {
+  function finishAdminSignIn({ admin }) {
     setForm((previous) => ({ ...previous, password: '' }))
-    if (admin) onAdminVerified(admin)
-    else setAdminChallenge(challenge)
+    onAdminVerified(admin)
   }
 
   // Connect to FastAPI backend
@@ -187,11 +143,6 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
       const email = form.email.trim().toLowerCase()
 
       const startAdmin = () => startAdminSignIn(email, form.password)
-      if (adminOnly) {
-        finishAdminSignIn(await startAdmin())
-        return
-      }
-
       let response
 
       if (isRegister) {
@@ -354,7 +305,7 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
 
         {/* RIGHT FORM PANEL */}
         <div className="relative flex min-w-0 flex-1 flex-col justify-center px-[clamp(20px,3.5vw,48px)] py-8 md:block md:overflow-y-auto">
-          {onBack && !adminChallenge && (
+          {onBack && (
             <button
               type="button"
               onClick={onBack}
@@ -379,20 +330,14 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
             />
 
             <div className="mb-2 flex justify-end"><LanguageSwitcher /></div>
-            {adminChallenge ? (
-              <AdminVerification challenge={adminChallenge} onSuccess={onAdminVerified}
-                onCancel={returnToSharedLogin} shared />
-            ) : <>
             {/* LOGIN / REGISTER TABS */}
-            {adminOnly ? (
-              <h2 className="mb-4 text-center font-['Playfair_Display'] text-3xl font-semibold text-[#7B2346]">{t('sign_in_to_herbloom')}</h2>
-            ) : <div
+            <div
               className="grid grid-cols-2"
               style={{ marginTop: u(0.03) }}
             >
               {tab('login', t('log_in'))}
               {tab('register', t('create_account'))}
-            </div>}
+            </div>
 
             <form
               onSubmit={submit}
@@ -422,7 +367,6 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
                 icon={Mail}
                 label={t('email')}
                 name="email"
-                ref={emailField}
                 type="email"
                 placeholder={t('email')}
                 autoComplete="off"
@@ -505,7 +449,7 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
               )}
 
               {/* SUBMIT */}
-              {!isRegister && !adminOnly && <a href="/forgot-password" className="mb-3 flex min-h-11 items-center justify-end text-sm font-medium text-[#7B2346] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">{t('forgot_password')}</a>}
+              {!isRegister && <a href="/forgot-password" className="mb-3 flex min-h-11 items-center justify-end text-sm font-medium text-[#7B2346] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">{t('forgot_password')}</a>}
               <button
                 type="submit"
                 disabled={loading}
@@ -525,7 +469,6 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
               </button>
             </form>
 
-            {!adminOnly && <>
             {/* DIVIDER */}
             <div
               className="flex items-center gap-4 text-[#6B4455]"
@@ -540,12 +483,7 @@ export default function Login({ onSuccess, onAdminVerified, onBack, initialMode 
             </div>
 
             {/* GOOGLE LOGIN */}
-            <GoogleSignIn disabled={loading} onSuccess={onSuccess} style={bigBtn}>
-              <GoogleIcon />
-              {t('continue_with_google')}
-            </GoogleSignIn>
-            </>}
-            </>}
+            <GoogleSignIn disabled={loading} onSuccess={onSuccess} />
           </div>
         </div>
       </div>

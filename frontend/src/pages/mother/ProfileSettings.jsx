@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import GoogleAccountSecurity from '../../components/mother/GoogleAccountSecurity'
 import { MyPlan } from '../../components/mother/EntitlementPanels'
 
 import { useEffect, useState } from 'react'
@@ -390,14 +391,6 @@ function SettingsForm({ section, form, change, email }) {
           </div>
         </label>
 
-        <div className="rounded-2xl bg-[#FFF6F1] p-5">
-          <h3 className="text-sm font-semibold text-[#7B2346]">
-            {uiText('account_security')}
-          </h3>
-          <p className="mt-2 text-xs leading-6 text-[#987887]">
-            {auditText('common:password_change_data_export_and_account_deletion_will_be_available_after_secure_backend_endpoints_are_implemented')}
-          </p>
-        </div>
       </div>
     )
   }
@@ -729,6 +722,7 @@ export default function ProfileSettings({ user, onLogout, onNavigate, initialSec
                     </button>
                   </div>
                 </form>
+                {section === 'privacy' && <GoogleAccountSecurity token={user.access_token} onLogout={onLogout} />}
               </div>
             </div>
           )}

@@ -14,7 +14,7 @@ from app.e2e_fixtures import ADMIN_EMAIL, MOTHER_EMAIL
 from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminPermission, AdminRole, AdminUser
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services.auth_service import create_access_token
 from app.services.recovery_rules import local_today
 from app.services.user_privacy import ownership_verified
@@ -44,7 +44,7 @@ def run():
                     permissions[key]=permission or AdminPermission(key=key)
                 manager.roles.append(AdminRole(name="a13_full",permissions=list(permissions.values())))
                 viewer=AdminUser(name="Synthetic viewer",email="a13-viewer@example.com",password_hash="synthetic",
-                                 active=True,totp_enabled=True,
+                                 active=True,
                                  roles=[AdminRole(name="a13_viewer",permissions=[permissions["support.view"]])])
                 session.add(viewer)
                 session.flush()

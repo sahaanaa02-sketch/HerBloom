@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Activity, ArrowLeft, Baby, BedDouble, CalendarDays,
   Check, ChevronLeft, ChevronRight, Clock, Footprints,
-  Heart, Info, Lock, Plus, ShieldAlert, Trash2,
-  TrendingUp, Wind,
+  Heart, Lock, ShieldAlert, Trash2,
+  TrendingUp,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -16,7 +16,6 @@ import MotherLayout from '../../components/mother/MotherLayout'
 import ExerciseAccess from '../../components/recovery/ExerciseAccess'
 import { recoveryApi as api } from '../../services/recoveryApi'
 
-const PINK = '#7B2346'
 const CARD = 'rounded-[24px] border border-[#F1DEE5] bg-white p-5 shadow-sm'
 const BUTTON = 'rounded-full bg-[#7B2346] px-5 py-2.5 text-sm font-semibold text-white'
 const INPUT = 'w-full rounded-xl border border-[#ECD7DF] bg-[#FFFCFB] px-4 py-3 text-sm outline-none focus:border-[#7B2346]'

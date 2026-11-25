@@ -115,7 +115,7 @@ export default function Step3Feeding({
   )
 
   return (
-    <div className="space-y-4">
+    <div className="hb-onboarding-step hb-onboarding-feeding space-y-4">
       <StepHeading
         title={version === 2 ? "Health and Feeding" : "Feeding and Food"}
         subtitle="Share your feeding and food preferences for more relevant nutrition information."

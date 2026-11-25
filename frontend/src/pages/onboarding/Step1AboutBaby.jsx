@@ -49,7 +49,7 @@ export default function Step1AboutBaby({
     birthDate < twelveMonthsAgo
 
   return (
-    <div className="space-y-4">
+    <div className="hb-onboarding-step hb-onboarding-about space-y-4">
       <StepHeading
         title={version === 2 ? "About You and Baby" : "Welcome to HerBloom"}
         subtitle="Let's get to know you. This takes about 2 minutes."

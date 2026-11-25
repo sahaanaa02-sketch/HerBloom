@@ -78,7 +78,7 @@ function ReviewDetail({ review, busy, onAction, close }) {
   </section>
 }
 
-export default function ClinicalReviewManager({ token, initialTab = 'queue' }) {
+export default function ClinicalReviewManager({ token, initialTab = 'queue', onTabChange }) {
   const { t: auditText } = useTranslation()
   const { t: localizeCopy } = useTranslation()
   const { t: uiText } = useTranslation('common')
@@ -128,7 +128,7 @@ export default function ClinicalReviewManager({ token, initialTab = 'queue' }) {
       <nav aria-label={auditText('common:clinical_review_sections')} className="flex gap-2">
         {[['queue','Review queue'],['due','Due for re-review']].map(([id,label]) =>
           <Button key={id} aria-pressed={tab===id} variant={tab===id?'contained':'outlined'} onClick={() => {
-            setError(''); setTab(id); setPage(0)
+            setError(''); onTabChange?.(id); setTab(id); setPage(0)
           }}>{label}</Button>)}
       </nav>
       {tab === 'queue' && <div className="flex flex-wrap gap-4">

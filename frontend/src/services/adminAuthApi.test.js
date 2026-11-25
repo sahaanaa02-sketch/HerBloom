@@ -45,28 +45,14 @@ test('isolated Admin sign-in rejects a challenge without a session', async (cont
     return Response.json({ requires_2fa: true, challenge_token: 'synthetic-challenge', setup_required: false })
   })
   await assert.rejects(resolveSharedLogin(Response.json({}, { status: 401 }), true,
-    () => api.startAdminSignIn('admin@example.test', 'synthetic')), /did not issue a password-only session/)
+    () => api.startAdminSignIn('admin@example.test', 'synthetic')), /Unexpected admin login response/)
 })
-
-test('verification request passes cancellation through to fetch', async (context) => {
-  const controller = new AbortController()
-  context.mock.method(globalThis, 'fetch', (_, options) => {
-    assert.equal(options.signal, controller.signal)
-    return new Promise((_, reject) => {
-      options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true })
-    })
-  })
-  const request = api.verifyAdmin2FA('synthetic-challenge', '000000', controller.signal)
-  controller.abort()
-  await assert.rejects(request, { name: 'AbortError' })
-})
-
 
 test('direct Admin sign-in returns a server session without opening verification', async (context) => {
   let requests = 0
   context.mock.method(globalThis, 'fetch', async () => {
     requests++
-    return Response.json({ requires_2fa: false, access_token: 'synthetic',
+    return Response.json({ access_token: 'synthetic',
       admin: { permissions: ['overview.view'] } })
   })
   const result = await resolveSharedLogin(Response.json({}, { status: 401 }), true,

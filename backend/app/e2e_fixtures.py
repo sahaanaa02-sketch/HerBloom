@@ -42,11 +42,11 @@ def fixture_credentials():
     if path.resolve() != path:
         raise RuntimeError("Test credentials must remain in the local E2E settings file.")
     values = dotenv_values(path, interpolate=False)
-    names = ("E2E_ADMIN_PASSWORD", "E2E_MOTHER_PASSWORD", "E2E_ADMIN_TOTP_SECRET")
+    names = ("E2E_ADMIN_PASSWORD", "E2E_MOTHER_PASSWORD")
     if any(not values.get(name) or len(values[name]) < 24 for name in names):
         raise RuntimeError("The private E2E fixture credentials are missing or invalid.")
     credentials = tuple(values[name] for name in names)
-    if len(set(credentials)) != 3:
+    if len(set(credentials)) != len(credentials):
         raise RuntimeError("Use distinct E2E fixture credentials.")
     return credentials
 
@@ -61,10 +61,10 @@ def fixture_png():
 
 
 def add_fixtures(db, image, credentials):
-    admin_password, mother_password, totp_secret = credentials
+    admin_password, mother_password = credentials
     role = AdminRole(name="e2e_content_manager", permissions=[AdminPermission(key=key) for key in PERMISSIONS])
     admin = AdminUser(email=ADMIN_EMAIL, name="E2E Admin", password_hash=hash_password(admin_password),
-                      active=True, totp_enabled=True, totp_secret=totp_secret, roles=[role])
+                      active=True, roles=[role])
     mother = User(username="e2e_mother", email=MOTHER_EMAIL, full_name="E2E Mother",
                   hashed_password=hash_password(mother_password), role="MOTHER")
     db.add_all([admin, mother])

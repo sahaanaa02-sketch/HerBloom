@@ -3,7 +3,6 @@ import json
 import os
 import secrets
 
-import pyotp
 from sqlalchemy import select
 
 from app.config import e2e_home
@@ -15,7 +14,7 @@ from app.services.auth_service import hash_password, verify_password
 
 
 def new_credentials():
-    return {role: {"password": secrets.token_urlsafe(24), "totp_secret": pyotp.random_base32()}
+    return {role: {"password": secrets.token_urlsafe(24)}
             for role in ROLE_PERMISSIONS}
 
 
@@ -30,8 +29,8 @@ def provision(db, credentials):
     permissions = {row.key: row for row in db.scalars(select(AdminPermission))}
     for role_name, keys in ROLE_PERMISSIONS.items():
         configured = credentials[role_name]
-        password, secret = configured["password"], configured["totp_secret"]
-        if not isinstance(password,str) or len(password)<24 or len(pyotp.TOTP(secret).now())!=6:
+        password = configured["password"]
+        if not isinstance(password,str) or len(password)<24:
             raise ValueError("Invalid synthetic demo credentials.")
         role = db.scalar(select(AdminRole).where(AdminRole.name==role_name))
         if role is None:
@@ -46,10 +45,10 @@ def provision(db, credentials):
         admin=db.scalar(select(AdminUser).where(AdminUser.email==email))
         if admin is None:
             admin=AdminUser(email=email,name="E2E "+role_name,password_hash=hash_password(password),
-                            totp_secret=secret,totp_enabled=True,active=True,roles=[role])
+                            active=True,roles=[role])
             db.add(admin)
             db.flush()
-        elif (not admin.active or not admin.totp_enabled or admin.totp_secret!=secret or
+        elif (not admin.active or
               not verify_password(password,admin.password_hash) or [item.name for item in admin.roles]!=[role_name]):
             raise ValueError("Refusing to modify an existing demo identity.")
         admins[role_name]=admin.id

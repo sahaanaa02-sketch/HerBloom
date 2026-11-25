@@ -4,7 +4,7 @@ from calendar import monthrange
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import MetaData, Table, func, inspect, select
+from sqlalchemy import MetaData, Table, inspect, select
 
 from app.models.article import Article
 from app.models.chat import ArticleChunk

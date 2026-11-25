@@ -2,7 +2,6 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -85,25 +84,6 @@ class AdminUser(Base):
     name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,
-    )
-
-    # Google Authenticator secret
-    totp_secret: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
-    )
-
-    # Whether 2FA has been enabled
-    totp_enabled: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-    )
-
-    # Prevent reuse of an already accepted TOTP time-step
-    last_totp_step: Mapped[int | None] = mapped_column(
-        BigInteger,
-        nullable=True,
     )
 
     # Admin account status

@@ -1,10 +1,10 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
-import { resolveApiBase } from './apiConfig.js'
+import { E2E_FRONTEND_PORT, resolveApiBase } from './apiConfig.js'
 
 function enforceLocalE2E({ host, port, strictPort }) {
-  if (host !== '127.0.0.1' || port !== 5183 || strictPort !== true) {
+  if (host !== '127.0.0.1' || port !== E2E_FRONTEND_PORT || strictPort !== true) {
     throw new Error('E2E frontend requires 127.0.0.1:5183 with strictPort enabled')
   }
 }
@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
   }
 
   const apiBase = resolveApiBase(mode, process.env.VITE_API_URL)
-  const localE2E = { host: '127.0.0.1', port: 5183, strictPort: true }
+  const localE2E = { host: '127.0.0.1', port: E2E_FRONTEND_PORT, strictPort: true }
   return {
     plugins: [...plugins, {
       name: 'herbloom-e2e-bind',

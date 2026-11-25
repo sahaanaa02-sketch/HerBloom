@@ -14,7 +14,6 @@ const columns = {
     {field:'email',headerName:'Email',minWidth:190,flex:1},
     {field:'roles',headerName:'Roles',minWidth:145,renderCell:({value})=>value.map((role)=>role.name).join(', ')},
     {field:'active',headerName:'Status',width:110,renderCell:({value})=>value?'Active':'Inactive'},
-    {field:'totp_enabled',headerName:'2FA',width:100,renderCell:({value})=>value?'Enabled':'Not set up'},
   ],
   legal: [
     {field:'type',headerName:'Legal page',minWidth:170,flex:1,renderCell:({value})=>legalLabels[value]},
@@ -111,7 +110,7 @@ function LegalForm({ values, disabled, update }) {
   </div>
 }
 
-export default function SettingsManager({token,permissions}) {
+export default function SettingsManager({token,permissions,initialTab,onTabChange}) {
   const { t: auditText } = useTranslation()
   const { t: localizeCopy } = useTranslation()
   const { t: uiText } = useTranslation('common')
@@ -119,7 +118,7 @@ export default function SettingsManager({token,permissions}) {
   const view=permissions.includes('settings.view')
   const audits=permissions.includes('audit.view')
   const tabs=[...(manage?[['admins','Admin accounts']]:[]),...(view?[['site','App settings'],['legal','Legal pages']]:[]),...(audits?[['audit','Audit log']]:[])]
-  const [tab,setTab]=useState(()=>tabs[0]?.[0])
+  const [tab,setTab]=useState(()=>tabs.find(([key])=>key===initialTab)?.[0] ?? tabs[0]?.[0])
   const [page,setPage]=useState(0)
   const [pageSize,setPageSize]=useState(10)
   const [filter,setFilter]=useState({})
@@ -189,7 +188,7 @@ export default function SettingsManager({token,permissions}) {
   return <section className="space-y-4">
     <nav aria-label={auditText('common:settings_sections')} className="flex flex-wrap gap-2">
       {tabs.map(([key,label])=><Button key={key} variant={tab===key?'contained':'outlined'} aria-pressed={tab===key}
-        onClick={()=>{setTab(key);setPage(0);setFilter({});setError('');setNotice('')}}>{label}</Button>)}
+        onClick={()=>{onTabChange?.(key);setTab(key);setPage(0);setFilter({});setError('');setNotice('')}}>{label}</Button>)}
     </nav>
     {current?.error&&<Alert severity="error">{current.error}</Alert>}
     {!editor&&error&&<Alert severity="error">{error}</Alert>}
@@ -224,9 +223,9 @@ export default function SettingsManager({token,permissions}) {
           </>}
         </DialogContent>
         <DialogActions>
-          {editor.mode==='account'&&editor.row.active&&['reset-2fa','deactivate'].map((action)=><Button key={action}
+          {editor.mode==='account'&&editor.row.active&&['deactivate'].map((action)=><Button key={action}
             color="error" disabled={busy} onClick={()=>{if(window.confirm(uiText('confirm_this_administrator_action')))
-              mutation('POST','/admins/'+editor.row.id+'/'+action)}}>{action==='reset-2fa'?auditText('common:reset_2fa'):auditText('common:deactivate')}</Button>)}
+              mutation('POST','/admins/'+editor.row.id+'/'+action)}}>{auditText('common:deactivate')}</Button>)}
           {editor.mode==='legal'&&manage&&editor.row.id&&!editor.row.published_at&&<Button disabled={busy} onClick={()=>{
             if(window.confirm(uiText('publish_the_saved_version_unsaved_text_changes_are_excluded')))
               mutation('POST','/legal/'+editor.row.id+'/publish')

@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   LogOut,
   ShieldCheck,
 } from 'lucide-react'
@@ -474,25 +473,15 @@ export default function Onboarding({
   const completedSteps = progress / 20
 
   return (
-    <div className="flex min-h-screen items-start justify-center bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-6">
-      <div className="hb-mother-onboarding grid w-full max-w-[1200px] rounded-[28px] border border-[#F1D9DF] bg-[#FFFCFB] shadow-xl md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <aside className="hb-onboarding-illustration" data-step={step}>
-          <div className="hb-onboarding-artwork">
-            <img
-              src={currentInfo.image}
-              width={step === 1 ? 1276 : 1264}
-              height={step === 1 ? 816 : 843}
-              alt={t('HerBloom onboarding illustration for {{title}}', { title: t(currentInfo.title) })}
-            />
-          </div>
-        </aside>
-
-        {/* QUESTIONS */}
-        <div className="flex min-w-0 flex-col">
-
+    <div
+      className="hb-onboarding-layout min-h-screen bg-[#FFF6F1] p-3 font-['Poppins'] sm:p-6"
+      data-step={step}
+      style={{ '--hb-onboarding-image': 'url("' + currentInfo.image + '")' }}
+    >
+      <div className="hb-mother-onboarding hb-onboarding-card flex min-w-0 flex-col rounded-[28px] border border-[#F1D9DF] shadow-xl">
           {/* HEADER */}
-          <header className="shrink-0 rounded-t-[27px] border-b md:rounded-tl-none border-[#F1D9DF] bg-white px-5 pb-4 pt-5 sm:px-7">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <header className="hb-onboarding-header shrink-0 rounded-t-[27px] border-b border-[#F1D9DF] bg-white/75 px-5 pb-4 pt-5 sm:px-7">
+            <div className="hb-onboarding-toolbar flex flex-wrap items-center justify-between gap-2">
 
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7B2346]">
@@ -503,7 +492,8 @@ export default function Onboarding({
                 </p>
               </div>
 
-              <LanguageSwitcher />
+              <div className="flex flex-wrap items-center gap-2">
+                <LanguageSwitcher />
 
               <button
                 type="button"
@@ -513,11 +503,12 @@ export default function Onboarding({
                 <LogOut size={16} />
                 {t('Log out')}
               </button>
+              </div>
 
             </div>
 
             {/* PROGRESS */}
-            <div className="mt-5 flex items-center justify-between gap-3 text-xs">
+            <div className="hb-onboarding-progress mt-5 flex items-center justify-between gap-3 text-xs">
               <span className="font-semibold text-[#7B2346]">
                 {t('Step {{step}} of 5', { step })}
               </span>
@@ -526,25 +517,15 @@ export default function Onboarding({
               </span>
             </div>
 
-            <ol aria-label={t('Onboarding steps')} className="mt-3 flex items-center">
+            <ol aria-label={t('Onboarding steps')} className="hb-onboarding-track">
               {steps.map(({ title }, index) => {
                 const complete = index < completedSteps
                 const current = !finished && index === step - 1
                 return (
                   <li key={title} aria-current={current ? 'step' : undefined}
-                    className="flex flex-1 items-center last:flex-none"
+                    data-complete={complete}
                   >
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
-                      current ? 'border-[#7B2346] bg-white text-[#7B2346] ring-2 ring-[#7B2346] ring-offset-2'
-                        : complete ? 'border-[#7B2346] bg-[#7B2346] text-white'
-                          : 'border-[#E8C3CC] bg-[#FFF6F1] text-[#765363]'
-                    }`}>
-                      <span className="sr-only">{complete ? t('{{title}}, completed', { title: t(title) }) : t(title)}</span>
-                      {complete && !current ? <Check size={15} aria-hidden="true" /> : <span aria-hidden="true">{index + 1}</span>}
-                    </span>
-                    {index < steps.length - 1 && (
-                      <span aria-hidden="true" className={`mx-2 h-0.5 flex-1 ${complete ? 'bg-[#7B2346]' : 'bg-[#F6D3DB]'}`} />
-                    )}
+                    <span className="sr-only">{complete ? t('{{title}}, completed', { title: t(title) }) : t(title)}</span>
                   </li>
                 )
               })}
@@ -553,7 +534,7 @@ export default function Onboarding({
 
           <main
             ref={questionsRef}
-            className="flex-1 px-4 py-5 sm:px-7 sm:py-6"
+            className="hb-onboarding-body flex-1 px-4 py-5 sm:px-7 sm:py-6"
           >
             {error && (
               <div
@@ -577,7 +558,7 @@ export default function Onboarding({
           </main>
 
           {/* FOOTER */}
-          {!finished && <footer className="shrink-0 rounded-b-[27px] border-t border-[#F1D9DF] bg-white md:rounded-bl-none px-4 py-3 sm:px-7 sm:py-4">
+          {!finished && <footer className="hb-onboarding-footer shrink-0 rounded-b-[27px] border-t border-[#F1D9DF] bg-white/75 px-4 py-3 sm:px-7 sm:py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
 
               <button
@@ -613,7 +594,6 @@ export default function Onboarding({
             </p>
           </footer>}
 
-        </div>
       </div>
     </div>
   )

@@ -21,7 +21,7 @@ from app.models.mother_profile import MotherProfile
 from app.models.user import User
 from app.models.wellbeing import JournalEntry
 from app.routers import admin_users
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services.auth_service import create_access_token, hash_password
 from app.services.journal_crypto import encrypt_text
 from app.services import mother_account, user_privacy as privacy
@@ -79,7 +79,7 @@ def run_enabled_suite():
                 else:
                     supervisor_role.permissions.extend(p for p in permissions if p not in supervisor_role.permissions)
                 supervisor = AdminUser(name="Synthetic A7 supervisor",email="a7-supervisor.e2e@example.com",
-                                       password_hash="Synthetic token-only account",active=True,totp_enabled=True,
+                                       password_hash="Synthetic token-only account",active=True,
                                        roles=[supervisor_role])
                 s.add(supervisor)
                 support=s.scalar(select(AdminUser).where(AdminUser.email==ADMIN_EMAIL))
@@ -144,9 +144,15 @@ def run_enabled_suite():
             provider = {"ACCOUNT_SMTP_HOST":"smtp.e2e.invalid", "ACCOUNT_SMTP_FROM":"test@example.com",
                         "ACCOUNT_EMAIL_FRONTEND_ORIGIN":"https://e2e.invalid"}
             def capture(message):
-                link = next(line for line in message.get_content().splitlines() if line.startswith("https://e2e.invalid/"))
-                purpose = "password_reset" if "/reset-password#" in link else "verify_email"
-                delivered.append((str(message["To"]),purpose,link.split("#",1)[1]))
+                content = message.get_content().splitlines()
+                code = next((line.split(": ",1)[1] for line in content if line.startswith("Your verification code is: ")), None)
+                if code is not None:
+                    assert len(code) == 6 and code.isdigit()
+                    assert all("/reset-password" not in line for line in content)
+                    delivered.append((str(message["To"]), "password_reset", code))
+                else:
+                    link = next(line for line in content if line.startswith("https://e2e.invalid/verify-email#"))
+                    delivered.append((str(message["To"]), "verify_email", link.split("#",1)[1]))
             def synthetic_provider(key, default=None):
                 return provider.get(key,default)
 
@@ -178,8 +184,10 @@ def run_enabled_suite():
                 client_mock = smtp.return_value.__enter__.return_value
                 client_mock.send_message.side_effect = capture
                 admin("POST",f"users/{aid}/send-reset")
-                email,purpose,token=delivered[-1]
+                email,purpose,code=delivered[-1]
                 assert email=="a7-first.e2e@example.com" and purpose=="password_reset"
+                call("POST","/auth/verify-email",422,None,json={"token":code})
+                token=call("POST","/auth/password-reset/verify",200,None,json={"email":email,"code":code}).json()["reset_token"]
                 call("POST","/auth/verify-email",400,None,json={"token":token})
                 call("POST","/auth/reset-password",200,None,json={"token":token,"password":"New synthetic password"})
                 call("POST","/auth/reset-password",400,None,json={"token":token,"password":"New synthetic password"})

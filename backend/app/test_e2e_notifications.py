@@ -12,7 +12,7 @@ from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.mother_profile import MotherProfile
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services import clinical_review, entitlements, free_quota
 from app.services.auth_service import create_access_token
 from app.services.recovery_rules import local_today
@@ -49,7 +49,7 @@ def run():
                     grants[key] = permission
                 manager.roles.append(AdminRole(name="a11_synthetic_manager", permissions=list(grants.values())))
                 editor = AdminUser(email="a11-editor@example.com", name="Synthetic content editor",
-                                   active=True, totp_enabled=True, password_hash="Synthetic token-only account",
+                                   active=True,  password_hash="Synthetic token-only account",
                                    roles=[AdminRole(name="a11_synthetic_editor",
                                                     permissions=[grants["notifications.view"], grants["notifications.create"]])])
                 other = User(username="a11_other", email="a11-other@example.com", full_name="Synthetic mother",

@@ -15,7 +15,7 @@ from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.chat import SafetyEvent
 from app.models.user import User
 from app.models.wellbeing import WellbeingCheckin
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services import admin_overview as metrics, clinical_review as flow
 from app.services.auth_service import create_access_token
 
@@ -65,10 +65,10 @@ def run():
                 if permission is None:
                     permission = AdminPermission(key="overview.view")
                 least = AdminUser(name="Synthetic overview-only admin", email="a8-overview.e2e@example.com",
-                                  password_hash="Synthetic token-only account", active=True, totp_enabled=True,
+                                  password_hash="Synthetic token-only account", active=True,
                                   roles=[AdminRole(name="synthetic_overview_only", permissions=[permission])])
                 denied = AdminUser(name="Synthetic unprivileged admin", email="a8-denied.e2e@example.com",
-                                   password_hash="Synthetic token-only account", active=True, totp_enabled=True)
+                                   password_hash="Synthetic token-only account", active=True)
                 db.add_all([least, denied])
                 db.flush()
                 limited_id, denied_id = least.id, denied.id

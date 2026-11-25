@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from jwt import InvalidTokenError
+from fastapi import HTTPException
 from pwdlib import PasswordHash
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -44,52 +44,37 @@ def verify_admin_password(
         return False
 
 
-def password_only_admin_enabled() -> bool:
-    return E2E_MODE and settings.E2E_ADMIN_PASSWORD_ONLY
+def require_admin_access(request):
+    if settings.A14_HOSTED or (not E2E_MODE and (
+            settings.DB_NAME != "herbloom_db" or settings.DB_HOST not in ("localhost", "127.0.0.1", "::1"))):
+        raise HTTPException(403, "Admin access is unavailable on this deployment.")
+    if E2E_MODE:
+        return
+    loopback = {"127.0.0.1", "::1", "localhost"}
+    if (request.client is None or request.client.host not in loopback
+            or request.url.hostname not in loopback
+            or request.headers.get("origin") not in (None, "http://localhost:5173", "http://127.0.0.1:5173")):
+        raise HTTPException(403, "Local Admin sign-in requires a loopback connection.")
 
 
 def admin_session_version(db, admin_id: int, lock: bool = False) -> int:
     if not ready(db):
-        return 0
+        raise HTTPException(503, "Admin session revocation is unavailable.")
     suffix = " FOR UPDATE" if lock else ""
     return db.connection().exec_driver_sql(
         "SELECT session_version FROM admin_users WHERE id=%s" + suffix, (admin_id,)
     ).scalar_one()
 
 
-def create_admin_2fa_challenge(admin_id: int, session_version: int = 0) -> str:
-    """
-    Short-lived token for completing 2FA.
-    This is NOT an authenticated Admin access token.
-    """
+def create_admin_access_token(admin_id: int, session_version: int = 0):
     now = datetime.now(timezone.utc)
-
-    payload = {
+    claims = {
         "sub": str(admin_id),
         "sv": session_version,
-        "aud": "admin-2fa",
-        "purpose": "complete_2fa",
+        "aud": "admin",
+        "purpose": "admin_access",
+        "amr": ["pwd"],
         "iat": now,
-        "exp": now + timedelta(minutes=5),
+        "exp": now + timedelta(minutes=admin_settings.ADMIN_TOKEN_MINUTES),
     }
-
-    return jwt.encode(
-        payload,
-        admin_settings.ADMIN_JWT_SECRET,
-        algorithm="HS256",
-    )
-
-
-def verify_admin_2fa_challenge(token: str) -> tuple[int, int]:
-    payload = jwt.decode(
-        token,
-        admin_settings.ADMIN_JWT_SECRET,
-        algorithms=["HS256"],
-        audience="admin-2fa",
-        options={"require": ["sub", "aud", "exp", "iat"]},
-    )
-
-    if payload.get("purpose") != "complete_2fa":
-        raise InvalidTokenError("Invalid token purpose")
-
-    return int(payload["sub"]), payload.get("sv", 0)
+    return jwt.encode(claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")

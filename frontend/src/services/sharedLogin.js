@@ -16,7 +16,11 @@ export async function resolveSharedLogin(motherResponse, allowAdmin, startAdmin)
     return startAdmin()
   }
 
-  if (role !== 'MOTHER' || !hasToken) {
+  return requireMotherSession(data)
+}
+
+function requireMotherSession(data) {
+  if (data?.user?.role !== 'MOTHER' || typeof data.access_token !== 'string' || !data.access_token.trim()) {
     throw new Error('Invalid account sign-in response. Please try again.')
   }
   return { mother: data }

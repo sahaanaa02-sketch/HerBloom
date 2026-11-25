@@ -23,6 +23,8 @@ import { Botanical, JourneyIllustration } from './LandingArtwork'
 
 
 const year = new Date().getFullYear()
+const supportEmail = (import.meta.env.VITE_SUPPORT_EMAIL || '').trim()
+const hasSupportEmail = /^[a-z0-9.]+@gmail\.com$/i.test(supportEmail)
 
 
 
@@ -287,7 +289,11 @@ export default function LandingPage({
           </nav>
           <div>
             <h3><Mail size={15} aria-hidden="true" />{t('contact')}</h3>
+            {hasSupportEmail ? (
+              <p><a className="break-all underline" href={"mailto:" + supportEmail}>{supportEmail}</a></p>
+            ) : (
             <p>{t('contact_email_coming_soon')}</p>
+            )}
             <p>{t('social_media_links_will_be_added_when_official_accounts_are_')}</p>
           </div>
           <div>

@@ -52,7 +52,7 @@ test('English and Tamil resources have matching keys across all namespaces', () 
   }
 })
 
-test('shared UI copy references exist and translated verification labels do not regress to literals', () => {
+test('shared UI copy references exist', () => {
   const src = fileURLToPath(new URL('../', import.meta.url))
   for (const path of readdirSync(src, { recursive: true })) {
     if (!path.endsWith('.jsx') || path.includes('.backup-')) continue
@@ -63,16 +63,11 @@ test('shared UI copy references exist and translated verification labels do not 
     for (const [, namespace, key] of code.matchAll(/\b(?:t|uiText|articleUi|localizeCopy|auditText)\(['"](common|landing|auth|onboarding|mother|admin):([a-z0-9_.]+)['"]/g)) {
       assert.ok(i18n.getResource('ta', namespace, key) !== undefined, path + ': ' + namespace + ':' + key)
     }
-    if (path.endsWith('AdminVerification.jsx')) {
-      assert.doesNotMatch(code, />\s*(?:Cancel|Authenticator code|Continue to verification)\s*</)
-    }
   }
 })
 
 test('authentication errors map known failures and hide unknown server diagnostics', () => {
   assert.equal(authErrorKey('Incorrect email or password.', 401), 'invalid_credentials')
-  assert.equal(authErrorKey('Invalid or already used authenticator code', 401), 'invalid_otp')
-  assert.equal(authErrorKey('Invalid or expired login challenge', 401), 'expired_challenge')
   assert.equal(authErrorKey('SQL details', 500), 'something_went_wrong_please_try_again')
   assert.equal(authErrorKey('', 422), 'invalid_input')
 })

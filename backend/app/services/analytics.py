@@ -1,6 +1,6 @@
 """Aggregates for observed mother engagement. Never return account-level rows."""
 import csv
-from datetime import date, timedelta
+from datetime import timedelta
 from io import StringIO
 
 from sqlalchemy import inspect, text

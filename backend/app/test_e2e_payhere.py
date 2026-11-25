@@ -17,7 +17,7 @@ from app.e2e_fixtures import ADMIN_EMAIL, MOTHER_EMAIL
 from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminPermission, AdminRole, AdminUser
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services import entitlements, free_quota, payhere, user_privacy
 from app.services.auth_service import create_access_token
 
@@ -61,7 +61,7 @@ def run():
                     permissions.append(permission or AdminPermission(key=key))
                 manager.roles.append(AdminRole(name="a12_sandbox_billing_manager",permissions=permissions))
                 outsider=AdminUser(name="E2E billing outsider",email="a12-billing-admin@example.com",
-                                   password_hash="synthetic",active=True,totp_enabled=True)
+                                   password_hash="synthetic",active=True)
                 db.add(outsider)
                 db.flush()
                 manager_id,outsider_id=manager.id,outsider.id

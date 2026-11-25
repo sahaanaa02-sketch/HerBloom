@@ -39,8 +39,8 @@ import WeeklySummary from './pages/mother/WeeklySummary'
 // ADMIN PORTAL - NEW
 // ============================================
 import AdminPortal from './pages/admin/AdminPortal'
-import AdminAuth from './pages/admin/AdminAuth'
 import { getAdminSession, revokeAdminSession } from './services/adminAuthApi'
+import { portalRoute, portalUrl } from './services/portalRouting'
 import AdminInviteSetup from './pages/admin/AdminInviteSetup'
 
 // ============================================
@@ -53,11 +53,9 @@ const adminHost = import.meta.env.VITE_PORTAL_MODE === 'admin'
 
 const motherSessionKey = 'herbloom.mother.token'
 
-const isolatedLogin = import.meta.env.MODE === 'e2e'
-const adminSessionKey = 'herbloom.e2e.admin.token'
+const adminSessionKey = import.meta.env.MODE === 'e2e' ? 'herbloom.e2e.admin.token' : 'herbloom.admin.token'
 
 function adminSession(token) {
-  if (!isolatedLogin) return null
   try {
     if (token === undefined) return sessionStorage.getItem(adminSessionKey)
     if (token) sessionStorage.setItem(adminSessionKey, token)
@@ -93,28 +91,43 @@ export default function App() {
     i18n.changeLanguage(motherLanguage ? normalizeLanguage(motherLanguage) : localLanguage())
   }, [motherLanguage])
 
-  const [savedToken] = useState(() =>
-    adminHost || !['/', '/login'].includes(window.location.pathname) ? null : motherSession()
+  const [initialPath] = useState(() => window.location.pathname)
+  const adminRoute = initialPath === '/admin' || initialPath === '/admin/login'
+  const accountRoute = ['/admin/setup', '/forgot-password', '/reset-password', '/verify-email'].includes(initialPath)
+  const [savedAdminToken] = useState(() =>
+    !accountRoute && import.meta.env.VITE_PORTAL_MODE !== 'mother' &&
+    (adminRoute || adminHost || ['/', '/login'].includes(initialPath)) ? adminSession() : null
   )
-  const [savedAdminToken] = useState(() => window.location.pathname === '/admin' ? adminSession() : null)
+  const [savedToken] = useState(() => !accountRoute && !adminHost && !adminRoute && !savedAdminToken ? motherSession() : null)
   const [loginMode, setLoginMode] = useState('login')
-  const [profileSection, setProfileSection] = useState(null)
   const [onboardingProfile, setOnboardingProfile] = useState(null)
-
-  const [view, setView] = useState(() =>
-    adminHost || (!isolatedLogin && ['/admin','/admin/login'].includes(window.location.pathname))
-      ? 'admin-login'
-      : (window.location.pathname === '/login' || (isolatedLogin && window.location.pathname.startsWith('/admin'))) ? 'login' : 'landing'
-  )
-
-  const [motherPage, setMotherPage] = useState('dashboard')
-  const [motherQuickSection, setMotherQuickSection] = useState(null)
-
+  const [view, setView] = useState(() => initialPath === '/' && !adminHost ? 'landing' : 'login')
+  const [motherRoute, setMotherRoute] = useState(() => portalRoute(window.location, '/mother'))
+  const motherPage = motherRoute.page || 'dashboard'
+  const motherQuickSection = motherRoute.section
+  const profileSection = motherPage === 'settings' ? motherRoute.section : null
+  const selectedArticleId = motherRoute.articleId
   const [loading, setLoading] = useState(Boolean(savedToken || savedAdminToken))
-
   const [error, setError] = useState('')
 
-  const [selectedArticleId, setSelectedArticleId] = useState(null)
+  function navigateMother(page, section = null, articleId = null, replace = false) {
+    const path = portalUrl(window.location, '/mother', { page, section, articleId })
+    window.history[replace ? 'replaceState' : 'pushState']({}, '', path)
+    setMotherRoute(portalRoute(window.location, '/mother'))
+  }
+
+  useEffect(() => {
+    const handlePopState = () => setMotherRoute(portalRoute(window.location, '/mother'))
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  useEffect(() => {
+    if (view === 'login' && !loading && window.location.pathname !== '/login' &&
+        !['/admin/setup', '/forgot-password', '/reset-password', '/verify-email'].includes(window.location.pathname)) {
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [view, loading])
 
   useEffect(() => {
     if (!savedAdminToken) return
@@ -122,14 +135,15 @@ export default function App() {
     getAdminSession(savedAdminToken, controller.signal).then((admin) => {
       if (!controller.signal.aborted) {
         setUser(admin)
+        if (window.location.pathname !== '/admin') window.history.replaceState({}, '', '/admin')
         setView('admin')
       }
     }).catch((reason) => {
       if (!controller.signal.aborted) {
-        adminSession(null)
+        const invalid = [401, 403].includes(reason.status)
+        if (invalid) adminSession(null)
         setError(reason.message)
-        setView(isolatedLogin ? 'login' : 'admin-login')
-        window.history.replaceState({}, '', isolatedLogin ? '/login' : '/admin/login')
+        setView(invalid ? 'login' : 'profile-error')
       }
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false)
@@ -152,6 +166,8 @@ export default function App() {
         return
       }
       setUser({ ...identity, access_token: savedToken, name: profile.display_name || identity.full_name, language: profile.language })
+      const path = data.onboarding_done ? '/mother' : '/onboarding'
+      if (window.location.pathname !== path) window.history.replaceState({}, '', path)
       setOnboardingProfile(data.onboarding_done ? null : data)
       setView(data.onboarding_done ? 'mother' : 'onboarding')
     }).catch((reason) => {
@@ -182,10 +198,8 @@ export default function App() {
       setLoginMode('login')
       setUser(null)
       setOnboardingProfile(null)
-      setSelectedArticleId(null)
       setLoading(false)
-      setView(user.role === 'ADMIN' && !isolatedLogin ? 'admin-login' : 'login')
-      window.history.replaceState({}, '', user.role === 'ADMIN' && !isolatedLogin ? '/admin/login' : '/login')
+      setView('login')
     }
     const delay = Math.max(0, expiration - Date.now())
     const timer = window.setTimeout(expire, delay)
@@ -266,14 +280,16 @@ export default function App() {
       )
 
       setUser({ ...loggedInUser, language: profileData.profile.language })
+      adminSession(null)
       motherSession(loggedInUser.access_token)
       if (profileData.onboarding_done) {
 
-        setMotherPage('dashboard')
+        navigateMother('dashboard', null, null, true)
         setView('mother')
 
       } else {
 
+        window.history.replaceState({}, '', '/onboarding')
         setOnboardingProfile(profileData)
         setView('onboarding')
 
@@ -330,19 +346,15 @@ export default function App() {
     const motherToken = user?.role === 'MOTHER' ? user.access_token : null
     motherSession(null)
     setLoginMode('login')
-    setMotherQuickSection(null)
-    setProfileSection(null)
 
     setUser(null)
     setOnboardingProfile(null)
 
-    setView(adminHost ? 'admin-login' : adminToken ? 'login' : 'landing')
+    setView('login')
 
-    window.history.replaceState({}, '', adminHost ? '/admin/login' : adminToken ? '/login' : '/')
+    window.history.replaceState({}, '', '/login')
 
-    setMotherPage('dashboard')
-
-    setSelectedArticleId(null)
+    setMotherRoute({})
 
     setError('')
     setLoading(Boolean(adminToken || motherToken))
@@ -380,7 +392,7 @@ export default function App() {
 
     setOnboardingProfile(null)
 
-    setMotherPage('dashboard')
+    navigateMother('dashboard', null, null, true)
 
     setView('mother')
 
@@ -392,7 +404,6 @@ export default function App() {
   // ============================================
 
   const handleMotherNavigate = (page, { openScanner = false, openBreathing = false } = {}) => {
-    setProfileSection(page === 'settings-language' ? 'language' : page === 'settings-plan' ? 'plan' : null)
 
     const pageAliases = {
 
@@ -446,26 +457,14 @@ export default function App() {
 
     if (availablePages.includes(resolvedPage)) {
 
-      // Opening AI Chat directly from sidebar should
-      // start without an old article selection.
-
-      if (
-        resolvedPage === 'chat' &&
-        motherPage !== 'chat'
-      ) {
-        setSelectedArticleId(null)
-      }
-
-      setMotherQuickSection(
-        resolvedPage === 'nutrition' && openScanner ? 'scanner'
-          : resolvedPage === 'wellbeing' && openBreathing ? 'breathing' : null
-      )
-      setMotherPage(resolvedPage)
+      const section = page === 'settings-language' ? 'language'
+        : page === 'settings-plan' ? 'plan'
+          : resolvedPage === 'nutrition' && openScanner ? 'scanner'
+            : resolvedPage === 'wellbeing' && openBreathing ? 'breathing' : null
+      navigateMother(resolvedPage, section, resolvedPage === 'chat' && motherPage === 'chat' ? selectedArticleId : null)
 
       return
     }
-
-    console.log('Mother Portal page pending:', page)
   }
 
 
@@ -475,9 +474,7 @@ export default function App() {
 
   const handleAskArticle = (articleId) => {
 
-    setSelectedArticleId(articleId)
-
-    setMotherPage('chat')
+    navigateMother('chat', null, articleId)
 
   }
 
@@ -488,9 +485,7 @@ export default function App() {
 
   const handleOpenArticle = (articleId) => {
 
-    setSelectedArticleId(articleId)
-
-    setMotherPage('learn')
+    navigateMother('learn', null, articleId)
 
   }
 
@@ -553,26 +548,12 @@ export default function App() {
         initialError={error.startsWith('common:') ? auditText(error) : error}
         onSuccess={handleLoginSuccess}
         onAdminVerified={import.meta.env.VITE_PORTAL_MODE !== 'mother' ? handleAdminLoginSuccess : undefined}
-        onBack={handleBackToLanding}
-      />
-    )
-
-  }
-
-
-  // ============================================
-  // SECURE ADMIN LOGIN AND TWO-FACTOR AUTH
-  // ============================================
-
-  if (view === 'admin-login' && !user) {
-    return (
-      <AdminAuth
-        onSuccess={handleAdminLoginSuccess}
-        initialError={error}
         onBack={adminHost ? undefined : handleBackToLanding}
       />
     )
+
   }
+
 
   // ============================================
   // PROFILE ERROR

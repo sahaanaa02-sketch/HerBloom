@@ -37,7 +37,7 @@ export default function AdminInviteSetup() {
           {result?.error && <p role="alert" className="text-red-800">{result.error}</p>}
           <button type="submit" disabled={busy} className="rounded-full bg-[#7B2346] px-5 py-2 text-white">{localizeCopy('auth:set_password')}</button>
         </form>}
-      <a href="/admin/login" className="text-[#7B2346] underline">{localizeCopy('common:admin_sign_in')}</a>
+      <a href="/login" className="text-[#7B2346] underline">{localizeCopy('common:admin_sign_in')}</a>
     </section>
   </main>
 }

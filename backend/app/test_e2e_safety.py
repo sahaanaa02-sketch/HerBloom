@@ -13,7 +13,7 @@ from app.e2e_fixtures import ADMIN_EMAIL, MOTHER_EMAIL
 from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminUser, AuditLog
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services.auth_service import create_access_token
 
 

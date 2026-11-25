@@ -157,14 +157,13 @@ def account_action(id: int, action: ACCOUNT_ACTION, request: Request, admin: Man
         db.commit()
     else:
         purpose = "password_reset" if action == "send-reset" else "verify_email"
-        raw = mail.issue_token(db,account,purpose)
+        raw, token_id = mail.issue_token(db,account,purpose)
         audit(db,request,admin,"users."+action+".requested",id)
         db.commit()
         try:
             mail.send_account_email(account["email"],purpose,raw)
         except Exception:
-            privacy.sql(db,"UPDATE mother_account_tokens SET used_at=%s WHERE token_hash=%s AND used_at IS NULL",
-                        (privacy.now(),privacy.secret_hash(raw)))
+            mail.invalidate_delivery(db, token_id)
             audit(db,request,admin,"users."+action+".delivery_failed",id)
             db.commit()
             raise HTTPException(503,"Account email could not be delivered.") from None

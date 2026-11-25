@@ -2,7 +2,7 @@
 from typing import Callable
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -12,7 +12,7 @@ from app.models.admin import (
     AdminUser,
     AdminRole,
 )
-from app.services.admin_security import admin_session_version, admin_settings, password_only_admin_enabled
+from app.services.admin_security import admin_session_version, admin_settings, require_admin_access
 
 
 admin_bearer = HTTPBearer(
@@ -22,12 +22,14 @@ admin_bearer = HTTPBearer(
 
 
 def get_current_admin(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(
         admin_bearer
     ),
     db: Session = Depends(get_db),
 ) -> AdminUser:
 
+    require_admin_access(request)
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,6 +49,7 @@ def get_current_admin(
                     "aud",
                     "exp",
                     "iat",
+                    "sv",
                 ]
             },
         )
@@ -83,20 +86,8 @@ def get_current_admin(
     if payload.get("sv", 0) != admin_session_version(db, admin.id):
         raise HTTPException(401, "Invalid or expired Admin token")
 
-    methods = payload.get("amr")
-    if methods == ["pwd"]:
-        if password_only_admin_enabled():
-            return admin
-        raise HTTPException(401, "This Admin sign-in method is unavailable.")
-
-    if methods != ["pwd", "otp"]:
+    if payload.get("amr") != ["pwd"]:
         raise HTTPException(401, "Invalid or expired Admin token", headers={"WWW-Authenticate": "Bearer"})
-
-    if not admin.totp_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Two-factor authentication is required",
-        )
 
     return admin
 

@@ -1,3 +1,4 @@
+import { portalRoute, portalUrl } from '../../services/portalRouting'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 import { useTranslation } from 'react-i18next'
 
@@ -126,12 +127,13 @@ export default function AdminPortal({ user, onLogout }) {
   const { t: localizeCopy } = useTranslation()
   const { t: uiText } = useTranslation('common')
   const { t } = useTranslation('admin')
-  const [page, setPage] = useState('overview')
-  const [contentSection, setContentSection] = useState('articles')
+  const [route, setRoute] = useState(() => portalRoute(window.location, '/admin'))
+  const page = route.page || 'overview'
+  const contentSection = ['articles', 'exercises', 'wellbeing', 'meals'].includes(route.section) ? route.section : 'articles'
+  const reviewTab = route.section === 'due' ? 'due' : 'queue'
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [admin, setAdmin] = useState(null)
   const [overviewRefresh, setOverviewRefresh] = useState(0)
-  const [reviewTab, setReviewTab] = useState('queue')
   const [error, setError] = useState('')
 
   const token = user?.access_token
@@ -157,14 +159,20 @@ export default function AdminPortal({ user, onLogout }) {
 
   const CurrentIcon = currentPage.icon
 
-  function navigate(id, destination = 'queue') {
+  useEffect(() => {
+    const handlePopState = () => setRoute(portalRoute(window.location, '/admin'))
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  function navigate(id, destination = null) {
     if (!allowedNavigation.some((item) => item.id === id)) {
       setError(auditText('common:you_do_not_have_permission_to_access_this_module'))
       return
     }
     setError('')
-    if (id === 'review') setReviewTab(destination)
-    setPage(id)
+    window.history.pushState({}, '', portalUrl(window.location, '/admin', { page: id, section: destination }))
+    setRoute(portalRoute(window.location, '/admin'))
 
     if (window.innerWidth < 900) {
       setSidebarOpen(false)
@@ -301,7 +309,7 @@ export default function AdminPortal({ user, onLogout }) {
                 {[['articles', 'articles'], ['exercises', 'exercises'], ['wellbeing', 'wellbeing_activities'], ['meals', 'meal_ideas']].map(([id, label]) => (
                   <button type="button" key={id} aria-pressed={contentSection === id}
                     className={`rounded-full border border-[#F6D3DB] px-4 py-2 text-sm font-semibold ${contentSection === id ? 'bg-[#7B2346] text-white' : 'bg-white text-[#7B2346]'}`}
-                    onClick={() => setContentSection(id)}>{t(label)}</button>
+                    onClick={() => navigate('content', id)}>{t(label)}</button>
                 ))}
               </nav>
               <AdminModuleErrorBoundary
@@ -339,7 +347,7 @@ export default function AdminPortal({ user, onLogout }) {
             </Suspense>
           ) : currentPage.id === 'settings' ? (
             <Suspense fallback={<div className="ha-message">{auditText('common:loading_settings_2')}</div>}>
-              <SettingsManager token={token} permissions={permissions} />
+              <SettingsManager key={route.section} token={token} permissions={permissions} initialTab={route.section} onTabChange={(tab) => navigate('settings', tab)} />
             </Suspense>
           ) : currentPage.id === 'users' ? (
             <Suspense fallback={<div className="ha-message">{auditText('common:loading_users')}</div>}>
@@ -347,7 +355,7 @@ export default function AdminPortal({ user, onLogout }) {
             </Suspense>
           ) : currentPage.id === 'review' ? (
             <Suspense fallback={<div className="ha-message">{auditText('common:loading_clinical_reviews')}</div>}>
-              <ClinicalReviewManager token={token} initialTab={reviewTab} />
+              <ClinicalReviewManager token={token} key={reviewTab} initialTab={reviewTab} onTabChange={(tab) => navigate('review', tab)} />
             </Suspense>
           ) : currentPage.id === 'safety' ? (
             <Suspense fallback={<div className="ha-message">{auditText('common:loading_safety_management')}</div>}>

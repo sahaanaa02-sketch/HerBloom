@@ -2,20 +2,12 @@ import { useTranslation } from 'react-i18next'
 
 import { useState } from 'react'
 import {
-  Activity,
   Heart,
   ShieldCheck,
 } from 'lucide-react'
 
 import MyRecoveryContent from './MyRecoveryContent'
 import ExerciseDisclaimer from '../../components/recovery/ExerciseDisclaimer'
-
-const COLORS = {
-  berry: '#7B2346',
-  burgundy: '#3A1224',
-  cream: '#FFF6F1',
-  pink: '#F6D3DB',
-}
 
 export default function MyRecovery(props) {
   const { t: auditText } = useTranslation()

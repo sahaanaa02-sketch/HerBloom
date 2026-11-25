@@ -14,16 +14,15 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.admin_overview import overview
 from app.services.app_settings import ready as session_schema_ready
-from app.routers.admin_2fa import create_admin_access_token
 from app.services import rate_limits
 from app.models.admin import AdminUser, AuditLog
 
 from app.services.admin_security import (
     verify_admin_password,
-    create_admin_2fa_challenge,
+    create_admin_access_token,
     admin_session_version,
     admin_settings,
-    password_only_admin_enabled,
+    require_admin_access,
 )
 
 from app.dependencies.admin_auth import (
@@ -58,6 +57,7 @@ def admin_login(
     request: Request,
     db: Session = Depends(get_db),
 ):
+    require_admin_access(request)
     rate_limits.enforce(db, "login:admin:" + rate_limits.source_ip(request), 30)
     email = str(data.email).strip().lower()
 
@@ -135,50 +135,19 @@ def admin_login(
             detail="Invalid email or password",
         )
 
-    if password_only_admin_enabled():
-        if not session_schema_ready(db):
-            raise HTTPException(503, "Admin session revocation is unavailable.")
-        version = admin_session_version(db, admin.id, lock=True)
-        admin.failed_attempts = 0
-        admin.locked_until = None
-        admin.last_login_at = now_naive
-        db.add(AuditLog(admin_id=admin.id, action="admin.login.success", entity="admin_auth",
-                        entity_id=str(admin.id), ip=client_ip, after_json={"method": "password"}))
-        payload = get_admin_profile(admin)
-        db.commit()
-        return {
-            "requires_2fa": False,
-            "access_token": create_admin_access_token(admin.id, version, password_only=True),
-            "token_type": "bearer",
-            "expires_in": admin_settings.ADMIN_TOKEN_MINUTES * 60,
-            "admin": payload,
-        }
-
-    challenge_token = create_admin_2fa_challenge(
-        admin.id, admin_session_version(db, admin.id)
-    )
-
-    db.add(
-        AuditLog(
-            admin_id=admin.id,
-            action="admin.login.password_verified",
-            entity="admin_auth",
-            entity_id=str(admin.id),
-            ip=client_ip,
-        )
-    )
-
+    version = admin_session_version(db, admin.id, lock=True)
+    admin.failed_attempts = 0
+    admin.locked_until = None
+    admin.last_login_at = now_naive
+    db.add(AuditLog(admin_id=admin.id, action="admin.login.success", entity="admin_auth",
+                    entity_id=str(admin.id), ip=client_ip, after_json={"method": "password"}))
+    payload = get_admin_profile(admin)
     db.commit()
-
     return {
-        "message": (
-            "Password verified. "
-            "Two-factor authentication required."
-        ),
-        "requires_2fa": True,
-        "setup_required": not admin.totp_enabled,
-        "challenge_token": challenge_token,
-        "expires_in": 300,
+        "access_token": create_admin_access_token(admin.id, version),
+        "token_type": "bearer",
+        "expires_in": admin_settings.ADMIN_TOKEN_MINUTES * 60,
+        "admin": payload,
     }
 
 
@@ -207,7 +176,6 @@ def get_admin_profile(
         "name": admin.name,
         "email": admin.email,
         "active": admin.active,
-        "totp_enabled": admin.totp_enabled,
         "roles": [
             role.name
             for role in admin.roles

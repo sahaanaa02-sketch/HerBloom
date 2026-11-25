@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
 from dotenv import dotenv_values, load_dotenv
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import EmailStr, SecretStr, field_validator, model_validator
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -54,6 +54,13 @@ class Settings(BaseSettings):
 
     A7_EXPORTS_ENABLED: bool = False
     A7_OUTBOUND_EMAIL_ENABLED: bool = False
+    MOTHER_PASSWORD_RESET_EMAIL_ENABLED: bool = False
+    ACCOUNT_SMTP_HOST: str | None = None
+    ACCOUNT_SMTP_PORT: int = 587
+    ACCOUNT_SMTP_FROM: EmailStr | None = None
+    ACCOUNT_SMTP_USER: str | None = None
+    ACCOUNT_SMTP_PASSWORD: SecretStr | None = None
+    ACCOUNT_EMAIL_FRONTEND_ORIGIN: str | None = None
     STAGE2_ENABLED: bool = False
     A9_ADMIN_INVITES_ENABLED: bool = False
 
@@ -69,7 +76,7 @@ class Settings(BaseSettings):
     A12_PAYHERE_APP_ID: str | None = None
     A12_PAYHERE_APP_SECRET: SecretStr | None = None
 
-    @field_validator("A14_HOSTED", "A12_PAYHERE_SANDBOX_ENABLED", "A7_EXPORTS_ENABLED", "A7_OUTBOUND_EMAIL_ENABLED", "STAGE2_ENABLED", "A9_ADMIN_INVITES_ENABLED", mode="before")
+    @field_validator("A14_HOSTED", "A12_PAYHERE_SANDBOX_ENABLED", "A7_EXPORTS_ENABLED", "A7_OUTBOUND_EMAIL_ENABLED", "MOTHER_PASSWORD_RESET_EMAIL_ENABLED", "STAGE2_ENABLED", "A9_ADMIN_INVITES_ENABLED", mode="before")
     @classmethod
     def explicit_feature_opt_in(cls, value):
         return value is True or (isinstance(value, str) and value.strip().lower() == "true")
@@ -84,6 +91,24 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
+
+    @model_validator(mode="after")
+    def validate_password_reset_email(self):
+        if not self.MOTHER_PASSWORD_RESET_EMAIL_ENABLED:
+            return self
+        if (not self.ACCOUNT_SMTP_HOST or not re.fullmatch(r"[A-Za-z0-9.-]+", self.ACCOUNT_SMTP_HOST)
+                or not 1 <= self.ACCOUNT_SMTP_PORT <= 65535 or not self.ACCOUNT_SMTP_FROM
+                or not (self.ACCOUNT_SMTP_USER or "").strip() or not self.ACCOUNT_SMTP_PASSWORD
+                or not self.ACCOUNT_SMTP_PASSWORD.get_secret_value().strip()):
+            raise ValueError("Password reset email requires a complete authenticated SMTP configuration.")
+        origin = (self.A14_MOTHER_ORIGIN if self.A14_HOSTED
+                  else getattr(self, "E2E_FRONTEND_ORIGIN", self.ACCOUNT_EMAIL_FRONTEND_ORIGIN))
+        url = urlsplit(origin or "")
+        if (not url.hostname or (url.scheme != "https" and
+                not (url.scheme == "http" and url.hostname in ("localhost", "127.0.0.1")))
+                or url.username or url.password or url.path or url.query or url.fragment):
+            raise ValueError("Password reset email requires an exact Mother frontend origin.")
+        return self
 
     @model_validator(mode="after")
     def validate_hosted(self):
@@ -116,14 +141,14 @@ class E2ESettings(Settings):
     E2E_API_PORT: int
     E2E_FRONTEND_ORIGIN: Literal["http://127.0.0.1:5183"]
     E2E_MEDIA_DIR: Path
-    E2E_ADMIN_PASSWORD_ONLY: bool = True
     E2E_GOOGLE_ENABLED: bool = False
     E2E_GOOGLE_CLIENT_ID: str | None = None
+    E2E_PASSWORD_RESET_TEST_RECIPIENT: EmailStr | None = None
 
     E2E_LIVE_MEAL_SCANNER_ENABLED: bool = False
     E2E_MEAL_SCANNER_GEMINI_API_KEY: SecretStr | None = None
 
-    @field_validator("E2E_GOOGLE_ENABLED", "E2E_ADMIN_PASSWORD_ONLY", "E2E_LIVE_MEAL_SCANNER_ENABLED", mode="before")
+    @field_validator("E2E_GOOGLE_ENABLED", "E2E_LIVE_MEAL_SCANNER_ENABLED", mode="before")
     @classmethod
     def parse_explicit_e2e_flag(cls, value):
         return value is True or (isinstance(value, str) and value.strip().lower() == "true")
@@ -147,6 +172,8 @@ class E2ESettings(Settings):
             not client_id or not re.fullmatch(r"[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com", client_id)
         ):
             raise ValueError("E2E Google requires a valid dedicated web client ID.")
+        if self.MOTHER_PASSWORD_RESET_EMAIL_ENABLED and not self.E2E_PASSWORD_RESET_TEST_RECIPIENT:
+            raise ValueError("E2E password reset delivery requires one designated test recipient.")
         if self.E2E_API_PORT != 8100:
             raise ValueError("E2E requires API port 8100.")
         if self.DB_NAME != E2E_DB_NAME or self.DB_USER != E2E_DB_USER:

@@ -12,7 +12,7 @@ from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.nutrition import Food
 from app.models.mother_profile import MotherProfile
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services import entitlements, free_quota
 from app.services.auth_service import create_access_token
 from app.services.clinical_review import now
@@ -40,7 +40,7 @@ def run():
                         "nutrition.create", "nutrition.edit", "nutrition.view"}
                 permissions = session.scalars(select(AdminPermission).where(AdminPermission.key.in_(keys))).all()
                 editor = AdminUser(email="a6-editor.e2e@example.com", name="Synthetic A6 editor",
-                                   password_hash="Synthetic token-only account", active=True, totp_enabled=True,
+                                   password_hash="Synthetic token-only account", active=True,
                                    roles=[AdminRole(name="synthetic_a6_editor", permissions=permissions)])
                 session.add(editor)
                 session.flush()

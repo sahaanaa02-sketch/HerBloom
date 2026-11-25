@@ -1,9 +1,7 @@
 """Authenticated A9 regressions. Writes roll back and SMTP is mocked."""
 from datetime import timedelta
-from urllib.parse import parse_qs, urlsplit
 from unittest.mock import patch
 
-import pyotp
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +12,7 @@ from app.e2e_fixtures import ADMIN_EMAIL, MOTHER_EMAIL
 from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.routers.admin_settings import now
 from app.services import admin_invitation, app_settings
 from app.services.auth_service import create_access_token
@@ -25,8 +23,7 @@ def run():
     preflight()
     from app.main import app
 
-    # Invitation enrollment exercises the TOTP path even in password-only E2E profiles.
-    with patch.object(settings, "E2E_ADMIN_PASSWORD_ONLY", False), engine.connect() as conn:
+    with engine.connect() as conn:
         tx = conn.begin()
         active_session = None
 
@@ -42,7 +39,7 @@ def run():
                 editor = AdminRole(name="synthetic_a9_editor")
                 permission = s.scalar(select(AdminPermission).where(AdminPermission.key=="audit.view"))
                 auditor=AdminUser(email="a9-auditor.e2e@example.com",name="=Synthetic auditor",active=True,
-                                  totp_enabled=True,password_hash="Synthetic token-only account",
+                                  password_hash="Synthetic token-only account",
                                   roles=[AdminRole(name="synthetic_a9_auditor",permissions=[permission])])
                 s.add_all([editor,auditor])
                 s.flush()
@@ -72,7 +69,7 @@ def run():
             admin("GET","/audit",401,"mother")
             admin("POST",f"/admins/{primary}/deactivate",409)
             page=admin("GET","/admins")
-            assert page["total"]>=2 and all(set(r)=={"id","name","email","active","totp_enabled","last_login_at","roles"} for r in page["items"])
+            assert page["total"]>=2 and all(set(r)=={"id","name","email","active","last_login_at","roles"} for r in page["items"])
             body={"name":"Synthetic invited A9 editor","email":"a9-editor.e2e@example.com","role_ids":[role_id]}
             with patch.object(settings,"A9_ADMIN_INVITES_ENABLED",False), patch.object(admin_invitation.smtplib,"SMTP") as disabled:
                 assert not admin("GET","/admins")["invitation_delivery_enabled"]
@@ -85,7 +82,10 @@ def run():
                       "ACCOUNT_EMAIL_FRONTEND_ORIGIN":"https://e2e.invalid"}
             captured=[]
             def capture(msg):
-                captured.append(msg.get_content().strip().split("#")[-1])
+                content = msg.get_content().strip()
+                assert "set your password and then sign in to HerBloom." in content
+                assert "two-factor" not in content.lower()
+                captured.append(content.split("#")[-1])
             with patch.object(settings,"A9_ADMIN_INVITES_ENABLED",True), patch.object(
                 admin_invitation,"external_setting",side_effect=lambda key,default=None:provider.get(key,default)
             ), patch.object(admin_invitation.smtplib,"SMTP") as smtp:
@@ -101,26 +101,21 @@ def run():
                 assert handler.starttls.call_count==handler.send_message.call_count==2
                 invite=captured[-1]
             password="Synthetic invitational password"
-            call("POST","/api/admin/auth/accept-invite",200,None,json={"token":invite,"password":password})
+            accepted = call("POST","/api/admin/auth/accept-invite",200,None,json={"token":invite,"password":password})
+            assert accepted.json() == {"message": "Password set. Sign in to HerBloom."}
             call("POST","/api/admin/auth/accept-invite",400,None,json={"token":invite,"password":password})
             bad=call("POST","/api/admin/auth/accept-invite",422,None,json={"token":"PROBE_SECRET","password":"x"})
             assert "PROBE_SECRET" not in bad.text
             login=call("POST","/api/admin/auth/login",200,None,json={"email":body["email"],"password":password}).json()
-            challenge=login["challenge_token"]
-            setup=call("POST","/api/admin/auth/2fa/setup",200,None,json={"challenge_token":challenge}).json()
-            secret=parse_qs(urlsplit(setup["otpauth_uri"]).query)["secret"][0]
-            credentials=call("POST","/api/admin/auth/2fa/verify",200,None,json={"challenge_token":challenge,"code":pyotp.TOTP(secret).now()}).json()
-            tokens["invitee"]=credentials["access_token"]
+            tokens["invitee"]=login["access_token"]
             call("GET","/api/admin/me",200,"invitee")
             admin("GET","/admins",403,"invitee")
-            admin("POST",f"/admins/{uid}/reset-2fa")
-            call("GET","/api/admin/me",401,"invitee")
-            call("POST","/api/admin/auth/2fa/setup",401,None,json={"challenge_token":challenge})
             roles=admin("PUT",f"/admins/{uid}/roles",json={"role_ids":[role_id]})
             assert [role["id"] for role in roles["roles"]]==[role_id]
+            call("GET","/api/admin/me",401,"invitee")
             admin("POST",f"/admins/{uid}/deactivate")
             call("POST","/api/admin/auth/login",401,None,json={"email":body["email"],"password":password})
-            print("PASS 48-hour single-use invitations, mocked TLS mail, existing 2FA enrollment and session invalidation")
+            print("PASS 48-hour single-use invitations, mocked TLS mail, direct password login and session invalidation")
 
             baseline=admin("GET")
             changed={**baseline,"support_email":"support@example.com","maintenance_banner_en":"Synthetic notice",
@@ -163,7 +158,7 @@ def run():
             with Session(bind=conn,join_transaction_mode="create_savepoint") as s:
                 actions=set(s.scalars(select(AuditLog.action)))
                 assert {"settings.updated","settings.audit.downloaded","admin.invite.sent","admin.invite.accepted",
-                        "admin.reset-2fa","admin.roles.updated","admin.deactivate","legal.published"}<=actions
+                        "admin.roles.updated","admin.deactivate","legal.published"}<=actions
                 assert app_settings.read_settings(s).stage2_enabled
             print("PASS audit filters, redacted JSON differences, CSV injection protection and admin audit events")
         finally:

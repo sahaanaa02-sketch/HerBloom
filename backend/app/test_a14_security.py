@@ -3,7 +3,6 @@ from inspect import getclosurevars
 import re
 
 import jwt
-import pyotp
 import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -35,8 +34,6 @@ def demo_email(role):
 @pytest.fixture
 def environment(monkeypatch):
     monkeypatch.setattr(a14_demo, "demo_email", demo_email)
-    from app.config import settings
-    monkeypatch.setattr(settings, "E2E_ADMIN_PASSWORD_ONLY", False)
     authorize_e2e_launcher()
     preflight()
     from app.main import app
@@ -77,18 +74,11 @@ def login(call,role,credentials):
     password=credentials[role]["password"]
     challenge=call("POST","/api/admin/auth/login",json={"email":demo_email(role),"password":password})
     assert challenge.status_code==200,challenge.status_code
-    body=challenge.json()
-    assert body["requires_2fa"] and "access_token" not in body
-    assert call("GET","/api/admin/me",body["challenge_token"]).status_code==401
-    code=pyotp.TOTP(credentials[role]["totp_secret"]).now()
-    verified=call("POST","/api/admin/auth/2fa/verify",json={"challenge_token":body["challenge_token"],"code":code})
-    assert verified.status_code==200,verified.status_code
-    result=verified.json()
+    result=challenge.json()
     token=result["access_token"]
+    assert "challenge_token" not in result
     claims=jwt.decode(token,options={"verify_signature":False})
-    assert claims["exp"]-claims["iat"]==3600
-    assert call("POST","/api/admin/auth/2fa/verify",json={
-        "challenge_token":body["challenge_token"],"code":code}).status_code==401
+    assert claims["exp"]-claims["iat"]==3600 and claims["amr"]==["pwd"]
     return token
 
 
@@ -101,8 +91,7 @@ def admin_routes(routes):
 
 
 PUBLIC={
-    "/api/admin/auth/login","/api/admin/auth/2fa/setup",
-    "/api/admin/auth/2fa/verify","/api/admin/auth/accept-invite",
+    "/api/admin/auth/login","/api/admin/auth/accept-invite",
 }
 DYNAMIC={
     "get_admin_profile":"authenticated", "queue":"clinical_list","due":"clinical_list",
@@ -119,9 +108,9 @@ PARAMS={"resource":"announcements","entity":"articles","feature":"chat","referen
 def expectation(route, role):
     permissions=ROLE_PERMISSIONS[role]
     for dep in route.dependant.dependencies:
-        if dep.call.__name__=="permission_checker":
+        if getattr(dep.call, "__name__", None)=="permission_checker":
             return getclosurevars(dep.call).nonlocals["permission_key"] in permissions
-        if dep.call.__name__=="require_view":
+        if getattr(dep.call, "__name__", None)=="require_view":
             return bool({"billing.view","subscriptions.view"} & permissions)
     gate=DYNAMIC[route.endpoint.__name__]
     if gate=="authenticated":
@@ -146,7 +135,7 @@ SESSION_MUTATIONS = {"/api/admin/auth/logout"}
 def test_admin_route_matrix(environment):
     app,call,credentials,review=environment
     roles={role:login(call,role,credentials) for role in ROLE_PERMISSIONS}
-    _,password,_=fixture_credentials()
+    _,password=fixture_credentials()
     mother=call("POST","/auth/login",data={"username":MOTHER_EMAIL,"password":password})
     assert mother.status_code==200,mother.status_code
     mother_token=mother.json()["access_token"]
@@ -193,8 +182,8 @@ def test_login_limits_and_redaction(environment):
     for _ in range(30):
         assert call("POST","/auth/login",data={"username":"a14-unknown@example.com","password":"synthetic"}).status_code==401
     assert call("POST","/auth/login",data={"username":"a14-unknown@example.com","password":"synthetic"}).status_code==429
-    assert call("POST","/api/admin/auth/2fa/setup",json={"challenge_token":"synthetic-invalid"}).status_code==401
-    assert call("POST","/api/admin/auth/2fa/verify",json={"challenge_token":"synthetic-invalid","code":"000000"}).status_code==401
+    assert call("POST","/api/admin/auth/2fa/setup",json={"challenge_token":"synthetic-invalid"}).status_code==404
+    assert call("POST","/api/admin/auth/2fa/verify",json={"challenge_token":"synthetic-invalid","code":"000000"}).status_code==404
 
 
 def test_media_content_and_headers(environment,monkeypatch,tmp_path):
@@ -303,52 +292,6 @@ def test_scan_photo_privacy_and_upload_size(environment):
     assert response.headers["cache-control"]=="no-store"
 
 
-def test_admin_challenge_rejects_wrong_and_expired_codes(environment):
-    from datetime import datetime, timedelta, timezone
-
-    from app.services.admin_security import admin_settings
-
-    _, call, credentials, _ = environment
-    role = "support"
-    challenge = call("POST", "/api/admin/auth/login", json={
-        "email": demo_email(role), "password": credentials[role]["password"],
-    })
-    assert challenge.status_code == 200
-    data = challenge.json()
-    assert data["requires_2fa"] and "access_token" not in data
-    token = data["challenge_token"]
-    assert call("GET", "/api/admin/me", token).status_code == 401
-    verifier = pyotp.TOTP(credentials[role]["totp_secret"])
-    now = datetime.now(timezone.utc)
-    neighboring_codes = {verifier.at(now + timedelta(seconds=30 * offset)) for offset in range(-2, 3)}
-    wrong = next(code for code in ("000000", "111111", "222222", "333333", "444444", "555555")
-                 if code not in neighboring_codes)
-    denied = call("POST", "/api/admin/auth/2fa/verify", json={"challenge_token": token, "code": wrong})
-    assert denied.status_code == 401 and "access_token" not in denied.json()
-    assert "authenticator code" in denied.json()["detail"]
-
-    claims = jwt.decode(token, options={"verify_signature": False})
-    claims.update(iat=now - timedelta(minutes=6), exp=now - timedelta(minutes=1))
-    expired = jwt.encode(claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")
-    denied = call("POST", "/api/admin/auth/2fa/verify",
-                  json={"challenge_token": expired, "code": verifier.now()})
-    assert denied.status_code == 401 and "access_token" not in denied.json()
-    assert "expired login challenge" in denied.json()["detail"]
-
-    access = login(call, role, credentials)
-    access_claims = jwt.decode(access, options={"verify_signature": False})
-    access_claims.pop("amr")
-    invalid = jwt.encode(access_claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")
-    assert call("GET", "/api/admin/me", invalid).status_code == 401
-    assert call("POST", "/auth/logout", access).status_code == 401
-    access_claims["amr"] = ["pwd", "otp"]
-    access_claims.update(iat=now - timedelta(minutes=61), exp=now - timedelta(minutes=1))
-    expired_access = jwt.encode(access_claims, admin_settings.ADMIN_JWT_SECRET, algorithm="HS256")
-    assert call("GET", "/api/admin/me", expired_access).status_code == 401
-    assert call("POST", "/api/admin/auth/logout", access).status_code == 204
-    assert call("GET", "/api/admin/me", access).status_code == 401
-
-
 def test_mother_registration_throttle(environment):
     _, call, _, _ = environment
     signup = {"name": "Synthetic Mother", "email": "phase3-limit.e2e@example.com",
@@ -359,3 +302,80 @@ def test_mother_registration_throttle(environment):
     limited = call("POST", "/auth/register", json=signup)
     assert limited.status_code == 429
     assert limited.headers["retry-after"] == "60"
+
+
+def test_password_only_admin_login_in_guarded_e2e(environment, monkeypatch):
+    _, call, credentials, _ = environment
+    sessions = {}
+    for role in ("super_admin", "content_editor"):
+        response = call("POST", "/api/admin/auth/login", json={
+            "email": demo_email(role), "password": credentials[role]["password"],
+        })
+        assert response.status_code == 200
+        payload = response.json()
+        assert "requires_2fa" not in payload and "challenge_token" not in payload
+        token = payload["access_token"]
+        sessions[role] = token
+        profile = call("GET", "/api/admin/me", token).json()
+        assert "totp_enabled" not in profile
+        assert role in profile["roles"]
+        assert set(profile["permissions"]) == set(ROLE_PERMISSIONS[role])
+        claims = jwt.decode(token, options={"verify_signature": False})
+        assert claims["amr"] == ["pwd"] and claims["exp"] - claims["iat"] == 3600
+    assert sessions["super_admin"] != sessions["content_editor"]
+    admin = sessions["super_admin"]
+    assert call("POST", "/api/admin/auth/2fa/setup", json={"challenge_token": "synthetic"}).status_code == 404
+    assert call("POST", "/api/admin/auth/2fa/verify",
+                json={"challenge_token": "synthetic", "code": "123456"}).status_code == 404
+    assert call("POST", "/api/admin/auth/google/challenge").status_code == 404
+    assert call("POST", "/api/admin/auth/google/link/challenge", admin,
+                json={"password": "synthetic", "code": "123456"}).status_code == 404
+    assert call("GET", "/api/admin/auth/google/link", admin).status_code == 404
+    assert call("POST", "/api/admin/settings/admins/999999/reset-2fa", admin).status_code == 404
+    assert call("POST", "/api/admin/auth/logout", admin).status_code == 204
+    assert call("GET", "/api/admin/me", admin).status_code == 401
+    assert call("GET", "/api/admin/me", sessions["content_editor"]).status_code == 200
+
+
+def test_admin_access_requires_loopback_and_rejects_hosted(monkeypatch):
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    from app.services import admin_security
+
+    monkeypatch.setattr(admin_security, "E2E_MODE", False)
+    local = SimpleNamespace(A14_HOSTED=False, DB_NAME="herbloom_db", DB_HOST="127.0.0.1")
+    monkeypatch.setattr(admin_security, "settings", local)
+    request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"),
+                              url=SimpleNamespace(hostname="127.0.0.1"),
+                              headers={"origin": "http://localhost:5173"})
+    admin_security.require_admin_access(request)
+    request.client.host = "192.0.2.1"
+    with pytest.raises(HTTPException) as denied:
+        admin_security.require_admin_access(request)
+    assert denied.value.status_code == 403
+    request.client.host = "127.0.0.1"
+    local.A14_HOSTED = True
+    with pytest.raises(HTTPException) as denied:
+        admin_security.require_admin_access(request)
+    assert denied.value.status_code == 403
+
+
+def test_last_super_admin_counts_active_accounts_without_totp_in_local_policy(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+    from fastapi import HTTPException
+    from app.routers import admin_settings
+
+    db = MagicMock()
+    role = SimpleNamespace(name="super_admin")
+    actor = SimpleNamespace(id=2, roles=[role])
+    account = SimpleNamespace(id=1, active=True, roles=[role])
+    db.scalar.return_value = account
+    db.execute.return_value.first.return_value = None
+    monkeypatch.setattr(admin_settings, "lock_super_role", lambda _: None)
+    with pytest.raises(HTTPException) as error:
+        admin_settings.locked_admin(db, account.id, actor)
+    assert error.value.status_code == 409
+    assert "totp_enabled" not in str(db.execute.call_args.args[0])
+    db.execute.return_value.first.return_value = (2,)
+    assert admin_settings.locked_admin(db, account.id, actor) is account

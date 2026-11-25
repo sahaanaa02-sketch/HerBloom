@@ -95,7 +95,7 @@ export default function Step4Health({
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="hb-onboarding-step hb-onboarding-health space-y-4">
       {version !== 2 && <StepHeading
         title="Your Health"
         subtitle="A few optional questions help us provide more relevant recovery information."
@@ -122,7 +122,7 @@ export default function Step4Health({
         title="Have you experienced any of these health conditions?"
         helper="Choose Yes, No, or Not sure for each condition."
       >
-        <div className="space-y-3">
+        <div className="hb-onboarding-conditions space-y-3">
           {conditions.map(({ key, label }) => (
             <div
               key={key}

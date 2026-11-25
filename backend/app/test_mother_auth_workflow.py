@@ -127,24 +127,67 @@ def test_mother_authentication_flows(monkeypatch):
             assert profile["onboarding_done"] and profile["profile"]["language"] == "ta"
             call("GET", "/dashboard/today", 200, fresh)
 
+            clock = mother_account.now()
+            monkeypatch.setattr(mother_account, "now", lambda: clock)
             generic = call("POST", "/auth/forgot-password", 202, json={"email": email})
             assert call("POST", "/auth/forgot-password", 202, json={"email": "missing@example.com"}) == generic
-            assert len(captured) == 1
+            assert call("POST", "/auth/forgot-password", 202, json={"email": email}) == generic
+            assert len(captured) == 1  # Resend cooldown is enforced on the server.
             first = captured[-1][2]
+            assert len(first) == 6 and first.isascii() and first.isdigit()
             with isolated() as db:
-                user_privacy.sql(db, "UPDATE mother_account_tokens SET expires_at=%s WHERE token_hash=%s",
-                                 (user_privacy.now() - timedelta(minutes=1), user_privacy.secret_hash(first)))
+                user = db.scalar(select(User).where(User.email == email))
+                entry = user_privacy.sql(db, "SELECT token_hash,expires_at FROM mother_account_tokens WHERE user_id=%s",
+                                         (user.id,)).one()
+                assert entry.token_hash == mother_account.otp_digest(
+                    {"id": user.id, "email": email}, first, entry.expires_at)
+                legacy = "x" * 43
+                mother_account.store_token(db, {"id": user.id, "email": email}, "password_reset",
+                                           user_privacy.secret_hash(legacy), clock + timedelta(hours=1))
                 db.commit()
-            call("POST", "/auth/password-reset/verify", 400, json={"token": first})
+            call("POST", "/auth/reset-password", 400, json={"token": legacy, "password": password})
+            call("POST", "/auth/reset-password", 422, json={"token": first, "password": password})
+            clock += timedelta(minutes=5)
+            expired = call("POST", "/auth/password-reset/verify", 400, json={"email": email, "code": first})
+            assert expired["detail"] == "Verification code expired."
+            call("POST", "/auth/forgot-password", 202, json={"email": email})
+            second = captured[-1][2]
+            assert len(captured) == 2 and second != first
+            wrong = f"{(int(second) + 1) % 1_000_000:06d}"
+            invalid = call("POST", "/auth/password-reset/verify", 400, json={"email": email, "code": first})
+            assert call("POST", "/auth/password-reset/verify", 400,
+                        json={"email": "missing@example.com", "code": wrong}) == invalid
+            for _ in range(4):
+                call("POST", "/auth/password-reset/verify", 400, json={"email": email, "code": wrong})
+            call("POST", "/auth/password-reset/verify", 400, json={"email": email, "code": second})
+            clock += timedelta(seconds=60)
             call("POST", "/auth/forgot-password", 202, json={"email": email})
             current = captured[-1][2]
-            call("POST", "/auth/password-reset/verify", 200, json={"token": current})
+            grant = call("POST", "/auth/password-reset/verify", 200,
+                         json={"email": email, "code": current})["reset_token"]
             replacement = "Synthetic second password!"
-            call("POST", "/auth/reset-password", 200, json={"token": current, "password": replacement})
-            call("POST", "/auth/password-reset/verify", 400, json={"token": current})
-            call("POST", "/auth/reset-password", 400, json={"token": current, "password": password})
+            call("POST", "/auth/password-reset/verify", 400, json={"email": email, "code": current})
+            call("POST", "/auth/reset-password", 200, json={"token": grant, "password": replacement})
+            call("POST", "/auth/reset-password", 400, json={"token": grant, "password": password})
             call("GET", "/auth/me", 401, original)
+            call("POST", "/auth/login", 401, data={"username": email, "password": password})
             call("POST", "/auth/login", 200, data={"username": email, "password": replacement})
+
+            assert call("POST", "/auth/forgot-password", 202, json={"email": email}) == generic
+            assert len(captured) == 3  # Per-account issuance limit.
+            failure_email = f"auth-{uuid4().hex}@example.com"
+            call("POST", "/auth/register", 201, json={**signup, "email": failure_email})
+            failed = []
+            def transport_failure(_email, _purpose, code):
+                failed.append(code)
+                raise OSError("private provider diagnostic")
+
+            with monkeypatch.context() as transport:
+                transport.setattr(mother_account, "send_account_email", transport_failure)
+                assert call("POST", "/auth/forgot-password", 202, json={"email": failure_email}) == generic
+                assert len(failed) == 1
+                call("POST", "/auth/password-reset/verify", 400,
+                     json={"email": failure_email, "code": failed[0]})
 
             call("POST", "/auth/google/challenge", 503)
             monkeypatch.setattr(auth.settings, "E2E_GOOGLE_ENABLED", True)
@@ -162,6 +205,11 @@ def test_mother_authentication_flows(monkeypatch):
             claims["nonce"] = challenge["nonce"]
             first_google = exchange(challenge, 200)
             assert first_google["user"]["role"] == "MOTHER"
+            assert call("POST", "/auth/forgot-password", 202, json={"email": google_email}) == generic
+            assert len(captured) == 3
+            with isolated() as db:
+                assert user_privacy.sql(db, "SELECT COUNT(*) FROM mother_account_tokens WHERE user_id=%s",
+                                        (first_google["user"]["id"],)).scalar_one() == 0
             exchange(challenge, 401)
             call("GET", "/api/admin/me", 401, first_google["access_token"])
             assert call("GET", "/profile", 200, first_google["access_token"])["onboarding_step"] == 1
@@ -182,6 +230,39 @@ def test_mother_authentication_flows(monkeypatch):
             assert completed["user"]["id"] == first_google["user"]["id"]
             assert call("GET", "/profile", 200, completed["access_token"])["onboarding_done"]
             call("GET", "/dashboard/today", 200, completed["access_token"])
+            # A matching verified Google address only offers linking until the password is proven.
+            existing_email = f"auth-{uuid4().hex}@gmail.com"
+            existing = call("POST", "/auth/register", 201,
+                            json={**signup, "email": existing_email})["user"]["id"]
+            with isolated() as db:
+                user_privacy.sql(db, "UPDATE users SET email_verified_at=%s WHERE id=%s",
+                                 (user_privacy.now(), existing))
+                db.commit()
+            # Even a verified local email does not bypass proof of account ownership.
+            linking = call("POST", "/auth/google/challenge", 200)
+            claims.update(sub=uuid4().hex, email=existing_email, email_verified=False, nonce=linking["nonce"])
+            exchange(linking, 401)
+            linking = call("POST", "/auth/google/challenge", 200)
+            claims.update(email_verified=True, nonce=linking["nonce"])
+            offer = exchange(linking, 409)
+            assert set(offer) == {"code", "ticket"} and offer["code"] == "google_link_required"
+            call("POST", "/auth/google/link-login", 401,
+                 json={"ticket": offer["ticket"], "password": "incorrect"})
+            try_link = {"ticket": offer["ticket"], "password": password}
+            call("POST", "/auth/google/link-login", 403, request_origin="https://wrong.example", json=try_link)
+            linked = call("POST", "/auth/google/link-login", 200, json=try_link)
+            assert linked["user"]["id"] == existing
+            call("GET", "/api/admin/me", 401, linked["access_token"])
+            call("POST", "/auth/google/link-login", 401, json=try_link)
+            again = call("POST", "/auth/google/challenge", 200)
+            claims["nonce"] = again["nonce"]
+            assert exchange(again, 200)["user"]["id"] == existing
+            call("POST", "/auth/login", 200, data={"username": existing_email, "password": password})
+            call("POST", "/auth/google/unlink", 200, linked["access_token"], json={"password": password})
+            call("GET", "/auth/me", 401, linked["access_token"])
+            call("POST", "/auth/google/link-login", 401, json=try_link)
+            call("POST", "/auth/login", 200, data={"username": existing_email, "password": password})
+
             collision = call("POST", "/auth/google/challenge", 200)
             claims.update(sub=uuid4().hex, email=google_email, nonce=collision["nonce"])
             exchange(collision, 409)
@@ -287,3 +368,61 @@ def test_onboarding_concurrent_profile_creation():
     finally:
         with SessionLocal.begin() as db:
             db.execute(delete(User).where(User.id == user_id, User.username == identifier))
+
+
+def test_hosted_reset_opt_in_does_not_enable_administrative_email(monkeypatch, tmp_path):
+    import pytest
+    from pydantic import ValidationError
+    from app import config
+
+    monkeypatch.setattr(config, "E2E_MODE", False)
+    ca = tmp_path / "ca.pem"
+    ca.touch()
+    values = dict(
+        DB_USER="fixture", DB_PASSWORD="fixture", DB_NAME="fixture", DB_SSL_CA=ca,
+        SECRET_KEY="test-only-key-" * 3, A14_HOSTED=True,
+        A14_ADMIN_ORIGIN="https://admin.example.com", A14_MOTHER_ORIGIN="https://mother.example.com",
+        A14_MEDIA_DIR=tmp_path / "media", MOTHER_PASSWORD_RESET_EMAIL_ENABLED=True,
+        ACCOUNT_SMTP_HOST="smtp.example.com", ACCOUNT_SMTP_FROM="reset@example.com",
+        ACCOUNT_SMTP_USER="fixture", ACCOUNT_SMTP_PASSWORD="fixture",
+    )
+    hosted = config.Settings(_env_file=None, **values)
+    assert hosted.MOTHER_PASSWORD_RESET_EMAIL_ENABLED
+    assert not hosted.A7_OUTBOUND_EMAIL_ENABLED
+    with pytest.raises(ValidationError, match="authenticated SMTP configuration"):
+        config.Settings(_env_file=None, **{**values, "ACCOUNT_SMTP_PASSWORD": None})
+    with pytest.raises(ValidationError, match="Restricted A7 and A9"):
+        config.Settings(_env_file=None, **values, A7_OUTBOUND_EMAIL_ENABLED=True)
+
+
+def test_isolated_reset_smtp_uses_tls_and_limits_recipient(monkeypatch):
+    from unittest.mock import MagicMock
+    import pytest
+    from fastapi import HTTPException
+    from pydantic import SecretStr
+
+    options = dict(
+        MOTHER_PASSWORD_RESET_EMAIL_ENABLED=True, A7_OUTBOUND_EMAIL_ENABLED=False,
+        ACCOUNT_SMTP_HOST="smtp.example.com", ACCOUNT_SMTP_PORT=587,
+        ACCOUNT_SMTP_FROM="reset@example.com", ACCOUNT_SMTP_USER="fixture",
+        ACCOUNT_SMTP_PASSWORD=SecretStr("fixture"), E2E_PASSWORD_RESET_TEST_RECIPIENT="mother@example.com",
+    )
+    for key, value in options.items():
+        monkeypatch.setattr(mother_account.settings, key, value)
+    relay = MagicMock()
+    monkeypatch.setattr(mother_account.smtplib, "SMTP", relay)
+    with pytest.raises(RuntimeError, match="isolated test recipient"):
+        mother_account.send_account_email("other@example.com", "password_reset", "012345")
+    with pytest.raises(HTTPException) as error:
+        mother_account.send_account_email("mother@example.com", "verify_email", "x" * 43)
+    assert error.value.status_code == 503
+    relay.assert_not_called()
+    mother_account.send_account_email("mother@example.com", "password_reset", "012345")
+    relay.assert_called_once_with("smtp.example.com", 587, timeout=7)
+    client = relay.return_value.__enter__.return_value
+    assert [call[0] for call in client.method_calls] == ["starttls", "login", "send_message"]
+    message = client.send_message.call_args.args[0]
+    assert message["To"] == "mother@example.com"
+    content = message.get_content()
+    assert "012345" in content and "5 minutes" in content and "Do not share" in content
+    assert "http" not in content

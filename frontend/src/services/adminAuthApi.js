@@ -39,38 +39,13 @@ export function loginAdmin(email, password) {
   })
 }
 
-export function setupAdmin2FA(challengeToken) {
-  return authRequest('/api/admin/auth/2fa/setup', {
-    challenge_token: challengeToken,
-  })
-}
-
 export async function startAdminSignIn(email, password) {
   const result = await loginAdmin(email, password)
-  if (result.requires_2fa === false && typeof result.access_token === 'string' &&
-      result.access_token.trim() && Array.isArray(result.admin?.permissions)) {
-    return { admin: { ...result.admin, access_token: result.access_token, adminAuthenticated: true } }
-  }
-  if (import.meta.env.MODE === 'e2e') {
-    throw new Error('The isolated Admin API did not issue a password-only session. Verify that the Login page is on port 5183 and the E2E API is on port 8100.')
-  }
-  if (result.requires_2fa !== true || typeof result.challenge_token !== 'string' || !result.challenge_token) {
+  if (typeof result.access_token !== 'string' || !result.access_token.trim() ||
+      !Array.isArray(result.admin?.permissions)) {
     throw new Error('Unexpected admin login response.')
   }
-  let setupKey = ''
-  if (result.setup_required) {
-    const setup = await setupAdmin2FA(result.challenge_token)
-    setupKey = new URL(setup.otpauth_uri).searchParams.get('secret')
-    if (!setupKey) throw new Error('Authenticator setup key missing.')
-  }
-  return { challenge: { token: result.challenge_token, setupKey } }
-}
-
-export function verifyAdmin2FA(challengeToken, code, signal) {
-  return authRequest('/api/admin/auth/2fa/verify', {
-    challenge_token: challengeToken,
-    code,
-  }, signal)
+  return { admin: { ...result.admin, access_token: result.access_token, adminAuthenticated: true } }
 }
 
 export async function revokeAdminSession(token) {
@@ -87,7 +62,7 @@ export async function getAdminSession(token, signal) {
     headers: { Authorization: 'Bearer ' + token },
     signal,
   })
-  if (!response.ok) throw new Error('Admin session could not be restored.')
+  if (!response.ok) throw Object.assign(new Error('Admin session could not be restored.'), { status: response.status })
   const admin = await response.json()
   if (!Array.isArray(admin.permissions)) throw new Error('Invalid Admin session.')
   return { ...admin, access_token: token, role: 'ADMIN', adminAuthenticated: true }

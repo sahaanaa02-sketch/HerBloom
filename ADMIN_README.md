@@ -1,6 +1,6 @@
 ﻿# HerBloom Admin Portal
 
-The Admin and Mother portals share one React codebase and one FastAPI API. Admin accounts use separate signed tokens and mandatory TOTP. Roles and permissions are maintained in app/seed/sync_admin_permissions.py. Current roles are Super Admin, Content Editor, Clinical Reviewer and Support. API permissions are authoritative, even when a browser route or navigation item is visible.
+The Admin and Mother portals share one React codebase and one FastAPI API. Admin accounts use email and password and separate signed tokens in loopback development and guarded E2E. Hosted Admin access is unavailable pending a separate approval. Roles and permissions are maintained in app/seed/sync_admin_permissions.py. Current roles are Super Admin, Content Editor, Clinical Reviewer and Support. API permissions are authoritative, even when a browser route or navigation item is visible.
 
 ## Local development and E2E
 
@@ -9,9 +9,9 @@ From backend, install requirements.txt and requirements-dev.txt in a Python virt
     python -m app.e2e preflight
     python -m pytest -q app/test_a14_security.py
 
-The separate command python -m app.a14_demo provisions one account per role only in the guarded E2E database. It generates distinct passwords and TOTP secrets and writes them to a14-demo-credentials.json in the existing private E2E directory. Keep that directory owner-restricted. The pytest suite creates temporary accounts in rolled-back transactions and requires no persistent demo seed. Demo accounts use a14-<hyphenated-role>.e2e@example.com.
+The separate command python -m app.a14_demo provisions one account per role only in the guarded E2E database. It generates distinct passwords and writes them to a14-demo-credentials.json in the existing private E2E directory. Keep that directory owner-restricted. The pytest suite creates temporary accounts in rolled-back transactions and requires no persistent demo seed. Demo accounts use a14-<hyphenated-role>.e2e@example.com.
 
-For a newly approved environment, verify the target database identity, provision the authorized roles, then run python -m app.seed.create_super_admin interactively. The administrator completes authenticator enrollment before receiving an access token. Use private credential provisioning, and verify all role grants before opening access.
+For a newly approved environment, verify the target database identity, provision the authorized roles, then run python -m app.seed.create_super_admin interactively. The active administrator signs in with their email and password on the local application. Use private credential provisioning, and verify all role grants before opening access.
 
 ## Git security preflight
 
@@ -23,7 +23,7 @@ Run these read-only checks from the repository root:
     python backend/scripts/check_repository_secrets.py --history
     git check-ignore .env backend/uploads/sample.png frontend/.env.production
 
-Review candidate binaries, local backups, database files, generated exports, credentials and project configuration manually. The scanner reports paths and lines only. Keep provider keys, database passwords, JWT and TOTP secrets, journal encryption keys, and populated database backups outside the repository. Git ignore rules protect normal staging. A file already in Git history requires incident handling and credential rotation.
+Review candidate binaries, local backups, database files, generated exports, credentials and project configuration manually. The scanner reports paths and lines only. Keep provider keys, database passwords, JWT signing secrets and any historical authenticator secrets, journal encryption keys, and populated database backups outside the repository. Git ignore rules protect normal staging. A file already in Git history requires incident handling and credential rotation.
 
 After explicit approval, create a review branch from the current main branch, stage only reviewed source files by path, inspect git diff --cached and git diff --cached --name-only, run the scanner with --staged --history, then commit. Push the review branch using git push -u origin HEAD and open a pull request. Verify the existing remote belongs to the intended private GitHub repository. Enable GitHub secret scanning and push protection if the repository supports them. Keep automatic production deploys disabled while the branch is under review.
 
@@ -71,7 +71,31 @@ For a production backup restore rehearsal, obtain explicit approval for the sour
 
 ## Final acceptance
 
-- Complete Admin and Mother browser testing on separate HTTPS origins, including 2FA setup, dashboard workflows, responsive layout, keyboard navigation and English/Tamil rendering.
+- Complete Admin and Mother browser testing on separate HTTPS origins, including sign-in, dashboard workflows, responsive layout, keyboard navigation and English/Tamil rendering.
 - Confirm authoring, request changes, resubmission, approval and publication through the Mother view in both languages. Confirm urgent safety terms and scanner aliases through the actual approved integrations.
 - Review the clinical content inventory for reviewer and review date before release. Keep operational email, private exports and deletion gated. The isolated suite tests those behaviors with mocked transport and synthetic data.
 - Resolve PayHere hosted sandbox sign-off, pending-order reconciliation, taxes and refund policy, data retention, and any remaining clinical or AI policy decisions before activating affected features.
+
+
+### Local Admin demonstration and hosted access
+
+Bind normal development FastAPI to 127.0.0.1 with the local `herbloom_db`
+database and use the frontend on port 5173. Guarded E2E continues to use its
+isolated database and fixed origins. Admin sign-in uses email and password
+with a 60-minute signed, revocable session. Keep the local API off public
+tunnels and remote proxies. Retired session types require a new sign-in.
+
+Hosted Admin access remains blocked. A proposed replacement is a dedicated
+Admin origin protected by an identity-aware proxy using passkeys. It needs a
+separate approval, verified proxy assertions, private backend ingress, and
+account-to-role mapping before activation. Mother authentication is independent.
+
+### Legacy Admin column removal
+
+The reviewed cleanup in backend/migrations/retire_admin_totp.sql has been
+applied to the normal local herbloom_db schema. The Admin ORM no longer
+maps any of the retired columns. Historical Admin audit events are retained.
+
+Keep the destructive migration out of routine migration runs. Any other
+database requires separate approval, a fresh restore-tested encrypted backup,
+a schema and data baseline, and a coordinated application rollout.

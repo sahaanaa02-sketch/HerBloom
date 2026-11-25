@@ -14,7 +14,7 @@ from app.e2e_fixtures import ADMIN_EMAIL, MOTHER_EMAIL
 from app.e2e_guard import authorize_e2e_launcher, preflight
 from app.models.admin import AdminPermission, AdminRole, AdminUser, AuditLog
 from app.models.user import User
-from app.routers.admin_2fa import create_admin_access_token
+from app.services.admin_security import create_admin_access_token
 from app.services import ai_gateway, ai_monitor as monitor, food_scanner
 from app.services.auth_service import create_access_token
 
@@ -42,7 +42,7 @@ def run():
                 mother_id=s.scalar(select(User.id).where(User.email==MOTHER_EMAIL))
                 perm=s.scalar(select(AdminPermission).where(AdminPermission.key=="ai.view"))
                 viewer=AdminUser(email="a10-viewer.e2e@example.com",name="Synthetic A10 viewer",active=True,
-                                 totp_enabled=True,password_hash="Synthetic token-only account",
+                                 password_hash="Synthetic token-only account",
                                  roles=[AdminRole(name="synthetic_a10_viewer",permissions=[perm])])
                 other=User(username="a10_other",email="a10-other.e2e@example.com",full_name="Synthetic A10 mother",
                            role="MOTHER",hashed_password="Synthetic token-only account",is_active=True)

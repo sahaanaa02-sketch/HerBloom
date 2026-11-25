@@ -32,7 +32,7 @@ def send_invitation(email, token):
     message["From"] = sender
     message["To"] = email
     message["Subject"] = "Set up your HerBloom administrator account"
-    message.set_content("Open this one-time link within 48 hours to set your password and then enroll in two-factor authentication."
+    message.set_content("Open this one-time link within 48 hours to set your password and then sign in to HerBloom."
                         + chr(10)*2 + origin.rstrip("/") + "/admin/setup#" + token)
     require_delivery()
     with smtplib.SMTP(host, int(external_setting("ACCOUNT_SMTP_PORT", "587")), timeout=7) as smtp:

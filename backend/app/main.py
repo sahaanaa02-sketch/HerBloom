@@ -71,7 +71,6 @@ from app.routers.admin import router as admin_router
 # ==========================================
 # Admin Two-Factor Authentication
 # ==========================================
-from app.routers.admin_2fa import router as admin_2fa_router
 
 # ==========================================
 # Admin Media Management - NEW (Phase A2.3)
@@ -194,7 +193,6 @@ app.include_router(admin_router)
 # ==========================================
 # Admin Two-Factor Authentication Routes
 # ==========================================
-app.include_router(admin_2fa_router)
 
 
 # ==========================================
@@ -218,7 +216,7 @@ app.include_router(notifications_mother)
 @app.exception_handler(RequestValidationError)
 async def protect_account_link_validation(request, error):
     path = request.url.path
-    account_links = {"/auth/forgot-password", "/auth/reset-password", "/auth/verify-email", "/auth/password-reset/verify", "/auth/google", "/api/admin/auth/accept-invite"}
+    account_links = {"/auth/forgot-password", "/auth/reset-password", "/auth/verify-email", "/auth/password-reset/verify", "/auth/google", "/auth/google/link-login", "/api/admin/auth/accept-invite"}
     if path in account_links or (path.startswith("/api/admin/data-requests/") and path.endswith("/download")):
         return JSONResponse({"detail": "Invalid account or download request."}, status_code=422,
                             headers={"Cache-Control": "no-store"})

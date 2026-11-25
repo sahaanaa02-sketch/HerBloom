@@ -6,8 +6,10 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.config import E2E_MODE, settings
 from app.database import SessionLocal
 from app.models.admin import AdminUser, AdminRole
+from app.models.user import User
 
 
 password_hasher = PasswordHash.recommended()
@@ -29,6 +31,9 @@ def validate_password(password):
 
 
 def create_super_admin():
+    if E2E_MODE or settings.A14_HOSTED or settings.DB_HOST not in ("localhost", "127.0.0.1", "::1"):
+        raise SystemExit("Run this provisioner against the normal local HerBloom database.")
+
     print("\n" + "=" * 50)
     print("HerBloom - Create Super Admin")
     print("=" * 50)
@@ -47,6 +52,9 @@ def create_super_admin():
     db = SessionLocal()
 
     try:
+        if db.connection().exec_driver_sql("SELECT DATABASE()").scalar_one() != "herbloom_db":
+            raise SystemExit("Expected herbloom_db. No account was created.")
+
         existing_admin = db.scalar(
             select(AdminUser)
             .options(selectinload(AdminUser.roles))
@@ -55,6 +63,11 @@ def create_super_admin():
 
         if existing_admin:
             print("\nAn Admin account with this email already exists.")
+            print("No changes were made.")
+            return
+
+        if db.scalar(select(User.id).where(User.email == email)) is not None:
+            print("\nAn account in the Mother portal already uses this email.")
             print("No changes were made.")
             return
 
@@ -91,7 +104,6 @@ def create_super_admin():
             name=name,
             password_hash=hashed_password,
             active=True,
-            totp_enabled=False,
             failed_attempts=0,
         )
 
@@ -109,9 +121,7 @@ def create_super_admin():
         print(f"Email: {admin.email}")
         print("Role: super_admin")
         print("Status: Active")
-        print("Two-factor authentication: Pending setup")
         print("\nPassword securely hashed and stored.")
-        print("Next: Configure secure Admin Login and 2FA.")
 
     except Exception:
         db.rollback()

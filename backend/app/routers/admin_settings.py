@@ -100,15 +100,15 @@ def locked_admin(db, id, actor):
             raise HTTPException(403, "Only a super administrator can change this account.")
         peers = (select(AdminUser.id).join(admin_user_roles).join(AdminRole)
                  .where(AdminUser.id != id, AdminUser.active.is_(True),
-                        AdminUser.totp_enabled.is_(True), AdminRole.name == "super_admin").with_for_update())
-        if account.active and account.totp_enabled and not db.execute(peers).first():
-            raise HTTPException(409, "The last active super administrator with 2FA must remain available.")
+                        AdminRole.name == "super_admin").with_for_update())
+        if account.active and not db.execute(peers).first():
+            raise HTTPException(409, "The last active super administrator must remain available.")
     return account
 
 
 def account_row(admin):
     return {"id": admin.id, "name": admin.name, "email": admin.email, "active": admin.active,
-            "totp_enabled": admin.totp_enabled, "last_login_at": admin.last_login_at,
+            "last_login_at": admin.last_login_at,
             "roles": [{"id": r.id, "name": r.name} for r in admin.roles]}
 
 
@@ -141,7 +141,7 @@ def invite(body: Invite, request: Request, admin: Manager, db: Db):
     try:
         if account is None:
             account = AdminUser(email=address, name=body.name, password_hash=password_hasher.hash(secrets.token_urlsafe(32)),
-                                active=False, totp_enabled=False, roles=roles)
+                                active=False, roles=roles)
             db.add(account)
             db.flush()
         else:
@@ -192,7 +192,7 @@ def accept_invite(body: AcceptInvite, request: Request, db: Db):
     db.execute(tokens.update().where(tokens.c.id == item["id"]).values(used_at=stamp))
     audit(db, id, request, "admin_users", id, "admin.invite.accepted")
     db.commit()
-    return {"message":"Password set. Sign in to enroll in two-factor authentication."}
+    return {"message":"Password set. Sign in to HerBloom."}
 
 
 @router.put("/api/admin/settings/admins/{id:int}/roles")
@@ -208,20 +208,16 @@ def change_roles(id: int, body: Roles, request: Request, admin: Manager, db: Db)
     return account_row(account)
 
 
-@router.post("/api/admin/settings/admins/{id:int}/{action}")
-def account_action(id: int, action: Literal["deactivate","reset-2fa"], request: Request, admin: Manager, db: Db):
+@router.post("/api/admin/settings/admins/{id:int}/deactivate")
+def account_action(id: int, request: Request, admin: Manager, db: Db):
     app_settings.require_ready(db)
     account = locked_admin(db,id,admin)
     if not account.active:
         raise HTTPException(409, "Only active admin accounts can receive this action.")
-    before = {"active":account.active,"totp_enabled":account.totp_enabled}
-    if action == "deactivate":
-        account.active = False
-    else:
-        account.totp_enabled, account.totp_secret, account.last_totp_step = False, None, None
+    before = {"active": account.active}
+    account.active = False
     revoke(db,id)
-    audit(db,admin.id,request,"admin_users",id,"admin."+action,before,
-          {"active":account.active,"totp_enabled":account.totp_enabled})
+    audit(db,admin.id,request,"admin_users",id,"admin.deactivate",before,{"active": False})
     db.commit()
     return account_row(account)
 

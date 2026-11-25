@@ -30,7 +30,6 @@ After provisioning approval, save backend.env under %LOCALAPPDATA%\HerBloom\E2E.
     JOURNAL_ENCRYPTION_KEY=<Fernet key generated for E2E>
     E2E_ADMIN_PASSWORD=<generated test admin password>
     E2E_MOTHER_PASSWORD=<different generated test mother password>
-    E2E_ADMIN_TOTP_SECRET=<generated test-only TOTP secret>
     E2E_API_PORT=8100
     E2E_FRONTEND_ORIGIN=http://127.0.0.1:5183
     E2E_MEDIA_DIR=C:/Users/<your user>/AppData/Local/HerBloom/E2E/media

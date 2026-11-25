@@ -124,13 +124,13 @@ export default function Step5Preferences({
   )
 
   return (
-    <div className="space-y-4">
+    <div className="hb-onboarding-step hb-onboarding-preferences space-y-4">
       <StepHeading
         title={version === 2 ? (preferencesOnly ? "Preferences and Concerns" : "Review and Consent") : "Almost Done!"}
         subtitle={version !== 2 || preferencesOnly ? "Choose how you'd like HerBloom to support you." : undefined}
       />
 
-      {!preferencesOnly && <section aria-labelledby="onboarding-review-heading" className="space-y-3">
+      {!preferencesOnly && <section aria-labelledby="onboarding-review-heading" className="hb-onboarding-review space-y-3">
         <h2 id="onboarding-review-heading" className="text-base font-semibold text-[#3A1224]">
           {t('Review your answers')}
         </h2>
